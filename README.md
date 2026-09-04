@@ -1,23 +1,34 @@
-# Video DownloadHelper Pro (Chrome Extension Clone)
+# StreamGrabber (Chrome Extension - Manifest V3)
 
-Extensión de Chrome (Manifest V3) que clona y mejora las funciones de **Video DownloadHelper Premium**, 100% gratuita y sin restricciones.
+Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader for Google Chrome. 100% free and unlimited.
 
-## 🚀 Características Incluidas (100% Gratis & Pro Desbloqueado)
+## 🚀 Features
 
-- **Detección Automática de Red (Network Sniffer):** Captura transmisiones de video/audio en segundo plano inspeccionando cabeceras HTTP (`video/mp4`, `application/x-mpegURL`, `application/dash+xml`, etc.).
-- **Inspección de DOM & Players:** Detecta reproductores HTML5 (`<video>`, `<audio>`, `<source>`, `<iframe>`), etiquetas OpenGraph y configuraciones JSON de reproductores.
-- **Motor HLS Ilimitado (`.m3u8`):** Parsea listas de reproducción M3U8 principales y secundarias, descarga fragmentos `.ts` en paralelo y los fusiona en un solo archivo local sin marcas de agua ni límites de tiempo.
-- **Extracción de Audio:** Descarga la pista de audio o convierte transmisiones directamente a MP3.
-- **Interfaz Réplica Premium:** Incluye un Popup UI completo con contador en el icono de Chrome, barra de progreso de descargas activas en tiempo real (con velocidad en MB/s) y una réplica visual de `downloadhelper.net/premium`.
-- **Configuración Personalizada:** Control de filtros por tamaño mínimo de archivo y conexiones paralelas.
+- **Smart Network Sniffer:** Automatically captures media streams and direct files in the background by inspecting HTTP response headers (`video/mp4`, `application/x-mpegURL`, `application/dash+xml`, `audio/mpeg`, etc.).
+- **DOM & Player Detection:** Scans HTML5 `<video>`, `<audio>`, `<source>`, `<noscript>` fallback containers, OpenGraph/Twitter tags, and inline player configs.
+- **Pre-Play Detection:** Detects videos immediately upon page load (including players with noscript/poster overlays) without requiring user playback first.
+- **Anti-Hotlink Direct Downloader:** Automatically resolves cross-origin 302/301 redirects and injects required `Referer` / `Origin` headers at the network layer to bypass server hotlink protections.
+- **Native Chrome Downloads:** Streams video files directly to disk via Chrome's native download manager with zero memory overhead and native transfer speeds.
+- **Live Progress & Speed:** Real-time transfer progress bar with speed (MB/s) and percentage in the popup UI and native desktop notifications on completion.
+- **Unlimited HLS (`.m3u8`) Engine:** Parses master playlists, downloads `.ts` segments via parallel workers, handles AES-128 decryption, and merges into an intact file.
+- **Customizable Options:** Toggle whether to prompt for filename/destination before downloading, filter minimum file sizes, adjust concurrent connections, and set default formats (MP4, MKV, TS).
+- **Creator Support:** Built-in PayPal donation support (`paypal.me/yesarts`) requiring zero setup.
 
 ---
 
-## 🛠️ Cómo instalar en Google Chrome
+## 🛠️ Installation in Google Chrome
 
-1. Abre Google Chrome y navega a `chrome://extensions/`.
-2. Activa el **Modo de desarrollador** (esquina superior derecha).
-3. Haz clic en **Cargar descomprimida** (Load unpacked).
-4. Selecciona la carpeta de este proyecto:
-   `c:\Users\yesua\PY\Browser\Extension`
-5. ¡Listo! El icono de **Video DownloadHelper Pro** aparecerá en la barra de herramientas de Chrome.
+1. Open Google Chrome and go to `chrome://extensions/`.
+2. Enable **Developer mode** (toggle in the top-right corner).
+3. Click **Load unpacked** (Cargar descomprimida).
+4. Select this project directory:
+   ```
+   c:\Users\yesua\PY\Browser\Extension
+   ```
+5. Pin the **StreamGrabber** icon to your Chrome toolbar.
+
+---
+
+## 📄 License
+
+MIT License. Free and open source.
