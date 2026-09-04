@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const maxThreadsInput = document.getElementById('maxThreads');
   const defaultFormatInput = document.getElementById('defaultFormat');
   const autoDetectInput = document.getElementById('autoDetect');
-  const feedbackUrlInput = document.getElementById('feedbackUrl');
   const form = document.getElementById('optionsForm');
   const toast = document.getElementById('toast');
 
@@ -18,15 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
     minSizeKB: 100,
     maxThreads: 5,
     defaultFormat: 'mp4',
-    autoDetect: true,
-    feedbackUrl: ''
+    autoDetect: true
   }, (items) => {
     if (askFilenameInput) askFilenameInput.checked = Boolean(items.askFilename);
     minSizeInput.value = items.minSizeKB;
     maxThreadsInput.value = items.maxThreads;
     if (defaultFormatInput) defaultFormatInput.value = items.defaultFormat || 'mp4';
     autoDetectInput.value = items.autoDetect.toString();
-    if (feedbackUrlInput) feedbackUrlInput.value = items.feedbackUrl || '';
   });
 
   // Save options
@@ -38,15 +35,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const maxThreads = parseInt(maxThreadsInput.value, 10) || 5;
     const defaultFormat = defaultFormatInput ? defaultFormatInput.value : 'mp4';
     const autoDetect = autoDetectInput.value === 'true';
-    const feedbackUrl = feedbackUrlInput ? feedbackUrlInput.value.trim() : '';
 
     chrome.storage.sync.set({
       askFilename,
       minSizeKB,
       maxThreads,
       defaultFormat,
-      autoDetect,
-      feedbackUrl
+      autoDetect
     }, () => {
       toast.style.display = 'block';
       setTimeout(() => {

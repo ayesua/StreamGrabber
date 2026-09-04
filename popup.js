@@ -101,17 +101,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feedback Button
+  // Feedback Controls (Only appears when user clicks Feedback)
   const btnFeedback = document.getElementById('btnFeedback');
-  if (btnFeedback) {
+  const modalFeedback = document.getElementById('modalFeedback');
+  const modalFeedbackBtnClose = document.getElementById('modalFeedbackBtnClose');
+  const btnOpenFeedbackEmail = document.getElementById('btnOpenFeedbackEmail');
+  const btnCopyFeedbackEmail = document.getElementById('btnCopyFeedbackEmail');
+
+  const openFeedbackMail = () => {
+    chrome.tabs.create({ url: 'mailto:ayesua@gmail.com?subject=StreamGrabber%20Feedback%20%26%20Suggestions' });
+  };
+
+  if (btnFeedback && modalFeedback) {
     btnFeedback.addEventListener('click', () => {
-      chrome.storage.sync.get({ feedbackUrl: '' }, (res) => {
-        if (res.feedbackUrl && (res.feedbackUrl.startsWith('http') || res.feedbackUrl.startsWith('mailto:'))) {
-          chrome.tabs.create({ url: res.feedbackUrl });
-        } else {
-          chrome.tabs.create({ url: 'mailto:feedback@streamgrabber.app?subject=Feedback or Issue Report - StreamGrabber' });
-        }
-      });
+      modalFeedback.style.display = 'flex';
+    });
+  }
+
+  if (modalFeedbackBtnClose && modalFeedback) {
+    modalFeedbackBtnClose.addEventListener('click', () => {
+      modalFeedback.style.display = 'none';
+    });
+  }
+
+  if (btnOpenFeedbackEmail) {
+    btnOpenFeedbackEmail.addEventListener('click', openFeedbackMail);
+  }
+
+  if (btnCopyFeedbackEmail) {
+    btnCopyFeedbackEmail.addEventListener('click', () => {
+      navigator.clipboard.writeText('ayesua@gmail.com');
+      btnCopyFeedbackEmail.textContent = '✅ Copied: ayesua@gmail.com';
+      setTimeout(() => {
+        btnCopyFeedbackEmail.textContent = '📋 Copy Email Address';
+      }, 2000);
     });
   }
 
