@@ -13,7 +13,7 @@
     <div class="vdh-brand">
       <img src="icon48.png" class="vdh-logo-img" alt="StreamGrabber Icon" />
       <div>
-        <div class="vdh-title">StreamGrabber <span class="vdh-badge-free">FREE</span></div>
+        <div class="vdh-title">StreamGrabber</div>
       </div>
     </div>
 
@@ -93,11 +93,22 @@
     </div>
 
     <div class="footer-info">
-      <a href="#" id="footerPremiumLink" class="pro-link" title="100% Free &amp; Unlimited">
-        <span>✨ 100% Free</span>
-      </a>
+      <span class="version-label">v3.1.0</span>
     </div>
   </footer>
+
+  <!-- Inline Filename Prompt Modal (Inside Popup UI, avoids prompt() dialog blocks) -->
+  <div id="modalFilename" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-title">Name Your Video</div>
+      <div class="modal-desc">Please choose a name for this download:</div>
+      <input type="text" id="modalInputFilename" class="modal-input" placeholder="Enter file name..." />
+      <div class="modal-actions">
+        <button id="modalBtnCancel" class="btn-secondary">Cancel</button>
+        <button id="modalBtnConfirm" class="btn-primary">Download</button>
+      </div>
+    </div>
+  </div>
 
   <script src="popup.js" type="module"></script>
 </body>

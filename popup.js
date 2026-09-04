@@ -79,23 +79,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // PayPal Donation Button - Directly opens user's PayPal.me link (no configuration needed!)
+  // PayPal Donation Button - Directly opens developer PayPal.me link (non-editable, fixed for end users)
   const btnPayPal = document.getElementById('btnPayPal');
   if (btnPayPal) {
     btnPayPal.addEventListener('click', () => {
-      chrome.storage.sync.get({ paypalId: 'https://paypal.me/yesarts' }, (res) => {
-        const id = (res.paypalId || 'https://paypal.me/yesarts').trim();
-        if (id.startsWith('http://') || id.startsWith('https://')) {
-          chrome.tabs.create({ url: id });
-        } else if (id.includes('@')) {
-          chrome.tabs.create({
-            url: `https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=${encodeURIComponent(id)}&currency_code=USD&item_name=StreamGrabber`
-          });
-        } else {
-          const cleanUser = id.replace(/^paypal\.me\//i, '');
-          chrome.tabs.create({ url: `https://paypal.me/${encodeURIComponent(cleanUser)}` });
-        }
-      });
+      chrome.tabs.create({ url: 'https://paypal.me/yesarts' });
     });
   }
 
@@ -367,6 +355,55 @@ function createMediaCardHTML(item) {
   `;
 }
 
+function promptForFilename(defaultTitle, callback) {
+  const modal = document.getElementById('modalFilename');
+  const input = document.getElementById('modalInputFilename');
+  const btnConfirm = document.getElementById('modalBtnConfirm');
+  const btnCancel = document.getElementById('modalBtnCancel');
+
+  if (!modal || !input || !btnConfirm || !btnCancel) {
+    callback(defaultTitle);
+    return;
+  }
+
+  input.value = defaultTitle;
+  modal.style.display = 'flex';
+
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 60);
+
+  const cleanup = () => {
+    modal.style.display = 'none';
+    btnConfirm.onclick = null;
+    btnCancel.onclick = null;
+    input.onkeydown = null;
+  };
+
+  btnConfirm.onclick = () => {
+    const val = input.value.trim() || defaultTitle;
+    cleanup();
+    callback(val);
+  };
+
+  btnCancel.onclick = () => {
+    cleanup();
+    callback(null); // Cancelled by user
+  };
+
+  input.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      const val = input.value.trim() || defaultTitle;
+      cleanup();
+      callback(val);
+    } else if (e.key === 'Escape') {
+      cleanup();
+      callback(null);
+    }
+  };
+}
+
 function triggerDownload(item, format = 'mp4') {
   const genericNames = ['master', 'index', 'playlist', 'video', 'manifest', 'stream', 'video_completo', 'video_stream', 'full_video'];
   let finalTitle = item.title;
@@ -376,35 +413,38 @@ function triggerDownload(item, format = 'mp4') {
 
   chrome.storage.sync.get({ askFilename: false }, (res) => {
     if (res && res.askFilename) {
-      const userChoice = prompt('Enter file name for download:', finalTitle);
-      if (userChoice === null) {
-        // User clicked Cancel in the prompt dialog
-        return;
-      }
-      if (userChoice.trim()) {
-        finalTitle = userChoice.trim();
-      }
+      promptForFilename(finalTitle, (chosenTitle) => {
+        if (chosenTitle === null) {
+          // User clicked Cancel in the modal
+          return;
+        }
+        executeDownload(item, chosenTitle, format);
+      });
+    } else {
+      executeDownload(item, finalTitle, format);
     }
+  });
+}
 
-    const updatedItem = {
-      ...item,
-      title: finalTitle
-    };
+function executeDownload(item, title, format) {
+  const updatedItem = {
+    ...item,
+    title
+  };
 
-    chrome.runtime.sendMessage({
-      action: 'START_DOWNLOAD',
-      item: updatedItem,
-      format,
-      tabId: currentTabId,
-      referer: currentTabUrl
-    }, (response) => {
-      if (chrome.runtime.lastError) return;
-      if (response && response.success) {
-        loadTabMedia();
-      } else if (response && response.error) {
-        alert(`Error starting download: ${response.error}`);
-      }
-    });
+  chrome.runtime.sendMessage({
+    action: 'START_DOWNLOAD',
+    item: updatedItem,
+    format,
+    tabId: currentTabId,
+    referer: currentTabUrl
+  }, (response) => {
+    if (chrome.runtime.lastError) return;
+    if (response && response.success) {
+      loadTabMedia();
+    } else if (response && response.error) {
+      alert(`Error starting download: ${response.error}`);
+    }
   });
 }
 

@@ -140,7 +140,6 @@
   <div class="options-card">
     <div class="options-title">
       <span>StreamGrabber Settings</span>
-      <span class="vdh-badge-free">FREE</span>
     </div>
 
     <form id="optionsForm">
@@ -148,7 +147,7 @@
       <div class="form-group toggle-group">
         <div class="toggle-label-wrap">
           <label for="askFilename" style="margin-bottom: 2px;">Ask for file name before downloading</label>
-          <div class="form-help">When enabled, a "Save As" window will open asking you to confirm or edit the file name and destination folder before saving.</div>
+          <div class="form-help">When enabled, you will be prompted to enter or customize the file name before saving.</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="askFilename">
@@ -188,19 +187,6 @@
           <option value="true" selected>Enabled (Recommended)</option>
           <option value="false">Disabled</option>
         </select>
-      </div>
-
-      <div class="form-group" style="background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
-        <label for="paypalId" style="color: #003087; display: flex; align-items: center; gap: 6px; font-weight: 700;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="#003087">
-            <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
-          </svg>
-          PayPal Username or Link (To receive donations)
-        </label>
-        <input type="text" id="paypalId" value="https://paypal.me/yesarts" placeholder="https://paypal.me/yesarts" />
-        <div class="form-help" style="color: #15803d;">
-          ✅ <strong>Configured link:</strong> The PayPal button in the popup links directly to <code>https://paypal.me/yesarts</code>. Users don't need to configure anything to send donations.
-        </div>
       </div>
 
       <div class="form-group">

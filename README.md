@@ -1,6 +1,6 @@
 # StreamGrabber (Chrome Extension - Manifest V3)
 
-Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader for Google Chrome. 100% free and unlimited.
+Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader for Google Chrome.
 
 ## 🚀 Features
 
@@ -31,4 +31,4 @@ Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader fo
 
 ## 📄 License
 
-MIT License. Free and open source.
+MIT License.
