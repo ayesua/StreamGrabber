@@ -1,0 +1,8 @@
+{
+  "name": "video-downloadhelper-pro",
+  "version": "3.0.0",
+  "description": "Video DownloadHelper Pro - 100% Free Chrome Extension Clone with Unlimited HLS and Media Detection",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 0"
+  }
+}

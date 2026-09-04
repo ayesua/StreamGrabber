@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamGrabber - Unlimited Edition (100% Free)</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      width: 100%;
+      min-height: 100vh;
+      background: #0b1834;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .hero-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 166, 61, 0.2);
+      border: 1px solid #00a63d;
+      color: #00a63d;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+      color: #94a3b8;
+      max-width: 640px;
+      margin: 0 auto 40px auto;
+      line-height: 1.6;
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 800px;
+      margin: 0 auto 60px auto;
+    }
+
+    .p-card {
+      background: #0f172a;
+      border: 2px solid #00a63d;
+      border-radius: 20px;
+      padding: 32px;
+      text-align: left;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0, 166, 61, 0.15);
+    }
+
+    .p-card-header {
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+    }
+
+    .p-card-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffec25;
+      margin-bottom: 8px;
+    }
+
+    .p-card-price {
+      font-size: 38px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .p-card-price span {
+      font-size: 16px;
+      color: #94a3b8;
+      font-weight: 400;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 15px;
+      color: #e2e8f0;
+    }
+
+    .check-icon {
+      width: 22px;
+      height: 22px;
+      background: rgba(0, 166, 61, 0.2);
+      color: #00a63d;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .btn-activated {
+      width: 100%;
+      background: #00a63d;
+      color: #ffffff;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* Comparison Table */
+    .table-container {
+      max-width: 800px;
+      margin: 0 auto 60px auto;
+      background: #0f172a;
+      border-radius: 16px;
+      border: 1px solid #1e293b;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 16px 24px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    th {
+      background: #1e293b;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+    }
+
+    td {
+      font-size: 15px;
+    }
+
+    /* FAQ Section */
+    .faq-container {
+      max-width: 720px;
+      margin: 0 auto 60px auto;
+      text-align: left;
+    }
+
+    .faq-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .faq-item {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+
+    .faq-q {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffec25;
+      margin-bottom: 8px;
+    }
+
+    .faq-a {
+      font-size: 14px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero-container">
+    <div class="hero-badge">
+      <span>✓ 100% FREE UNLIMITED EDITION</span>
+    </div>
+
+    <h1 class="hero-title">StreamGrabber</h1>
+    <p class="hero-subtitle">Enjoy all advanced video capabilities with zero restrictions: unlimited HLS downloads, built-in thumbnail frame capture, maximum multi-threaded speed, audio extraction, and no watermarks.</p>
+
+    <!-- Card -->
+    <div class="cards-grid">
+      <div class="p-card">
+        <div class="p-card-header">
+          <div class="p-card-name">Complete Edition</div>
+          <div class="p-card-price">$0 <span>/ lifetime</span></div>
+        </div>
+
+        <ul class="feature-list">
+          <li class="feature-item">
+            <div class="check-icon">✓</div>
+            <span>Unlimited downloads for <strong>HLS (.m3u8) &amp; DASH (.mpd)</strong> streams</span>
+          </li>
+          <li class="feature-item">
+            <div class="check-icon">✓</div>
+            <span>Integrated video <strong>frame capture &amp; thumbnail preview</strong></span>
+          </li>
+          <li class="feature-item">
+            <div class="check-icon">✓</div>
+            <span>No daily download limits and zero watermarks</span>
+          </li>
+          <li class="feature-item">
+            <div class="check-icon">✓</div>
+            <span>Accelerated multi-threaded parallel downloads</span>
+          </li>
+          <li class="feature-item">
+            <div class="check-icon">✓</div>
+            <span>1-click MP3 audio extraction</span>
+          </li>
+          <li class="feature-item">
+            <div class="check-icon">✓</div>
+            <span>HTTP network sniffer and HTML5 media detector</span>
+          </li>
+          <li class="feature-item">
+            <div class="check-icon">✓</div>
+            <span>Support for 1080p, 4K, and multiple quality variants</span>
+          </li>
+        </ul>
+
+        <button class="btn-activated">
+          <span>✨ STATUS: 100% UNLOCKED</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Features Parity Table -->
+    <h2 style="font-size: 24px; margin-bottom: 20px;">Feature Comparison</h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Other Extensions</th>
+            <th style="color: #00a63d;">StreamGrabber</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>HLS (.m3u8) Downloads</td>
+            <td style="color: #df4252;">Limited / Paid subscription</td>
+            <td style="color: #00a63d; font-weight: bold;">✓ Unlimited</td>
+          </tr>
+          <tr>
+            <td>Frame Preview / Poster</td>
+            <td>Not available</td>
+            <td style="color: #00a63d; font-weight: bold;">✓ Captured Frame Poster</td>
+          </tr>
+          <tr>
+            <td>Video Watermarks</td>
+            <td style="color: #df4252;">Yes on HLS / Conversion</td>
+            <td style="color: #00a63d; font-weight: bold;">✓ None (100% Clean)</td>
+          </tr>
+          <tr>
+            <td>Download Speed</td>
+            <td>Standard</td>
+            <td style="color: #00a63d; font-weight: bold;">⚡ Ultra-fast Multi-threaded</td>
+          </tr>
+          <tr>
+            <td>MP3 Audio Extraction</td>
+            <td>Requires payment / external tools</td>
+            <td style="color: #00a63d; font-weight: bold;">✓ Built-in browser extraction</td>
+          </tr>
+          <tr>
+            <td>Cost</td>
+            <td>$28+ USD</td>
+            <td style="color: #ffec25; font-weight: bold;">$0 COMPLETELY FREE</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FAQ -->
+    <div class="faq-container">
+      <h2 class="faq-title">Frequently Asked Questions (FAQ)</h2>
+
+      <div class="faq-item">
+        <div class="faq-q">Do I need to pay any subscription?</div>
+        <div class="faq-a">No. StreamGrabber is completely free and provides all features unlocked right upon installation.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">How does the frame capture work?</div>
+        <div class="faq-a">By clicking the 'Preview' button on any detected video, a built-in player/frame capturer will display to verify content before downloading.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Where are my downloaded videos saved?</div>
+        <div class="faq-a">Files are downloaded directly to your default Google Chrome Downloads folder.</div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "StreamGrabber",
+  "version": "3.1.0",
+  "description": "Fast video, audio, and HLS (.m3u8) stream detector and downloader. 100% free and unlimited.",
+  "permissions": [
+    "storage",
+    "downloads",
+    "notifications",
+    "webRequest",
+    "tabs",
+    "scripting",
+    "declarativeNetRequest",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "StreamGrabber Downloader",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icon16.png",
+        "icon48.png",
+        "icon128.png",
+        "styles.css",
+        "premium.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

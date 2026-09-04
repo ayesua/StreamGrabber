@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamGrabber</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Header Navbar -->
+  <header class="vdh-header">
+    <div class="vdh-brand">
+      <img src="icon48.png" class="vdh-logo-img" alt="StreamGrabber Icon" />
+      <div>
+        <div class="vdh-title">StreamGrabber <span class="vdh-badge-free">FREE</span></div>
+      </div>
+    </div>
+
+    <!-- Top Donation Block: Donations label above PayPal button -->
+    <div class="top-donation-block">
+      <span class="top-donation-tag">Donations</span>
+      <button id="btnPayPal" class="btn-paypal-top" title="Donate via PayPal (paypal.me/yesarts)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
+        </svg>
+        <span>PayPal</span>
+      </button>
+    </div>
+
+    <div class="vdh-nav-actions">
+      <button id="btnRescan" class="icon-btn" title="Rescan videos and media frames">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6"/>
+          <path d="M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+      <button id="btnOpenOptions" class="icon-btn" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Subbar with Active Tab Info -->
+  <div class="vdh-subbar">
+    <div class="vdh-tab-title" id="currentTabTitle">Loading tab...</div>
+    <div class="vdh-media-count" id="mediaCount">0 detected</div>
+  </div>
+
+  <!-- Filter Pills Bar (All | Videos | Audio Only) -->
+  <div class="filter-pills-bar">
+    <button class="pill-btn active" id="pillAll" data-filter="all">All (<span id="countAll">0</span>)</button>
+    <button class="pill-btn" id="pillVideos" data-filter="video">Videos (<span id="countVideos">0</span>)</button>
+    <button class="pill-btn" id="pillAudios" data-filter="audio">Audio (<span id="countAudios">0</span>)</button>
+  </div>
+
+  <!-- Content Section -->
+  <div class="vdh-content">
+    
+    <!-- Active Downloads Progress Section -->
+    <div id="activeDownloadsContainer" class="active-downloads-section" style="display: none;">
+      <div class="section-title">⚡ Active Downloads</div>
+      <div id="activeDownloadsList"></div>
+    </div>
+
+    <!-- Media Cards List -->
+    <div id="mediaListContainer"></div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="vdh-empty-state">
+      <div class="vdh-empty-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+      </div>
+      <div class="vdh-empty-title">No videos detected yet</div>
+      <div class="vdh-empty-text">Start playing the video on the web page so the sniffer can capture the complete stream and video frame.</div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="vdh-footer">
+    <div class="footer-actions">
+      <button id="btnFeedback" class="btn-feedback" title="Send suggestions or report an issue">
+        <span>💬</span> <span>Feedback &amp; Suggestions</span>
+      </button>
+    </div>
+
+    <div class="footer-info">
+      <a href="#" id="footerPremiumLink" class="pro-link" title="100% Free &amp; Unlimited">
+        <span>✨ 100% Free</span>
+      </a>
+    </div>
+  </footer>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

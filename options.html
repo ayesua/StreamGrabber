@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - StreamGrabber</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--vdh-bg);
+      color: var(--vdh-text);
+      font-family: var(--font-main);
+      padding: 40px 20px;
+    }
+    .options-card {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid var(--vdh-border);
+      border-radius: var(--vdh-radius);
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .options-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--vdh-header-bg);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--vdh-blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .form-help {
+      font-size: 12px;
+      color: var(--vdh-text-muted);
+      margin-top: 4px;
+    }
+    input[type="number"], input[type="text"], input[type="url"], select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border: 1px solid var(--vdh-border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .btn-save {
+      background: var(--vdh-green);
+      color: #ffffff;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .toast {
+      display: none;
+      background: #dcfce7;
+      color: #15803d;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 12px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    /* Switch Toggle */
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid var(--vdh-border);
+      border-radius: 8px;
+    }
+    .toggle-label-wrap {
+      flex: 1;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e1;
+      transition: .3s ease;
+      border-radius: 26px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s ease;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    input:checked + .slider {
+      background-color: #00a63d;
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="options-card">
+    <div class="options-title">
+      <span>StreamGrabber Settings</span>
+      <span class="vdh-badge-free">FREE</span>
+    </div>
+
+    <form id="optionsForm">
+      <!-- Ask File Name Toggle Option -->
+      <div class="form-group toggle-group">
+        <div class="toggle-label-wrap">
+          <label for="askFilename" style="margin-bottom: 2px;">Ask for file name before downloading</label>
+          <div class="form-help">When enabled, a "Save As" window will open asking you to confirm or edit the file name and destination folder before saving.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="askFilename">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="minSize">Minimum File Size Filter (KB)</label>
+        <input type="number" id="minSize" value="100" min="0" step="50">
+        <div class="form-help">Ignore small video clips, ads, or audio effects below this size threshold.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="maxThreads">Simultaneous HLS Connections (.m3u8)</label>
+        <select id="maxThreads">
+          <option value="3">3 Connections (Standard)</option>
+          <option value="5" selected>5 Connections (Fast - Recommended)</option>
+          <option value="8">8 Connections (Ultra Fast)</option>
+        </select>
+        <div class="form-help">Number of streaming segments downloaded concurrently.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="defaultFormat">Default Download Format</label>
+        <select id="defaultFormat">
+          <option value="mp4" selected>MP4 (Universal - High Compatibility)</option>
+          <option value="mkv">MKV (Matroska)</option>
+          <option value="ts">TS (Transport Stream)</option>
+        </select>
+        <div class="form-help">Preferred format for saving video streams. The highest available resolution will always be selected.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="autoDetect">Automatic Network Detection</label>
+        <select id="autoDetect">
+          <option value="true" selected>Enabled (Recommended)</option>
+          <option value="false">Disabled</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
+        <label for="paypalId" style="color: #003087; display: flex; align-items: center; gap: 6px; font-weight: 700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#003087">
+            <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
+          </svg>
+          PayPal Username or Link (To receive donations)
+        </label>
+        <input type="text" id="paypalId" value="https://paypal.me/yesarts" placeholder="https://paypal.me/yesarts" />
+        <div class="form-help" style="color: #15803d;">
+          ✅ <strong>Configured link:</strong> The PayPal button in the popup links directly to <code>https://paypal.me/yesarts</code>. Users don't need to configure anything to send donations.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="feedbackUrl">💬 Feedback Link or Email</label>
+        <input type="text" id="feedbackUrl" placeholder="mailto:your_email@gmail.com or Google Form link" />
+        <div class="form-help">Web page, Google Form, or email address where users can send suggestions or report video issues.</div>
+      </div>
+
+      <button type="submit" class="btn-save">Save Preferences</button>
+      <div id="toast" class="toast">Preferences saved successfully!</div>
+    </form>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
