@@ -352,11 +352,13 @@
     }
   });
 
-  // 5. In-Page Floating Video Download Button
+  // 5. In-Page Floating Video Download Button (Featuring StreamGrabber App Icon)
   let floatingBtn = null;
-  let activeHoverVideo = null;
-  let hideTimeout = null;
+  let activeVideo = null;
   let isFloatingBtnEnabled = true;
+  let isMouseOverBtn = false;
+
+  const appIconUrl = chrome.runtime.getURL('icon48.png');
 
   chrome.storage.sync.get({ showFloatingBtn: true }, (res) => {
     isFloatingBtnEnabled = Boolean(res?.showFloatingBtn ?? true);
@@ -369,9 +371,8 @@
     if (changes.showFloatingBtn) {
       isFloatingBtnEnabled = Boolean(changes.showFloatingBtn.newValue);
       if (!isFloatingBtnEnabled && floatingBtn) {
-        floatingBtn.remove();
-        floatingBtn = null;
-      } else if (isFloatingBtnEnabled && !floatingBtn) {
+        floatingBtn.style.display = 'none';
+      } else if (isFloatingBtnEnabled) {
         initFloatingButton();
       }
     }
@@ -384,13 +385,10 @@
     btn.id = 'streamgrabber-floating-btn';
     btn.className = 'streamgrabber-floating-btn';
     btn.setAttribute('data-streamgrabber', 'true');
+    btn.title = 'StreamGrabber - Click to download this video';
     btn.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display: block;">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      <span class="btn-text">Download</span>
+      <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber" style="width: 24px; height: 24px; border-radius: 6px; display: block; flex-shrink: 0; pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,0.3);" />
+      <span class="streamgrabber-btn-text" style="font-weight: 700; font-size: 12px; color: #ffffff; pointer-events: none; white-space: nowrap; line-height: 1;">Download</span>
     `;
 
     Object.assign(btn.style, {
@@ -398,90 +396,151 @@
       zIndex: '2147483647',
       display: 'none',
       alignItems: 'center',
-      gap: '6px',
-      background: 'rgba(15, 23, 42, 0.92)',
+      gap: '7px',
+      background: 'rgba(15, 23, 42, 0.94)',
       color: '#ffffff',
-      border: '1px solid rgba(0, 135, 205, 0.7)',
-      borderRadius: '20px',
-      padding: '6px 12px',
+      border: '1.5px solid #0087cd',
+      borderRadius: '24px',
+      padding: '5px 12px 5px 6px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '12px',
       fontWeight: '700',
       cursor: 'pointer',
-      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+      boxShadow: '0 4px 18px rgba(0, 135, 205, 0.45)',
       backdropFilter: 'blur(8px)',
       userSelect: 'none',
       pointerEvents: 'auto',
-      transition: 'opacity 0.2s ease, transform 0.2s ease, background 0.2s ease',
-      opacity: '0',
-      transform: 'translateY(-4px)'
+      transition: 'opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease',
+      opacity: '0.9'
     });
 
     btn.addEventListener('mouseenter', () => {
-      clearTimeout(hideTimeout);
+      isMouseOverBtn = true;
       btn.style.opacity = '1';
-      btn.style.transform = 'translateY(0)';
+      btn.style.transform = 'scale(1.06)';
+      btn.style.background = '#0087cd';
+      btn.style.borderColor = '#38bdf8';
     });
 
     btn.addEventListener('mouseleave', () => {
-      scheduleHide();
+      isMouseOverBtn = false;
+      btn.style.opacity = '0.9';
+      btn.style.transform = 'scale(1)';
+      btn.style.background = 'rgba(15, 23, 42, 0.94)';
+      btn.style.borderColor = '#0087cd';
     });
 
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       handleFloatingDownload();
-    });
+    }, true);
 
-    document.documentElement.appendChild(btn);
+    const targetRoot = document.fullscreenElement || document.body || document.documentElement;
+    targetRoot.appendChild(btn);
     floatingBtn = btn;
     return btn;
   }
 
   function positionFloatingButton(video) {
-    if (!video || !floatingBtn) return;
+    if (!video || !isFloatingBtnEnabled) return;
+    const btn = floatingBtn || createFloatingButton();
     const rect = video.getBoundingClientRect();
-    if (rect.width < 120 || rect.height < 80) return;
 
-    if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
-      floatingBtn.style.display = 'none';
+    if (rect.width < 140 || rect.height < 90) {
+      if (!isMouseOverBtn) btn.style.display = 'none';
       return;
     }
 
-    const top = Math.max(10, rect.top + 10);
-    const right = Math.max(10, window.innerWidth - rect.right + 10);
+    if (rect.bottom < 40 || rect.top > window.innerHeight - 40 || rect.right < 40 || rect.left > window.innerWidth - 40) {
+      if (!isMouseOverBtn) btn.style.display = 'none';
+      return;
+    }
 
-    floatingBtn.style.top = `${top}px`;
-    floatingBtn.style.right = `${right}px`;
-    floatingBtn.style.display = 'flex';
+    const btnWidth = btn.offsetWidth || 116;
+    const btnHeight = btn.offsetHeight || 36;
 
-    requestAnimationFrame(() => {
-      floatingBtn.style.opacity = '1';
-      floatingBtn.style.transform = 'translateY(0)';
-    });
+    const left = Math.max(10, Math.min(window.innerWidth - btnWidth - 10, rect.right - btnWidth - 12));
+    const top = Math.max(10, Math.min(window.innerHeight - btnHeight - 10, rect.top + 12));
+
+    btn.style.left = `${Math.round(left)}px`;
+    btn.style.top = `${Math.round(top)}px`;
+    btn.style.display = 'flex';
+
+    if (document.fullscreenElement && btn.parentElement !== document.fullscreenElement) {
+      document.fullscreenElement.appendChild(btn);
+    } else if (!document.fullscreenElement && btn.parentElement !== (document.body || document.documentElement)) {
+      (document.body || document.documentElement).appendChild(btn);
+    }
   }
 
-  function scheduleHide() {
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-      if (floatingBtn) {
-        floatingBtn.style.opacity = '0';
-        floatingBtn.style.transform = 'translateY(-4px)';
-        setTimeout(() => {
-          if (floatingBtn && floatingBtn.style.opacity === '0') {
-            floatingBtn.style.display = 'none';
+  function findVideoUnderCursor(e) {
+    if (!e || !e.clientX) return null;
+    try {
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      if (elements) {
+        for (const el of elements) {
+          if (el === floatingBtn || floatingBtn?.contains(el)) continue;
+          if (el.tagName === 'VIDEO') return el;
+          if (el.querySelector) {
+            const v = el.querySelector('video');
+            if (v) return v;
           }
-        }, 200);
+        }
       }
-      activeHoverVideo = null;
-    }, 400);
+    } catch (err) {}
+    return null;
+  }
+
+  function findMostVisibleVideo() {
+    const videos = Array.from(document.querySelectorAll('video'));
+    if (videos.length === 0) return null;
+
+    const playing = videos.find(v => !v.paused && v.readyState >= 1);
+    if (playing) {
+      const r = playing.getBoundingClientRect();
+      if (r.width >= 140 && r.height >= 90 && r.bottom > 40 && r.top < window.innerHeight - 40) {
+        return playing;
+      }
+    }
+
+    let best = null;
+    let maxArea = 0;
+    for (const v of videos) {
+      const r = v.getBoundingClientRect();
+      if (r.width >= 140 && r.height >= 90 && r.bottom > 40 && r.top < window.innerHeight - 40) {
+        const area = r.width * r.height;
+        if (area > maxArea) {
+          maxArea = area;
+          best = v;
+        }
+      }
+    }
+    return best;
+  }
+
+  function updateTracker() {
+    if (!isFloatingBtnEnabled) {
+      if (floatingBtn) floatingBtn.style.display = 'none';
+      return;
+    }
+
+    if (isMouseOverBtn) return;
+
+    const targetVideo = activeVideo || findMostVisibleVideo();
+    if (targetVideo) {
+      positionFloatingButton(targetVideo);
+    } else if (floatingBtn) {
+      floatingBtn.style.display = 'none';
+    }
   }
 
   function handleFloatingDownload() {
     if (!floatingBtn) return;
-    const textEl = floatingBtn.querySelector('.btn-text');
-    const originalText = textEl ? textEl.textContent : 'Download';
-    const video = activeHoverVideo;
+    const textEl = floatingBtn.querySelector('.streamgrabber-btn-text');
+    const originalText = 'Download';
+    const video = activeVideo || findMostVisibleVideo();
 
     if (textEl) textEl.textContent = '⏳ Starting...';
     floatingBtn.style.background = '#0284c7';
@@ -502,7 +561,7 @@
 
       setTimeout(() => {
         if (textEl) textEl.textContent = originalText;
-        floatingBtn.style.background = 'rgba(15, 23, 42, 0.92)';
+        floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
       }, 2500);
     });
   }
@@ -510,32 +569,30 @@
   function initFloatingButton() {
     createFloatingButton();
 
-    document.addEventListener('mouseover', (e) => {
+    document.addEventListener('mousemove', (e) => {
       if (!isFloatingBtnEnabled) return;
-      const target = e.target;
-      if (target === floatingBtn || floatingBtn?.contains(target)) return;
+      if (isMouseOverBtn) return;
 
-      const video = target.tagName === 'VIDEO' ? target : target.closest?.('video');
+      const video = findVideoUnderCursor(e);
       if (video) {
-        clearTimeout(hideTimeout);
-        activeHoverVideo = video;
+        activeVideo = video;
         positionFloatingButton(video);
       }
-    }, true);
-
-    document.addEventListener('mouseout', (e) => {
-      if (!isFloatingBtnEnabled) return;
-      const target = e.target;
-      if (target.tagName === 'VIDEO' || target.closest?.('video')) {
-        scheduleHide();
-      }
-    }, true);
-
-    window.addEventListener('scroll', () => {
-      if (activeHoverVideo && floatingBtn && floatingBtn.style.display !== 'none') {
-        positionFloatingButton(activeHoverVideo);
-      }
     }, { passive: true });
+
+    window.addEventListener('scroll', updateTracker, { passive: true });
+    window.addEventListener('resize', updateTracker, { passive: true });
+
+    document.addEventListener('play', (e) => {
+      if (e.target && e.target.tagName === 'VIDEO') {
+        activeVideo = e.target;
+        positionFloatingButton(e.target);
+      }
+    }, true);
+
+    setInterval(updateTracker, 1500);
+    setTimeout(updateTracker, 500);
+    setTimeout(updateTracker, 1500);
   }
 
   const observer = new MutationObserver(() => scanMediaElements());
