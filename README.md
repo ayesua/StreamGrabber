@@ -4,6 +4,9 @@ Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader fo
 
 ## 🚀 Features
 
+- **In-Popup Video Preview Player:** Click on any video thumbnail or the Preview button to watch and verify streams directly inside the extension popup before downloading.
+- **Multi-Bitrate HLS Quality Selector:** Choose your preferred video resolution and bitrate (e.g. 1080p, 720p, 480p) from a dropdown on multi-variant streams.
+- **In-Page Floating Download Button:** Sleek on-hover download button attached directly to HTML5 video players on websites for instant 1-click downloading (configurable in Settings).
 - **Smart Network Sniffer:** Automatically captures media streams and direct files in the background by inspecting HTTP response headers (`video/mp4`, `application/x-mpegURL`, `application/dash+xml`, `audio/mpeg`, etc.).
 - **DOM & Player Detection:** Scans HTML5 `<video>`, `<audio>`, `<source>`, `<noscript>` fallback containers, OpenGraph/Twitter tags, and inline player configs.
 - **Pre-Play Detection:** Detects videos immediately upon page load (including players with noscript/poster overlays) without requiring user playback first.
@@ -11,7 +14,7 @@ Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader fo
 - **Native Chrome Downloads:** Streams video files directly to disk via Chrome's native download manager with zero memory overhead and native transfer speeds.
 - **Live Progress & Speed:** Real-time transfer progress bar with speed (MB/s) and percentage in the popup UI and native desktop notifications on completion.
 - **Unlimited HLS (`.m3u8`) Engine:** Parses master playlists, downloads `.ts` segments via parallel workers, handles AES-128 decryption, and merges into an intact file.
-- **Customizable Options:** Toggle whether to prompt for filename/destination before downloading, filter minimum file sizes, adjust concurrent connections, and set default formats (MP4, MKV, TS).
+- **Customizable Options:** Toggle whether to prompt for filename, enable/disable the in-page floating button, filter minimum file sizes, adjust concurrent connections, and set default formats (MP4, MKV, TS).
 - **Creator Support:** Built-in PayPal donation support (`paypal.me/yesarts`) requiring zero setup.
 
 ---

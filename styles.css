@@ -759,3 +759,222 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* Thumbnail Play Button Overlay */
+.thumb-play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 2;
+}
+
+.media-thumbnail-frame:hover .thumb-play-overlay {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.thumb-play-circle {
+  width: 42px;
+  height: 42px;
+  background: rgba(0, 135, 205, 0.92);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transform: scale(0.9);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.thumb-play-circle svg {
+  margin-left: 2px;
+}
+
+.media-thumbnail-frame:hover .thumb-play-circle {
+  transform: scale(1.06);
+  background: #0087cd;
+}
+
+/* HLS Stream Quality / Resolution Selector */
+.media-quality-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--vdh-border);
+}
+
+.quality-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--vdh-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quality-select {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--vdh-border);
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  outline: none;
+}
+
+.quality-select:focus {
+  border-color: var(--vdh-blue);
+}
+
+/* Preview Modal & Player */
+.preview-dialog {
+  max-width: 440px;
+  width: 95%;
+  padding: 14px 16px;
+  border-radius: 12px;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vdh-header-bg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 340px;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--vdh-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-modal:hover {
+  background: #f1f5f9;
+  color: var(--vdh-red);
+}
+
+.preview-player-container {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000000;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+#previewPlayer {
+  width: 100%;
+  max-height: 220px;
+  display: block;
+  outline: none;
+  background: #000;
+}
+
+.preview-status-msg {
+  padding: 8px 12px;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 11px;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.preview-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  gap: 10px;
+}
+
+.preview-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-download-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* In-Page Floating Download Button */
+.streamgrabber-floating-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #ffffff;
+  border: 1px solid rgba(0, 135, 205, 0.6);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.streamgrabber-floating-btn.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.streamgrabber-floating-btn:hover {
+  background: #0087cd;
+  border-color: #38bdf8;
+  box-shadow: 0 6px 20px rgba(0, 135, 205, 0.5);
+  transform: translateY(-1px) scale(1.03);
+}
+
+.streamgrabber-floating-btn.loading {
+  background: #0284c7;
+  pointer-events: none;
+}
+
+.streamgrabber-floating-btn.success {
+  background: #16a34a;
+  border-color: #4ade80;
+}

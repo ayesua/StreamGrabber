@@ -173,7 +173,7 @@ export class HLSEngine {
 
     if (isMaster) {
       const variants = [];
-      let currentVariant = {};
+      let currentVariant = null;
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -183,9 +183,12 @@ export class HLSEngine {
           if (resMatch) currentVariant.resolution = resMatch[1];
           const bwMatch = line.match(/BANDWIDTH=(\d+)/i);
           if (bwMatch) currentVariant.bandwidth = parseInt(bwMatch[1], 10);
-        } else if (!line.startsWith('#') && lines[i - 1]?.startsWith('#EXT-X-STREAM-INF:')) {
+          const nameMatch = line.match(/NAME="([^"]+)"/i);
+          if (nameMatch) currentVariant.name = nameMatch[1];
+        } else if (currentVariant && !line.startsWith('#')) {
           currentVariant.url = this.resolveUrl(line, baseUrl);
           variants.push(currentVariant);
+          currentVariant = null;
         }
       }
 
@@ -300,13 +303,14 @@ export class HLSEngine {
   /**
    * Start complete HLS stream download
    */
-  async startDownload({ id, url, title, tabId, referer, format, saveAs, onProgress, onStatusChange }) {
+  async startDownload({ id, url, selectedVariantUrl, title, tabId, referer, format, saveAs, onProgress, onStatusChange }) {
     const downloadId = id || 'hls_' + Date.now();
     const targetFormat = (format || 'mp4').toLowerCase();
     
     const downloadState = {
       id: downloadId,
       url,
+      selectedVariantUrl,
       title: title || 'full_video',
       format: targetFormat,
       status: 'analyzing',
@@ -329,20 +333,21 @@ export class HLSEngine {
     try {
       updateState({ status: 'analyzing' });
 
-      // Fetch Master Playlist (immune to HTTP 412)
-      const masterText = await this.fetchPlaylistText(url, tabId, referer);
-      let parsed = this.parseM3U8(masterText, url);
+      // Target URL: either the user's explicitly selected variant or the master playlist URL
+      const streamUrl = selectedVariantUrl || url;
+      const initialText = await this.fetchPlaylistText(streamUrl, tabId, referer);
+      let parsed = this.parseM3U8(initialText, streamUrl);
 
-      // If Master, fetch highest quality variant
+      // If it's a Master playlist (and user didn't pick a direct media playlist), select best or chosen variant
       let selectedBandwidth = 0;
       if (parsed.isMaster) {
         if (!parsed.variants || parsed.variants.length === 0) {
           throw new Error('No stream variants found in stream');
         }
-        const bestVariant = parsed.variants[0];
-        selectedBandwidth = bestVariant.bandwidth || 0;
-        const mediaText = await this.fetchPlaylistText(bestVariant.url, tabId, referer);
-        parsed = this.parseM3U8(mediaText, bestVariant.url);
+        const chosenVariant = (selectedVariantUrl && parsed.variants.find(v => v.url === selectedVariantUrl)) || parsed.variants[0];
+        selectedBandwidth = chosenVariant.bandwidth || 0;
+        const mediaText = await this.fetchPlaylistText(chosenVariant.url, tabId, referer);
+        parsed = this.parseM3U8(mediaText, chosenVariant.url);
       }
 
       if (!parsed.segments || parsed.segments.length === 0) {

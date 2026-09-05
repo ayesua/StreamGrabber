@@ -146,9 +146,120 @@ document.addEventListener('DOMContentLoaded', async () => {
       const el = document.getElementById(`dl_${message.id}`);
       if (el) el.remove();
       loadTabMedia();
+    } else if (message.action === 'MEDIA_UPDATED') {
+      loadTabMedia();
+    }
+  });
+
+  // Preview Modal Listeners
+  const modalPreview = document.getElementById('modalPreview');
+  const modalPreviewBtnClose = document.getElementById('modalPreviewBtnClose');
+  const previewBtnDownload = document.getElementById('previewBtnDownload');
+
+  if (modalPreviewBtnClose) {
+    modalPreviewBtnClose.addEventListener('click', closePreview);
+  }
+
+  if (previewBtnDownload) {
+    previewBtnDownload.addEventListener('click', () => {
+      if (!activePreviewItem) return;
+      const format = document.getElementById('previewFormatSelect')?.value || 'mp4';
+      const itemToDownload = { ...activePreviewItem };
+      closePreview();
+      triggerDownload(itemToDownload, format, itemToDownload.selectedVariantUrl);
+    });
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (modalPreview && modalPreview.style.display !== 'none') {
+        closePreview();
+      }
     }
   });
 });
+
+let currentHlsInstance = null;
+let activePreviewItem = null;
+
+function openPreview(item) {
+  activePreviewItem = item;
+  const modal = document.getElementById('modalPreview');
+  const player = document.getElementById('previewPlayer');
+  const titleEl = document.getElementById('previewTitle');
+  const qualityBadge = document.getElementById('previewQualityBadge');
+  const typeBadge = document.getElementById('previewTypeBadge');
+  const statusMsg = document.getElementById('previewStatusMsg');
+
+  if (!modal || !player) return;
+
+  closePreviewPlayerOnly();
+
+  if (titleEl) titleEl.textContent = item.title || 'Video Preview';
+  if (qualityBadge) qualityBadge.textContent = '★ ' + (item.quality || 'Auto HD');
+  if (typeBadge) {
+    typeBadge.textContent = item.type || 'MP4';
+    typeBadge.className = `thumbnail-badge-type tag tag-type-${(item.type || 'mp4').toLowerCase()}`;
+  }
+  if (statusMsg) statusMsg.style.display = 'none';
+
+  modal.style.display = 'flex';
+
+  const streamUrl = item.selectedVariantUrl || item.url;
+
+  if (item.type === 'HLS' || streamUrl.includes('.m3u8')) {
+    if (window.Hls && window.Hls.isSupported()) {
+      currentHlsInstance = new window.Hls({
+        maxBufferLength: 15,
+        enableWorker: true
+      });
+      currentHlsInstance.loadSource(streamUrl);
+      currentHlsInstance.attachMedia(player);
+      currentHlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
+        player.play().catch(() => {});
+      });
+      currentHlsInstance.on(window.Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          if (statusMsg) {
+            statusMsg.textContent = 'Preview notice: Direct stream playback requires unrestricted CORS. Full video download remains available!';
+            statusMsg.style.display = 'block';
+          }
+        }
+      });
+    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+      player.src = streamUrl;
+      player.play().catch(() => {});
+    } else {
+      if (statusMsg) {
+        statusMsg.textContent = 'HLS preview playback not supported natively in this browser.';
+        statusMsg.style.display = 'block';
+      }
+    }
+  } else {
+    player.src = streamUrl;
+    player.play().catch(() => {});
+  }
+}
+
+function closePreviewPlayerOnly() {
+  const player = document.getElementById('previewPlayer');
+  if (player) {
+    player.pause();
+    player.removeAttribute('src');
+    player.load();
+  }
+  if (currentHlsInstance) {
+    currentHlsInstance.destroy();
+    currentHlsInstance = null;
+  }
+}
+
+function closePreview() {
+  closePreviewPlayerOnly();
+  const modal = document.getElementById('modalPreview');
+  if (modal) modal.style.display = 'none';
+  activePreviewItem = null;
+}
 
 async function loadTabMedia() {
   if (!currentTabId) return;
@@ -254,12 +365,33 @@ function renderMediaList(mediaList) {
       });
     }
 
+    // Preview trigger on thumbnail click
+    const thumbFrame = card.querySelector('.btn-trigger-preview');
+    if (thumbFrame) {
+      thumbFrame.addEventListener('click', () => openPreview(item));
+    }
+
+    // Preview button
+    const btnPreview = card.querySelector('.btn-preview');
+    if (btnPreview) {
+      btnPreview.addEventListener('click', () => openPreview(item));
+    }
+
+    // Quality selector change
+    const qualitySelect = card.querySelector('.quality-select');
+    if (qualitySelect) {
+      qualitySelect.addEventListener('change', (e) => {
+        item.selectedVariantUrl = e.target.value;
+      });
+    }
+
     // Download Button
     const btnDownload = card.querySelector('.btn-download');
     if (btnDownload) {
       btnDownload.addEventListener('click', () => {
         const format = card.querySelector('.format-select')?.value || 'mp4';
-        triggerDownload(item, format);
+        const selectedVariant = card.querySelector('.quality-select')?.value || item.selectedVariantUrl;
+        triggerDownload(item, format, selectedVariant);
       });
     }
 
@@ -318,13 +450,34 @@ function createMediaCardHTML(item) {
     cleanTitle = currentTabTitle || 'Video';
   }
 
+  const qualitySelectHTML = (item.variants && item.variants.length > 1) ? `
+    <div class="media-quality-row">
+      <span class="quality-label">Resolution:</span>
+      <select class="quality-select" title="Choose stream resolution">
+        ${item.variants.map((v, idx) => {
+          const resHeight = v.resolution ? (v.resolution.split('x')[1] ? v.resolution.split('x')[1] + 'p' : v.resolution) : (v.name || 'Stream');
+          const mbps = v.bandwidth ? ` (~${(v.bandwidth / 1000000).toFixed(1)} Mbps)` : '';
+          const isSelected = item.selectedVariantUrl ? (item.selectedVariantUrl === v.url) : (idx === 0);
+          return `<option value="${escapeHtml(v.url)}" ${isSelected ? 'selected' : ''}>★ ${resHeight}${mbps}</option>`;
+        }).join('')}
+      </select>
+    </div>
+  ` : '';
+
   return `
     <div class="media-card" id="card_${item.id}">
       
-      <!-- Static Video Screenshot Photo (Directly Above Download Button) -->
-      <div class="media-thumbnail-frame" title="Captured video frame">
+      <!-- Static Video Screenshot Photo with Play Overlay -->
+      <div class="media-thumbnail-frame btn-trigger-preview" title="Click to preview video">
         ${posterImgHTML}
         ${placeholderHTML}
+        <div class="thumb-play-overlay">
+          <div class="thumb-play-circle">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </div>
+        </div>
         <span class="thumbnail-badge-type tag ${typeClass}">${item.type}</span>
         <span class="thumbnail-badge-res">★ ${qualityText}</span>
       </div>
@@ -347,7 +500,10 @@ function createMediaCardHTML(item) {
           <span>Size: <strong>${sizeText}</strong></span>
         </div>
 
-        <!-- Download Action Buttons with Format Selector -->
+        <!-- HLS Stream Quality / Resolution Selector -->
+        ${qualitySelectHTML}
+
+        <!-- Download Action Buttons with Format Selector and Preview Button -->
         <div class="media-actions">
           <select class="format-select" title="Select video format (MP4, MKV, TS)">
             <option value="mp4" selected>MP4</option>
@@ -355,13 +511,17 @@ function createMediaCardHTML(item) {
             <option value="ts">TS</option>
           </select>
 
-          <button class="btn-primary btn-download" title="Download in maximum available quality">
+          <button class="btn-primary btn-download" title="Download in selected quality">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
             Download
+          </button>
+
+          <button class="btn-secondary btn-preview" title="Preview video before downloading">
+            ▶ Preview
           </button>
 
           <button class="btn-secondary btn-audio" title="Download as MP3 audio">
@@ -427,12 +587,17 @@ function promptForFilename(defaultTitle, callback) {
   };
 }
 
-function triggerDownload(item, format = 'mp4') {
+function triggerDownload(item, format = 'mp4', selectedVariantUrl = null) {
   const genericNames = ['master', 'index', 'playlist', 'video', 'manifest', 'stream', 'video_completo', 'video_stream', 'full_video'];
   let finalTitle = item.title;
   if (!finalTitle || genericNames.includes(finalTitle.toLowerCase().trim())) {
     finalTitle = currentTabTitle || 'Video';
   }
+
+  const updatedItem = {
+    ...item,
+    selectedVariantUrl: selectedVariantUrl || item.selectedVariantUrl || null
+  };
 
   chrome.storage.sync.get({ askFilename: false }, (res) => {
     if (res && res.askFilename) {
@@ -441,10 +606,10 @@ function triggerDownload(item, format = 'mp4') {
           // User clicked Cancel in the modal
           return;
         }
-        executeDownload(item, chosenTitle, format);
+        executeDownload(updatedItem, chosenTitle, format);
       });
     } else {
-      executeDownload(item, finalTitle, format);
+      executeDownload(updatedItem, finalTitle, format);
     }
   });
 }

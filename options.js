@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const askFilenameInput = document.getElementById('askFilename');
+  const showFloatingBtnInput = document.getElementById('showFloatingBtn');
   const minSizeInput = document.getElementById('minSize');
   const maxThreadsInput = document.getElementById('maxThreads');
   const defaultFormatInput = document.getElementById('defaultFormat');
@@ -14,12 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load saved options
   chrome.storage.sync.get({
     askFilename: false,
+    showFloatingBtn: true,
     minSizeKB: 100,
     maxThreads: 5,
     defaultFormat: 'mp4',
     autoDetect: true
   }, (items) => {
     if (askFilenameInput) askFilenameInput.checked = Boolean(items.askFilename);
+    if (showFloatingBtnInput) showFloatingBtnInput.checked = Boolean(items.showFloatingBtn ?? true);
     minSizeInput.value = items.minSizeKB;
     maxThreadsInput.value = items.maxThreads;
     if (defaultFormatInput) defaultFormatInput.value = items.defaultFormat || 'mp4';
@@ -31,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
 
     const askFilename = askFilenameInput ? askFilenameInput.checked : false;
+    const showFloatingBtn = showFloatingBtnInput ? showFloatingBtnInput.checked : true;
     const minSizeKB = parseInt(minSizeInput.value, 10) || 100;
     const maxThreads = parseInt(maxThreadsInput.value, 10) || 5;
     const defaultFormat = defaultFormatInput ? defaultFormatInput.value : 'mp4';
@@ -38,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.storage.sync.set({
       askFilename,
+      showFloatingBtn,
       minSizeKB,
       maxThreads,
       defaultFormat,

@@ -352,6 +352,192 @@
     }
   });
 
+  // 5. In-Page Floating Video Download Button
+  let floatingBtn = null;
+  let activeHoverVideo = null;
+  let hideTimeout = null;
+  let isFloatingBtnEnabled = true;
+
+  chrome.storage.sync.get({ showFloatingBtn: true }, (res) => {
+    isFloatingBtnEnabled = Boolean(res?.showFloatingBtn ?? true);
+    if (isFloatingBtnEnabled) {
+      initFloatingButton();
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.showFloatingBtn) {
+      isFloatingBtnEnabled = Boolean(changes.showFloatingBtn.newValue);
+      if (!isFloatingBtnEnabled && floatingBtn) {
+        floatingBtn.remove();
+        floatingBtn = null;
+      } else if (isFloatingBtnEnabled && !floatingBtn) {
+        initFloatingButton();
+      }
+    }
+  });
+
+  function createFloatingButton() {
+    if (floatingBtn) return floatingBtn;
+
+    const btn = document.createElement('div');
+    btn.id = 'streamgrabber-floating-btn';
+    btn.className = 'streamgrabber-floating-btn';
+    btn.setAttribute('data-streamgrabber', 'true');
+    btn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display: block;">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <span class="btn-text">Download</span>
+    `;
+
+    Object.assign(btn.style, {
+      position: 'fixed',
+      zIndex: '2147483647',
+      display: 'none',
+      alignItems: 'center',
+      gap: '6px',
+      background: 'rgba(15, 23, 42, 0.92)',
+      color: '#ffffff',
+      border: '1px solid rgba(0, 135, 205, 0.7)',
+      borderRadius: '20px',
+      padding: '6px 12px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontSize: '12px',
+      fontWeight: '700',
+      cursor: 'pointer',
+      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+      backdropFilter: 'blur(8px)',
+      userSelect: 'none',
+      pointerEvents: 'auto',
+      transition: 'opacity 0.2s ease, transform 0.2s ease, background 0.2s ease',
+      opacity: '0',
+      transform: 'translateY(-4px)'
+    });
+
+    btn.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimeout);
+      btn.style.opacity = '1';
+      btn.style.transform = 'translateY(0)';
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      scheduleHide();
+    });
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleFloatingDownload();
+    });
+
+    document.documentElement.appendChild(btn);
+    floatingBtn = btn;
+    return btn;
+  }
+
+  function positionFloatingButton(video) {
+    if (!video || !floatingBtn) return;
+    const rect = video.getBoundingClientRect();
+    if (rect.width < 120 || rect.height < 80) return;
+
+    if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+      floatingBtn.style.display = 'none';
+      return;
+    }
+
+    const top = Math.max(10, rect.top + 10);
+    const right = Math.max(10, window.innerWidth - rect.right + 10);
+
+    floatingBtn.style.top = `${top}px`;
+    floatingBtn.style.right = `${right}px`;
+    floatingBtn.style.display = 'flex';
+
+    requestAnimationFrame(() => {
+      floatingBtn.style.opacity = '1';
+      floatingBtn.style.transform = 'translateY(0)';
+    });
+  }
+
+  function scheduleHide() {
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      if (floatingBtn) {
+        floatingBtn.style.opacity = '0';
+        floatingBtn.style.transform = 'translateY(-4px)';
+        setTimeout(() => {
+          if (floatingBtn && floatingBtn.style.opacity === '0') {
+            floatingBtn.style.display = 'none';
+          }
+        }, 200);
+      }
+      activeHoverVideo = null;
+    }, 400);
+  }
+
+  function handleFloatingDownload() {
+    if (!floatingBtn) return;
+    const textEl = floatingBtn.querySelector('.btn-text');
+    const originalText = textEl ? textEl.textContent : 'Download';
+    const video = activeHoverVideo;
+
+    if (textEl) textEl.textContent = '⏳ Starting...';
+    floatingBtn.style.background = '#0284c7';
+
+    const videoSrc = video ? (video.currentSrc || video.src || '') : '';
+
+    chrome.runtime.sendMessage({
+      action: 'START_FLOATING_DOWNLOAD',
+      videoSrc: videoSrc
+    }, (response) => {
+      if (chrome.runtime.lastError || !response || !response.success) {
+        if (textEl) textEl.textContent = '⚠️ Play video 1st';
+        floatingBtn.style.background = '#e11d48';
+      } else {
+        if (textEl) textEl.textContent = '✅ Downloading!';
+        floatingBtn.style.background = '#16a34a';
+      }
+
+      setTimeout(() => {
+        if (textEl) textEl.textContent = originalText;
+        floatingBtn.style.background = 'rgba(15, 23, 42, 0.92)';
+      }, 2500);
+    });
+  }
+
+  function initFloatingButton() {
+    createFloatingButton();
+
+    document.addEventListener('mouseover', (e) => {
+      if (!isFloatingBtnEnabled) return;
+      const target = e.target;
+      if (target === floatingBtn || floatingBtn?.contains(target)) return;
+
+      const video = target.tagName === 'VIDEO' ? target : target.closest?.('video');
+      if (video) {
+        clearTimeout(hideTimeout);
+        activeHoverVideo = video;
+        positionFloatingButton(video);
+      }
+    }, true);
+
+    document.addEventListener('mouseout', (e) => {
+      if (!isFloatingBtnEnabled) return;
+      const target = e.target;
+      if (target.tagName === 'VIDEO' || target.closest?.('video')) {
+        scheduleHide();
+      }
+    }, true);
+
+    window.addEventListener('scroll', () => {
+      if (activeHoverVideo && floatingBtn && floatingBtn.style.display !== 'none') {
+        positionFloatingButton(activeHoverVideo);
+      }
+    }, { passive: true });
+  }
+
   const observer = new MutationObserver(() => scanMediaElements());
   observer.observe(document.documentElement, { childList: true, subtree: true });
 })();

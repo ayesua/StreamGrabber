@@ -251,6 +251,31 @@ function addMediaItem(tabId, item) {
 
   tabStore.set(item.url, item);
   updateBadge(tabId);
+
+  // Asynchronously inspect and parse HLS stream variants for master playlists
+  if (item.type === 'HLS' && !item._variantsEnriched) {
+    enrichHlsVariants(item, tabId);
+  }
+}
+
+async function enrichHlsVariants(item, tabId) {
+  item._variantsEnriched = true;
+  try {
+    const text = await hlsEngine.fetchPlaylistText(item.url, tabId);
+    if (!text) return;
+    const parsed = hlsEngine.parseM3U8(text, item.url);
+    if (parsed.isMaster && parsed.variants && parsed.variants.length > 0) {
+      item.variants = parsed.variants;
+      const top = parsed.variants[0];
+      if (top && top.resolution) {
+        const h = top.resolution.split('x')[1] || top.resolution;
+        item.quality = `${h}p (${parsed.variants.length} Qualities)`;
+      }
+      chrome.runtime.sendMessage({ action: 'MEDIA_UPDATED', tabId, item }, () => {
+        if (chrome.runtime.lastError) {}
+      });
+    }
+  } catch (e) {}
 }
 
 function updateBadge(tabId) {
@@ -519,95 +544,150 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === 'START_DOWNLOAD') {
-    const { item, referer, tabId: downloadTabId, format } = message;
-    const chosenFormat = (format || 'mp4').toLowerCase();
+function handleStartDownload({ item, referer, downloadTabId, format }, callback) {
+  const chosenFormat = (format || 'mp4').toLowerCase();
 
-    chrome.storage.sync.get({ askFilename: false }, async (settings) => {
-      const askFilename = Boolean(settings.askFilename);
+  chrome.storage.sync.get({ askFilename: false }, async (settings) => {
+    const askFilename = Boolean(settings.askFilename);
 
-      const sanitizedTitle = (item.title || 'video_completo')
-        .replace(/[/\\?%*:|"<>]/g, '_')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .substring(0, 100);
+    const sanitizedTitle = (item.title || 'video_completo')
+      .replace(/[/\\?%*:|"<>]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 100);
 
-      const downloadId = 'dl_' + Date.now();
+    const downloadId = 'dl_' + Date.now();
 
-      if (item.type === 'HLS' || item.url.includes('.m3u8')) {
-        const initialState = {
-          id: downloadId,
-          title: item.title,
-          type: 'HLS',
-          format: chosenFormat,
-          progress: 0,
-          speedBps: 0,
-          status: 'downloading',
-          downloadedBytes: 0
-        };
-        activeDownloadsMap.set(downloadId, initialState);
-        chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: initialState }, () => {
-          if (chrome.runtime.lastError) {}
-        });
+    if (item.type === 'HLS' || item.url.includes('.m3u8')) {
+      const initialState = {
+        id: downloadId,
+        title: item.title,
+        type: 'HLS',
+        format: chosenFormat,
+        progress: 0,
+        speedBps: 0,
+        status: 'downloading',
+        downloadedBytes: 0
+      };
+      activeDownloadsMap.set(downloadId, initialState);
+      chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: initialState }, () => {
+        if (chrome.runtime.lastError) {}
+      });
 
-        hlsEngine.startDownload({
-          id: downloadId,
-          url: item.url,
-          title: item.title,
-          tabId: downloadTabId || tabId,
-          referer: referer || item.pageUrl || '',
-          format: chosenFormat,
-          saveAs: askFilename,
-          onProgress: (state) => {
-            activeDownloadsMap.set(downloadId, state);
-            chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state }, () => {
-              if (chrome.runtime.lastError) {}
-            });
-          },
-          onStatusChange: (state) => {
-            activeDownloadsMap.set(downloadId, state);
-            if (state.status === 'complete') {
-              notifyDownloadComplete(item.title, `${sanitizedTitle}.${chosenFormat}`);
-              setTimeout(() => activeDownloadsMap.delete(downloadId), 5000);
-            }
-            chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
-              if (chrome.runtime.lastError) {}
-            });
+      hlsEngine.startDownload({
+        id: downloadId,
+        url: item.url,
+        selectedVariantUrl: item.selectedVariantUrl,
+        title: item.title,
+        tabId: downloadTabId,
+        referer: referer || item.pageUrl || '',
+        format: chosenFormat,
+        saveAs: askFilename,
+        onProgress: (state) => {
+          activeDownloadsMap.set(downloadId, state);
+          chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+        },
+        onStatusChange: (state) => {
+          activeDownloadsMap.set(downloadId, state);
+          if (state.status === 'complete') {
+            notifyDownloadComplete(item.title, `${sanitizedTitle}.${chosenFormat}`);
+            setTimeout(() => activeDownloadsMap.delete(downloadId), 5000);
           }
-        }).catch(err => {
-          console.error('HLS Download Error:', err);
-        });
+          chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+        }
+      }).catch(err => {
+        console.error('HLS Download Error:', err);
+      });
 
-        sendResponse({ success: true, downloadId });
-      } else {
-        // Direct Media File Downloader with intact URL (avoids HTTP 404 from signature invalidation)
-        let ext = chosenFormat ? `.${chosenFormat}` : '.mp4';
-        if (item.type === 'Audio') ext = '.mp3';
-        else if (item.type === 'WebM' && !chosenFormat) ext = '.webm';
-        else if (item.type === 'FLV' && !chosenFormat) ext = '.flv';
+      if (callback) callback({ success: true, downloadId });
+    } else {
+      // Direct Media File Downloader with intact URL (avoids HTTP 404 from signature invalidation)
+      let ext = chosenFormat ? `.${chosenFormat}` : '.mp4';
+      if (item.type === 'Audio') ext = '.mp3';
+      else if (item.type === 'WebM' && !chosenFormat) ext = '.webm';
+      else if (item.type === 'FLV' && !chosenFormat) ext = '.flv';
 
-        const filename = `${sanitizedTitle}${ext}`;
-        const pageReferer = referer || item.pageUrl || '';
+      const filename = `${sanitizedTitle}${ext}`;
+      const pageReferer = referer || item.pageUrl || '';
 
-        const initialState = {
-          id: downloadId,
-          title: item.title || sanitizedTitle,
-          type: item.type || 'MP4',
-          format: chosenFormat,
-          progress: 0,
-          speedBps: 0,
-          status: 'downloading',
-          downloadedBytes: 0,
-          totalBytes: item.size || 0
-        };
-        activeDownloadsMap.set(downloadId, initialState);
-        chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: initialState }, () => {
-          if (chrome.runtime.lastError) {}
-        });
+      const initialState = {
+        id: downloadId,
+        title: item.title || sanitizedTitle,
+        type: item.type || 'MP4',
+        format: chosenFormat,
+        progress: 0,
+        speedBps: 0,
+        status: 'downloading',
+        downloadedBytes: 0,
+        totalBytes: item.size || 0
+      };
+      activeDownloadsMap.set(downloadId, initialState);
+      chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: initialState }, () => {
+        if (chrome.runtime.lastError) {}
+      });
 
-        startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, sendResponse, item.title, item.size);
+      startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.size);
+    }
+  });
+}
+
+  if (message.action === 'START_DOWNLOAD') {
+    handleStartDownload({
+      item: message.item,
+      referer: message.referer,
+      downloadTabId: message.tabId || sender.tab?.id,
+      format: message.format
+    }, sendResponse);
+    return true;
+  }
+
+  if (message.action === 'START_FLOATING_DOWNLOAD') {
+    const targetTabId = message.tabId || sender.tab?.id;
+    const tabStore = tabMediaStore.get(targetTabId);
+    let itemToDownload = null;
+
+    if (tabStore && tabStore.size > 0) {
+      if (message.videoSrc) {
+        for (const item of tabStore.values()) {
+          if (item.url === message.videoSrc) {
+            itemToDownload = item;
+            break;
+          }
+        }
       }
-    });
+      if (!itemToDownload) {
+        const items = Array.from(tabStore.values());
+        itemToDownload = items.find(i => i.type === 'HLS') || items[0];
+      }
+    }
+
+    if (!itemToDownload && message.videoSrc && !message.videoSrc.startsWith('blob:')) {
+      itemToDownload = {
+        id: 'direct_' + Date.now(),
+        url: message.videoSrc,
+        title: tabTitles.get(targetTabId) || sender.tab?.title || 'Video',
+        type: message.videoSrc.includes('.m3u8') ? 'HLS' : 'MP4',
+        quality: 'Auto HD',
+        poster: tabPosters.get(targetTabId) || null
+      };
+    }
+
+    if (itemToDownload) {
+      handleStartDownload({
+        item: itemToDownload,
+        referer: sender.tab?.url || '',
+        downloadTabId: targetTabId,
+        format: 'mp4'
+      }, (res) => {
+        sendResponse({ success: true, title: itemToDownload.title, downloadId: res?.downloadId });
+      });
+    } else {
+      sendResponse({ success: false, error: 'No video stream detected yet. Try playing the video.' });
+    }
     return true;
   }
 
