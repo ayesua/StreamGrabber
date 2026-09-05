@@ -213,6 +213,40 @@ function isExcludedNetworkUrl(url, contentType) {
   return false;
 }
 
+/**
+ * Identify if a title is empty, generic, or technical CDN garbage (e.g. tpl..., seg_..., hash, 1080p)
+ */
+function isGenericOrTechnicalTitle(title) {
+  if (!title) return true;
+  const clean = title.toLowerCase().trim();
+  if (!clean || clean.length <= 2) return true;
+
+  // 1. Common generic names
+  const genericList = [
+    'master', 'index', 'playlist', 'video', 'manifest', 'stream',
+    'video_completo', 'video_stream', 'full_video', 'full video',
+    'media', 'videoplayback', 'playback', 'output', 'file', 'source',
+    'untitled', 'default', 'null', 'undefined', 'movie', 'clip',
+    'watch', 'play', 'download', 'streaming'
+  ];
+  if (genericList.includes(clean)) return true;
+
+  // 2. Technical CDN template / profile patterns: e.g. "tpl...", "tpl_1080p", "tpl-720p", "tpl_sd", "tpl"
+  if (/^tpl[-_]?/i.test(clean) || /^tpl\d+/i.test(clean) || clean === 'tpl' || clean.startsWith('tpl')) return true;
+
+  // 3. Technical stream / chunk / segment prefixes
+  if (/^(hls|dash|seg|segment|chunk|frag|fragment|part)[-_]?\d*/i.test(clean)) return true;
+  if (/^(video|stream|track|aud|audio)[-_]?\d+/i.test(clean)) return true;
+
+  // 4. Resolution only: e.g. "1080p", "720p", "480p", "1920x1080", "1280x720", "mp4"
+  if (/^(\d{3,4}p|\d{3,4}x\d{3,4}|mp4|webm|m3u8|ts|m4s)$/i.test(clean)) return true;
+
+  // 5. Pure hex hashes / tokens: e.g. "a1b2c3d4e5f6..." (12+ hex characters)
+  if (/^[0-9a-f]{12,}$/i.test(clean)) return true;
+
+  return false;
+}
+
 function addMediaItem(tabId, item) {
   if (!tabId || tabId < 0) return;
   if (isExcludedNetworkUrl(item.url, '')) return;
@@ -245,6 +279,22 @@ function addMediaItem(tabId, item) {
 
   if (!item.poster && tabPosters.has(tabId)) {
     item.poster = tabPosters.get(tabId);
+  }
+
+  // Ensure title consistency:
+  const knownTitle = tabTitles.get(tabId);
+  if (knownTitle && !isGenericOrTechnicalTitle(knownTitle)) {
+    if (isGenericOrTechnicalTitle(item.title)) {
+      item.title = knownTitle;
+    }
+  } else if (item.title && !isGenericOrTechnicalTitle(item.title)) {
+    tabTitles.set(tabId, item.title);
+    // Retroactively update earlier items in this tab that had tpl... or generic titles
+    for (const existing of tabStore.values()) {
+      if (isGenericOrTechnicalTitle(existing.title)) {
+        existing.title = item.title;
+      }
+    }
   }
 
   if (tabStore.has(item.url)) return;
@@ -364,24 +414,33 @@ chrome.webRequest.onHeadersReceived.addListener(
 
       const mediaInfo = parseMediaInfo(url, contentType, contentLength);
 
-      const genericNames = ['master', 'index', 'playlist', 'video', 'manifest', 'stream', 'video_completo', 'video_stream'];
       let videoTitle = tabTitles.get(details.tabId) || '';
-      
-      if (!videoTitle || genericNames.includes(videoTitle.toLowerCase().trim())) {
-        let pathName = '';
-        try {
-          const parsedUrl = new URL(url);
-          const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
-          if (pathSegments.length > 0) {
-            pathName = pathSegments[pathSegments.length - 1].replace(/\.[^/.]+$/, "");
-          }
-        } catch (e) {}
 
-        if (pathName && !genericNames.includes(pathName.toLowerCase().trim())) {
-          videoTitle = pathName;
-        } else {
-          videoTitle = 'Video';
+      // If we don't have an authentic page title yet, query the tab immediately
+      if (!videoTitle || isGenericOrTechnicalTitle(videoTitle)) {
+        if (details.tabId) {
+          chrome.tabs.get(details.tabId, (tab) => {
+            if (tab && tab.title) {
+              const clean = tab.title.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+              if (clean && !isGenericOrTechnicalTitle(clean)) {
+                tabTitles.set(details.tabId, clean);
+                item.title = clean;
+                const tabStore = tabMediaStore.get(details.tabId);
+                if (tabStore) {
+                  for (const m of tabStore.values()) {
+                    if (isGenericOrTechnicalTitle(m.title)) {
+                      m.title = clean;
+                    }
+                  }
+                }
+                chrome.runtime.sendMessage({ action: 'MEDIA_UPDATED', tabId: details.tabId, item }, () => {
+                  if (chrome.runtime.lastError) {}
+                });
+              }
+            }
+          });
         }
+        videoTitle = 'Video';
       }
 
       const item = {
@@ -398,19 +457,6 @@ chrome.webRequest.onHeadersReceived.addListener(
         initiator: details.initiator || '',
         timestamp: Date.now()
       };
-
-      // Asynchronously fetch tab title if title is still generic
-      if (videoTitle === 'Video' && details.tabId) {
-        chrome.tabs.get(details.tabId, (tab) => {
-          if (tab && tab.title) {
-            const clean = tab.title.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
-            if (clean && !genericNames.includes(clean.toLowerCase())) {
-              tabTitles.set(details.tabId, clean);
-              item.title = clean;
-            }
-          }
-        });
-      }
 
       addMediaItem(details.tabId, item);
     }
@@ -444,13 +490,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === 'TAB_INFO_UPDATE') {
     if (tabId && message.title) {
-      tabTitles.set(tabId, message.title);
-      const tabStore = tabMediaStore.get(tabId);
-      if (tabStore) {
-        const genericNames = ['master', 'index', 'playlist', 'video', 'manifest', 'stream', 'video_completo', 'video_stream'];
-        for (const item of tabStore.values()) {
-          if (!item.title || genericNames.includes(item.title.toLowerCase().trim())) {
-            item.title = message.title;
+      const cleanTitle = message.title.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (cleanTitle && !isGenericOrTechnicalTitle(cleanTitle)) {
+        tabTitles.set(tabId, cleanTitle);
+        const tabStore = tabMediaStore.get(tabId);
+        if (tabStore) {
+          for (const item of tabStore.values()) {
+            if (isGenericOrTechnicalTitle(item.title)) {
+              item.title = cleanTitle;
+            }
           }
         }
       }
@@ -489,12 +537,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const tabStore = tabMediaStore.get(message.tabId);
     let mediaList = tabStore ? Array.from(tabStore.values()) : [];
 
-    // Ensure titles are authentic, not generic 'master'
-    const knownTitle = tabTitles.get(message.tabId);
-    if (knownTitle) {
-      const genericNames = ['master', 'index', 'playlist', 'video', 'manifest', 'stream', 'video_completo', 'video_stream'];
+    // 1. Resolve authentic title: from tabTitles or from any DOM-detected item that has a good title
+    let knownTitle = tabTitles.get(message.tabId);
+    if (!knownTitle || isGenericOrTechnicalTitle(knownTitle)) {
+      const goodItem = mediaList.find(m => m.title && !isGenericOrTechnicalTitle(m.title));
+      if (goodItem) {
+        knownTitle = goodItem.title;
+        tabTitles.set(message.tabId, knownTitle);
+      }
+    }
+
+    // 2. Ensure ALL items in this tab (including top streams) receive the authentic title
+    if (knownTitle && !isGenericOrTechnicalTitle(knownTitle)) {
       mediaList.forEach(m => {
-        if (!m.title || genericNames.includes(m.title.toLowerCase().trim())) {
+        if (isGenericOrTechnicalTitle(m.title)) {
           m.title = knownTitle;
         }
       });

@@ -21,6 +21,29 @@ function formatBytes(bytes) {
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
+function isGenericOrTechnicalTitle(title) {
+  if (!title) return true;
+  const clean = title.toLowerCase().trim();
+  if (!clean || clean.length <= 2) return true;
+
+  const genericList = [
+    'master', 'index', 'playlist', 'video', 'manifest', 'stream',
+    'video_completo', 'video_stream', 'full_video', 'full video',
+    'media', 'videoplayback', 'playback', 'output', 'file', 'source',
+    'untitled', 'default', 'null', 'undefined', 'movie', 'clip',
+    'watch', 'play', 'download', 'streaming'
+  ];
+  if (genericList.includes(clean)) return true;
+
+  if (/^tpl[-_]?/i.test(clean) || /^tpl\d+/i.test(clean) || clean === 'tpl' || clean.startsWith('tpl')) return true;
+  if (/^(hls|dash|seg|segment|chunk|frag|fragment|part)[-_]?\d*/i.test(clean)) return true;
+  if (/^(video|stream|track|aud|audio)[-_]?\d+/i.test(clean)) return true;
+  if (/^(\d{3,4}p|\d{3,4}x\d{3,4}|mp4|webm|m3u8|ts|m4s)$/i.test(clean)) return true;
+  if (/^[0-9a-f]{12,}$/i.test(clean)) return true;
+
+  return false;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Get Active Tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -444,10 +467,14 @@ function createMediaCardHTML(item) {
     </div>
   `;
 
-  const genericNames = ['master', 'index', 'playlist', 'video', 'manifest', 'stream', 'video_completo', 'video_stream', 'full_video'];
   let cleanTitle = item.title;
-  if (!cleanTitle || genericNames.includes(cleanTitle.toLowerCase().trim())) {
-    cleanTitle = currentTabTitle || 'Video';
+  if (isGenericOrTechnicalTitle(cleanTitle)) {
+    if (currentTabTitle && !isGenericOrTechnicalTitle(currentTabTitle)) {
+      cleanTitle = currentTabTitle;
+    } else {
+      const goodItem = allDetectedMedia.find(m => m.title && !isGenericOrTechnicalTitle(m.title));
+      cleanTitle = goodItem ? goodItem.title : 'Video';
+    }
   }
 
   const qualitySelectHTML = (item.variants && item.variants.length > 1) ? `
@@ -588,10 +615,14 @@ function promptForFilename(defaultTitle, callback) {
 }
 
 function triggerDownload(item, format = 'mp4', selectedVariantUrl = null) {
-  const genericNames = ['master', 'index', 'playlist', 'video', 'manifest', 'stream', 'video_completo', 'video_stream', 'full_video'];
   let finalTitle = item.title;
-  if (!finalTitle || genericNames.includes(finalTitle.toLowerCase().trim())) {
-    finalTitle = currentTabTitle || 'Video';
+  if (isGenericOrTechnicalTitle(finalTitle)) {
+    if (currentTabTitle && !isGenericOrTechnicalTitle(currentTabTitle)) {
+      finalTitle = currentTabTitle;
+    } else {
+      const goodItem = allDetectedMedia.find(m => m.title && !isGenericOrTechnicalTitle(m.title));
+      finalTitle = goodItem ? goodItem.title : 'Video';
+    }
   }
 
   const updatedItem = {
