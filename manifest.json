@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "StreamGrabber",
   "version": "3.2.0",
-  "description": "Fast video, audio, and HLS (.m3u8) stream detector and downloader with player preview and quality selector.",
+  "description": "Fast video & HLS stream downloader with player preview. Note: YouTube is not supported due to Chrome Web Store policy.",
   "permissions": [
     "storage",
     "downloads",
@@ -52,10 +52,7 @@
       "resources": [
         "icon16.png",
         "icon48.png",
-        "icon128.png",
-        "styles.css",
-        "premium.html",
-        "hls.light.min.js"
+        "icon128.png"
       ],
       "matches": [
         "<all_urls>"

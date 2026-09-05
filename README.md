@@ -32,6 +32,30 @@ Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader fo
 
 ---
 
+## 📦 Packaging for Chrome Web Store
+
+To generate the clean, lightweight production archive ready for upload to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole):
+
+```powershell
+# Using npm
+npm run package
+
+# Or directly via PowerShell
+powershell -ExecutionPolicy Bypass -File .\package.ps1
+```
+
+This generates `StreamGrabber-v3.2.0.zip` (~213 KB) containing strictly the 15 production runtime files while automatically excluding `node_modules`, git artifacts, development config, and promotional assets.
+
+---
+
+## 🛡️ Chrome Web Store Policy Compliance
+
+* **YouTube Policy:** In strict compliance with Google Chrome Web Store Developer Program Policies and YouTube Terms of Service, downloading videos from YouTube is not supported.
+* **Single Purpose:** StreamGrabber focuses exclusively on detecting and downloading user-authorized multimedia streams.
+* **Privacy & Security:** StreamGrabber does not collect, transmit, or monetize any user personal data, browsing history, or keystrokes. All stream detection occurs locally within the user's browser.
+
+---
+
 ## 📄 License
 
 MIT License.

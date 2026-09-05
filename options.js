@@ -1,5 +1,5 @@
 /**
- * Video DownloadHelper Pro - Options Page Logic
+ * StreamGrabber - Options Page Logic
  */
 
 document.addEventListener('DOMContentLoaded', () => {

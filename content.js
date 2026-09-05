@@ -4,6 +4,11 @@
  */
 
 (function () {
+  // Chrome Web Store Compliance: Completely bypass YouTube
+  if (location.hostname.includes('youtube.com') || location.hostname.includes('youtu.be')) {
+    return;
+  }
+
   if (window.__STREAMGRABBER_INITIALIZED__) return;
   window.__STREAMGRABBER_INITIALIZED__ = true;
 
@@ -106,14 +111,7 @@
       }
     } catch (e) {}
 
-    // 6. YouTube thumbnail
-    const ytMatch = window.location.href.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/);
-    if (ytMatch && ytMatch[1]) {
-      cachedPoster = `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-      return cachedPoster;
-    }
-
-    // 7. Direct canvas frame extraction from video as final fallback
+    // 6. Direct canvas frame extraction from video as final fallback
     if (video) {
       try {
         if (video.readyState >= 2 && video.videoWidth > 50) {

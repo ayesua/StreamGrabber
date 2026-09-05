@@ -80,20 +80,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const btnOpenPremium = document.getElementById('btnOpenPremium');
-  if (btnOpenPremium) {
-    btnOpenPremium.addEventListener('click', () => {
-      chrome.tabs.create({ url: chrome.runtime.getURL('premium.html') });
-    });
-  }
-
-  const footerPremiumLink = document.getElementById('footerPremiumLink');
-  if (footerPremiumLink) {
-    footerPremiumLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      chrome.tabs.create({ url: chrome.runtime.getURL('premium.html') });
-    });
-  }
 
   const btnOpenOptions = document.getElementById('btnOpenOptions');
   if (btnOpenOptions) {
@@ -316,6 +302,21 @@ function renderMediaList(mediaList) {
   const container = document.getElementById('mediaListContainer');
   const emptyState = document.getElementById('emptyState');
   const countBadge = document.getElementById('mediaCount');
+
+  const isYouTube = Boolean(currentTabUrl && (currentTabUrl.includes('youtube.com') || currentTabUrl.includes('youtu.be')));
+  if (isYouTube) {
+    container.innerHTML = `
+      <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 24px 16px; text-align: center; margin: 16px 0;">
+        <div style="font-size: 28px; margin-bottom: 8px;">🛡️</div>
+        <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">Chrome Web Store Policy Notice</div>
+        <div style="font-size: 12px; color: #475569; line-height: 1.5;">Due to Google Chrome Web Store Developer Program policies, downloading videos from YouTube is not supported.</div>
+        <div style="font-size: 11px; color: #0087cd; font-weight: 600; margin-top: 10px;">StreamGrabber works normally on other streaming and video websites.</div>
+      </div>
+    `;
+    emptyState.style.display = 'none';
+    countBadge.textContent = '0 detected';
+    return;
+  }
 
   // Filter based on active pill
   let filtered = mediaList;

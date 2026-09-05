@@ -192,6 +192,11 @@ function isExcludedNetworkUrl(url, contentType) {
   const lowerUrl = url.toLowerCase();
   const lowerType = (contentType || '').toLowerCase();
 
+  // 0. Chrome Web Store Compliance: Strictly exclude YouTube domains
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be') || lowerUrl.includes('googlevideo.com')) {
+    return true;
+  }
+
   // 1. Exclude HTML web pages & scripts
   if (lowerType.includes('text/html') || lowerType.includes('xhtml+xml')) return true;
   if (lowerUrl.match(/\.(html|htm|php|asp|aspx|jsp|js|css|json)(\?.*)?$/)) return true;
@@ -601,6 +606,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
 function handleStartDownload({ item, referer, downloadTabId, format }, callback) {
+  if (item?.url?.includes('youtube.com') || item?.url?.includes('youtu.be') || referer?.includes('youtube.com') || referer?.includes('youtu.be')) {
+    if (callback) callback({ success: false, error: 'YouTube downloads are not supported due to Chrome Web Store policy.' });
+    return;
+  }
+
   const chosenFormat = (format || 'mp4').toLowerCase();
 
   chrome.storage.sync.get({ askFilename: false }, async (settings) => {
@@ -702,6 +712,12 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
   }
 
   if (message.action === 'START_FLOATING_DOWNLOAD') {
+    const tabUrl = sender.tab?.url || '';
+    if (tabUrl.includes('youtube.com') || tabUrl.includes('youtu.be')) {
+      sendResponse({ success: false, error: 'YouTube downloads are not supported due to Chrome Web Store policy.' });
+      return true;
+    }
+
     const targetTabId = message.tabId || sender.tab?.id;
     const tabStore = tabMediaStore.get(targetTabId);
     let itemToDownload = null;
