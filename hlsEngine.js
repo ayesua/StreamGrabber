@@ -432,7 +432,7 @@ export class HLSEngine {
   /**
    * Start complete HLS stream download
    */
-  async startDownload({ id, url, selectedVariantUrl, title, tabId, referer, format, saveAs, onProgress, onStatusChange }) {
+  async startDownload({ id, url, selectedVariantUrl, title, tabId, referer, format, saveAs, rotation = 0, onProgress, onStatusChange }) {
     const downloadId = id || 'hls_' + Date.now();
     const targetFormat = (format || 'mp4').toLowerCase();
     
@@ -442,6 +442,7 @@ export class HLSEngine {
       selectedVariantUrl,
       title: title || 'full_video',
       format: targetFormat,
+      rotation: rotation || 0,
       status: 'analyzing',
       progress: 0,
       downloadedBytes: 0,
