@@ -53,6 +53,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentTabTitle = tab.title || tab.url;
     const titleEl = document.getElementById('currentTabTitle');
     if (titleEl) titleEl.textContent = tab.title || tab.url;
+
+    // Trigger instant DOM media scan on active tab
+    try {
+      chrome.tabs.sendMessage(currentTabId, { action: 'SCAN_MEDIA_NOW' }, () => {
+        if (chrome.runtime.lastError) {}
+        loadTabMedia();
+      });
+    } catch (e) {}
+
     loadTabMedia();
   }
 
@@ -72,11 +81,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnRescan) {
     btnRescan.addEventListener('click', () => {
       if (!currentTabId) return;
-      chrome.scripting.executeScript({
-        target: { tabId: currentTabId },
-        files: ['content.js']
-      }).catch(() => {});
-      setTimeout(loadTabMedia, 600);
+      btnRescan.classList.add('rotating');
+      chrome.tabs.sendMessage(currentTabId, { action: 'SCAN_MEDIA_NOW' }, (res) => {
+        if (chrome.runtime.lastError) {
+          chrome.scripting.executeScript({
+            target: { tabId: currentTabId },
+            files: ['content.js']
+          }).catch(() => {});
+        }
+        setTimeout(() => {
+          btnRescan.classList.remove('rotating');
+          loadTabMedia();
+        }, 500);
+      });
     });
   }
 
@@ -201,6 +218,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnRotateReset) {
     btnRotateReset.addEventListener('click', () => {
       previewRotationAngle = 0;
+      updatePreviewRotationUI();
+    });
+  }
+
+  const btnQuickRotateOverlay = document.getElementById('btnQuickRotateOverlay');
+  if (btnQuickRotateOverlay) {
+    btnQuickRotateOverlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      previewRotationAngle = (previewRotationAngle + 90) % 360;
       updatePreviewRotationUI();
     });
   }

@@ -4,18 +4,84 @@
  */
 
 (function () {
+  // Chrome Web Store Compliance: Completely bypass YouTube
+  if (location.hostname.includes('youtube.com') || location.hostname.includes('youtu.be')) {
+    return;
+  }
+
+  // Filter out ad iframes from polluting detected media
+  if (window.self !== window.top) {
+    const loc = (window.location.href || '').toLowerCase();
+    const docTitle = (document.title || '').toLowerCase();
+    if (isAdOrAnnounceUrl(loc) || loc.includes('about:blank') || loc.includes('banner') || loc.includes('sponsor') || loc.includes('ads') || docTitle.includes('ad')) {
+      return; // Do not run sniffer inside ad iframes
+    }
+  }
+
   if (window.__STREAMGRABBER_INITIALIZED__) return;
   window.__STREAMGRABBER_INITIALIZED__ = true;
 
   const detectedUrls = new Set();
   let cachedPoster = null;
 
+  const KNOWN_AD_DOMAINS = [
+    'trafficstars.com', 'tsyndicate.com', 'magsrv.com', 'exoclick.com',
+    'traffichaus.com', 'trafficfactory.biz', 'ero-advertising.com',
+    'adnxs.com', 'doubleclick.net', 'ad-delivery.net', 'adcash.com',
+    'adsterra.com', 'monetag.com', 'propellerads.com', 'hilltopads.com',
+    'clickadu.com', 'popads.net', 'popcash.net', 'twinred.com',
+    'twinrdsrv.com', 'juicyads.com', 'adxxx.com', 'plugrush.com',
+    'trafficjunky.com', 'trafficjunky.net', 'adtng.com', 'goodstatorone.com',
+    'tarklot.com', 'auhubsm.com', 'bbangads.b-cdn.net', 'buddhabangxxx.com',
+    'dtipvw.com', 'rtb-demand', 'adnium.com', 'adx.adform.net'
+  ];
+
+  const AD_URL_PATTERNS = [
+    '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
+    'vast', 'vpaid', 'popunder', 'ad_banner', 'preview.mp4',
+    'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
+    'interstitial', '/ads/video/', '/sponsor/'
+  ];
+
+  function isAdOrAnnounceUrl(url) {
+    if (!url || typeof url !== 'string') return true;
+    const lower = url.toLowerCase();
+    if (KNOWN_AD_DOMAINS.some(d => lower.includes(d))) return true;
+    if (AD_URL_PATTERNS.some(p => lower.includes(p))) return true;
+    return false;
+  }
+
+  function detectQualityFromUrl(url, defaultQuality = 'Auto HD') {
+    if (!url) return defaultQuality;
+    const match = url.match(/(\d{3,4})p/i) || url.match(/(\d{3,4})x(\d{3,4})/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num >= 1080) return `${num}p Full HD`;
+      if (num >= 720) return `${num}p HD`;
+      return `${num}p SD`;
+    }
+    return defaultQuality;
+  }
+
   function getPageTitle() {
+    try {
+      const fullHtml = document.documentElement ? document.documentElement.innerHTML : '';
+      const scriptTitleMatch = fullHtml.match(/setVideoTitle\s*\(\s*['"]([^'"]+)['"]\s*\)/i) ||
+                               fullHtml.match(/video_title\s*=\s*['"]([^'"]+)['"]/i);
+      if (scriptTitleMatch && scriptTitleMatch[1]) {
+        let clean = scriptTitleMatch[1].replace(/\\/g, '').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (clean && clean.length > 2) return clean;
+      }
+    } catch (e) {}
+
     const ogTitle = document.querySelector('meta[property="og:title"]')?.content;
     const twitterTitle = document.querySelector('meta[name="twitter:title"]')?.content;
-    const h1 = document.querySelector('h1')?.innerText;
+    const h1 = document.querySelector('h1.page-title, h1')?.innerText;
     let raw = ogTitle || twitterTitle || h1 || document.title || 'Video';
-    let clean = raw.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+    let clean = raw.replace(/\s*-\s*(XVIDEOS\.COM|Pornhub\.com|RedTube|YouPorn|XVideos|XNXX)/gi, '')
+                   .replace(/[\\/:*?"<>|]/g, ' ')
+                   .replace(/\s+/g, ' ')
+                   .trim();
     return clean || 'Video';
   }
 
@@ -146,11 +212,16 @@
       return true;
     }
 
+    // Filter out ad / announce / teaser video URLs
+    if (isAdOrAnnounceUrl(lower)) {
+      return true;
+    }
+
     return false;
   }
 
   function reportMedia(mediaItem) {
-    if (!mediaItem.url || isExcludedUrl(mediaItem.url) || detectedUrls.has(mediaItem.url)) return;
+    if (!mediaItem.url || isExcludedUrl(mediaItem.url) || isAdOrAnnounceUrl(mediaItem.url) || detectedUrls.has(mediaItem.url)) return;
 
     detectedUrls.add(mediaItem.url);
 
@@ -196,38 +267,182 @@
 
     const videoElements = document.querySelectorAll('video');
     videoElements.forEach(video => {
+      // Check if video element is inside an ad wrapper or banner
+      const closestAd = video.closest(
+        '[class*="ad-"], [class*="ads-"], [id*="ad-"], [id*="ads-"], [class*="preroll"], [class*="sponsor"], [class*="banner"], [id*="vast"], [class*="exo_"]'
+      );
+      if (closestAd) return; // Skip ad videos!
+
       const quality = video.videoWidth ? `${video.videoWidth}x${video.videoHeight}` : 'Auto HD';
       const videoPoster = (video.poster && video.poster.startsWith('http')) ? video.poster : poster;
 
-      if (video.src && !video.src.startsWith('blob:') && !isExcludedUrl(video.src)) {
+      const src = video.src || '';
+      const currentSrc = video.currentSrc || '';
+
+      if (src && !src.startsWith('blob:') && !isExcludedUrl(src) && !isAdOrAnnounceUrl(src)) {
         reportMedia({
-          url: video.src,
+          url: src,
           quality: quality,
-          type: detectTypeFromUrl(video.src),
+          type: detectTypeFromUrl(src),
           poster: videoPoster
         });
       }
-      if (video.currentSrc && !video.currentSrc.startsWith('blob:') && !isExcludedUrl(video.currentSrc)) {
+      if (currentSrc && !currentSrc.startsWith('blob:') && !isExcludedUrl(currentSrc) && !isAdOrAnnounceUrl(currentSrc)) {
         reportMedia({
-          url: video.currentSrc,
+          url: currentSrc,
           quality: quality,
-          type: detectTypeFromUrl(video.currentSrc),
+          type: detectTypeFromUrl(currentSrc),
           poster: videoPoster
         });
       }
 
       const sources = video.querySelectorAll('source');
       sources.forEach(srcEl => {
-        if (srcEl.src && !srcEl.src.startsWith('blob:') && !isExcludedUrl(srcEl.src)) {
+        const sUrl = srcEl.src || '';
+        if (sUrl && !sUrl.startsWith('blob:') && !isExcludedUrl(sUrl) && !isAdOrAnnounceUrl(sUrl)) {
           reportMedia({
-            url: srcEl.src,
+            url: sUrl,
             quality: srcEl.getAttribute('res') || quality,
-            type: detectTypeFromUrl(srcEl.src),
+            type: detectTypeFromUrl(sUrl),
             poster: videoPoster
           });
         }
       });
     });
+  }
+
+  function scanInlinePlayerScripts() {
+    try {
+      const fullHtml = document.documentElement ? document.documentElement.innerHTML : '';
+      if (!fullHtml || fullHtml.length < 20) return;
+
+      const poster = findVideoPoster();
+
+      // 1. XVideos / XNXX HTML5Player declarations
+      const hlsMatch = fullHtml.match(/setVideoHLS\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/i);
+      if (hlsMatch && hlsMatch[1] && !isExcludedUrl(hlsMatch[1])) {
+        reportMedia({
+          url: hlsMatch[1].replace(/\\/g, ''),
+          quality: 'HD Stream',
+          type: 'HLS',
+          poster: poster
+        });
+      }
+
+      const highMatch = fullHtml.match(/setVideoUrlHigh\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/i);
+      if (highMatch && highMatch[1] && !isExcludedUrl(highMatch[1])) {
+        const u = highMatch[1].replace(/\\/g, '');
+        reportMedia({
+          url: u,
+          quality: detectQualityFromUrl(u, '1080p Full HD'),
+          type: 'MP4',
+          poster: poster
+        });
+      }
+
+      const lowMatch = fullHtml.match(/setVideoUrlLow\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/i);
+      if (lowMatch && lowMatch[1] && !isExcludedUrl(lowMatch[1])) {
+        const u = lowMatch[1].replace(/\\/g, '');
+        reportMedia({
+          url: u,
+          quality: detectQualityFromUrl(u, '480p SD'),
+          type: 'MP4',
+          poster: poster
+        });
+      }
+
+      // 2. Generic Tube / KVS / Player Variables (flashvars, video_url, video_url_high, hls_url, video_alt_url...)
+      const m3u8Match = fullHtml.match(/["']?(?:hls_url|video_hls|m3u8_url)["']?\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/i) ||
+                        fullHtml.match(/["'](https?:\/\/[^"'<>\s]+\.m3u8[^"'<>\s]*)["']/i);
+      if (m3u8Match && m3u8Match[1] && !isExcludedUrl(m3u8Match[1])) {
+        reportMedia({
+          url: m3u8Match[1].replace(/\\/g, ''),
+          quality: 'HD Stream',
+          type: 'HLS',
+          poster: poster
+        });
+      }
+
+      // High Resolution MP4 (1080p, 720p, HQ)
+      const highMp4Match = fullHtml.match(/["']?(?:video_url_high|video_url_hq|video_url_1080p|video_url_720p|video_alt_url|video_alt_url2)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i);
+      if (highMp4Match && highMp4Match[1] && !isExcludedUrl(highMp4Match[1])) {
+        const u = highMp4Match[1].replace(/\\/g, '');
+        reportMedia({
+          url: u,
+          quality: detectQualityFromUrl(u, '1080p Full HD'),
+          type: 'MP4',
+          poster: poster
+        });
+      }
+
+      // Standard MP4
+      const stdMp4Match = fullHtml.match(/["']?(?:video_url|video_alt_url3|video_alt_url4|video_url_text)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i) ||
+                          fullHtml.match(/sources\s*:\s*\[\s*\{[^}]*file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
+      if (stdMp4Match && stdMp4Match[1] && !isExcludedUrl(stdMp4Match[1])) {
+        const u = stdMp4Match[1].replace(/\\/g, '');
+        reportMedia({
+          url: u,
+          quality: detectQualityFromUrl(u, 'Auto HD'),
+          type: 'MP4',
+          poster: poster
+        });
+      }
+
+      // Base64 Encoded video URLs (common anti-leech obfuscation on tube sites)
+      const b64Match = fullHtml.match(/["'](aHR0c[A-Za-z0-9+/=]{16,})["']/g);
+      if (b64Match) {
+        for (const item of b64Match) {
+          try {
+            const cleanB64 = item.replace(/["']/g, '');
+            const decoded = atob(cleanB64);
+            if (decoded && decoded.startsWith('http') && (decoded.includes('.mp4') || decoded.includes('.m3u8')) && !isExcludedUrl(decoded)) {
+              reportMedia({
+                url: decoded,
+                quality: detectQualityFromUrl(decoded, 'Auto HD'),
+                type: detectTypeFromUrl(decoded),
+                poster: poster
+              });
+            }
+          } catch (e) {}
+        }
+      }
+
+      // 3. Schema.org JSON-LD contentUrl
+      const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const s of ldScripts) {
+        const txt = s.textContent || '';
+        if (txt.includes('contentUrl')) {
+          try {
+            const data = JSON.parse(txt);
+            const contentUrl = data.contentUrl || data.video?.contentUrl;
+            if (contentUrl && typeof contentUrl === 'string' && !isExcludedUrl(contentUrl)) {
+              reportMedia({
+                url: contentUrl,
+                quality: detectQualityFromUrl(contentUrl, 'Auto HD'),
+                type: detectTypeFromUrl(contentUrl),
+                poster: data.thumbnailUrl ? (Array.isArray(data.thumbnailUrl) ? data.thumbnailUrl[0] : data.thumbnailUrl) : poster
+              });
+            }
+          } catch (e) {}
+        }
+      }
+    } catch (e) {}
+  }
+
+  function scanMetaTags() {
+    try {
+      const ogVideo = document.querySelector('meta[property="og:video"]')?.content ||
+                      document.querySelector('meta[property="og:video:url"]')?.content ||
+                      document.querySelector('meta[property="og:video:secure_url"]')?.content;
+      if (ogVideo && ogVideo.startsWith('http') && !isExcludedUrl(ogVideo)) {
+        reportMedia({
+          url: ogVideo,
+          quality: detectQualityFromUrl(ogVideo, 'Auto HD'),
+          type: detectTypeFromUrl(ogVideo),
+          poster: findVideoPoster()
+        });
+      }
+    } catch (e) {}
   }
 
   function scanPerformanceResources() {
@@ -261,7 +476,7 @@
           const posterMatch = text.match(/poster=["']([^"']+)["']/i);
           reportMedia({
             url: videoSrcMatch[1],
-            quality: 'Auto HD',
+            quality: detectQualityFromUrl(videoSrcMatch[1], 'Auto HD'),
             type: detectTypeFromUrl(videoSrcMatch[1]),
             poster: (posterMatch && posterMatch[1]) ? posterMatch[1] : findVideoPoster()
           });
@@ -271,6 +486,8 @@
   }
 
   function runScan() {
+    scanInlinePlayerScripts();
+    scanMetaTags();
     scanMediaElements();
     scanNoscriptMedia();
     scanPerformanceResources();
@@ -292,11 +509,96 @@
   }
 
   runScan();
-  setTimeout(runScan, 1500);
-  setTimeout(runScan, 4000);
+  setTimeout(runScan, 1000);
+  setTimeout(runScan, 2500);
+  setTimeout(runScan, 5000);
 
-  // 4. In-page Message Listener: Handles Crop Rect & In-Page Fetch to prevent HTTP 412
+  // 3B. SPA Single-Page Navigation & Dynamic Player Observer
+  let lastLocationHref = location.href;
+  function handleUrlChange() {
+    if (location.href !== lastLocationHref) {
+      lastLocationHref = location.href;
+      detectedUrls.clear();
+      cachedPoster = null;
+
+      try {
+        chrome.runtime.sendMessage({
+          action: 'PAGE_NAVIGATED',
+          url: location.href,
+          title: getPageTitle()
+        }, () => {
+          if (chrome.runtime.lastError) {}
+        });
+      } catch (e) {}
+
+      runScan();
+      setTimeout(runScan, 600);
+      setTimeout(runScan, 1800);
+      setTimeout(runScan, 3500);
+    }
+  }
+
+  try {
+    const origPush = history.pushState;
+    if (origPush) {
+      history.pushState = function () {
+        origPush.apply(this, arguments);
+        handleUrlChange();
+      };
+    }
+    const origReplace = history.replaceState;
+    if (origReplace) {
+      history.replaceState = function () {
+        origReplace.apply(this, arguments);
+        handleUrlChange();
+      };
+    }
+  } catch (e) {}
+
+  window.addEventListener('popstate', handleUrlChange);
+  window.addEventListener('hashchange', handleUrlChange);
+  setInterval(handleUrlChange, 1200);
+
+  let mutationDebounceTimer = null;
+  const domObserver = new MutationObserver((mutations) => {
+    let shouldScan = false;
+    for (const m of mutations) {
+      if (m.addedNodes && m.addedNodes.length > 0) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType === 1) {
+            const tag = node.tagName;
+            if (tag === 'VIDEO' || tag === 'SOURCE' || tag === 'SCRIPT' || tag === 'IFRAME') {
+              shouldScan = true;
+              break;
+            }
+          }
+        }
+      }
+      if (shouldScan) break;
+    }
+    if (shouldScan) {
+      clearTimeout(mutationDebounceTimer);
+      mutationDebounceTimer = setTimeout(runScan, 400);
+    }
+  });
+
+  if (document.body) {
+    domObserver.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.body) domObserver.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+
+  // 4. In-page Message Listener: Handles Crop Rect, Scan Requests & In-Page Fetch to prevent HTTP 412
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Request Instant Media Scan from Popup / Rescan button
+    if (request.action === 'SCAN_MEDIA_NOW') {
+      runScan();
+      sendResponse({ success: true, count: detectedUrls.size });
+      return true;
+    }
+
     // Request Video Bounding Box for crop
     if (request.action === 'GET_VIDEO_CROP_RECT') {
       const rect = getVideoBoundingRect();

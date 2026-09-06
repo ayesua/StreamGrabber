@@ -185,13 +185,50 @@ function parseMediaInfo(url, contentType, contentLength) {
   };
 }
 
+const KNOWN_AD_DOMAINS = [
+  'trafficstars.com', 'tsyndicate.com', 'magsrv.com', 'exoclick.com',
+  'traffichaus.com', 'trafficfactory.biz', 'ero-advertising.com',
+  'adnxs.com', 'doubleclick.net', 'ad-delivery.net', 'adcash.com',
+  'adsterra.com', 'monetag.com', 'propellerads.com', 'hilltopads.com',
+  'clickadu.com', 'popads.net', 'popcash.net', 'twinred.com',
+  'twinrdsrv.com', 'juicyads.com', 'adxxx.com', 'plugrush.com',
+  'trafficjunky.com', 'trafficjunky.net', 'adtng.com', 'goodstatorone.com',
+  'tarklot.com', 'auhubsm.com', 'bbangads.b-cdn.net', 'buddhabangxxx.com',
+  'dtipvw.com', 'rtb-demand', 'adnium.com', 'adx.adform.net'
+];
+
+const AD_URL_PATTERNS = [
+  '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
+  'vast', 'vpaid', 'popunder', 'ad_banner', 'preview.mp4',
+  'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
+  'interstitial', '/ads/video/', '/sponsor/'
+];
+
+function isAdOrAnnounceUrl(url) {
+  if (!url || typeof url !== 'string') return true;
+  const lower = url.toLowerCase();
+  if (KNOWN_AD_DOMAINS.some(d => lower.includes(d))) return true;
+  if (AD_URL_PATTERNS.some(p => lower.includes(p))) return true;
+  return false;
+}
+
 /**
  * Filter out HTML web pages, scripts, and fragmented short video chunks
- * Prevents seeing 20 short video chunks for the same video!
+ * Prevents capturing pre-roll ads, announce clips, or fragmented chunks!
  */
 function isExcludedNetworkUrl(url, contentType) {
   const lowerUrl = url.toLowerCase();
   const lowerType = (contentType || '').toLowerCase();
+
+  // 0. Chrome Web Store Compliance: Strictly exclude YouTube domains
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be') || lowerUrl.includes('googlevideo.com')) {
+    return true;
+  }
+
+  // 0B. Filter out Ad Networks & Pre-roll Announcement video URLs
+  if (isAdOrAnnounceUrl(lowerUrl)) {
+    return true;
+  }
 
   // 1. Exclude HTML web pages & scripts
   if (lowerType.includes('text/html') || lowerType.includes('xhtml+xml')) return true;
@@ -250,7 +287,9 @@ function isGenericOrTechnicalTitle(title) {
 
 function addMediaItem(tabId, item) {
   if (!tabId || tabId < 0) return;
+  if (!item || !item.url) return;
   if (isExcludedNetworkUrl(item.url, '')) return;
+  if (isAdOrAnnounceUrl(item.url)) return;
 
   if (!tabMediaStore.has(tabId)) {
     tabMediaStore.set(tabId, new Map());
@@ -258,25 +297,30 @@ function addMediaItem(tabId, item) {
 
   const tabStore = tabMediaStore.get(tabId);
 
-  // If tab already has an HLS stream (.m3u8), don't clutter with low-priority sub-items
-  const hasHls = Array.from(tabStore.values()).some(m => m.type === 'HLS');
-  if (hasHls && item.type !== 'HLS') {
-    return;
+  // If item is HLS (.m3u8), it is top priority: clear out any low-priority short clips
+  if (item.type === 'HLS') {
+    for (const [url, existing] of tabStore.entries()) {
+      if (existing.type !== 'HLS' && (!existing.size || existing.size < 10 * 1024 * 1024)) {
+        tabStore.delete(url);
+      }
+    }
   }
 
-  // Deduplicate by base path on same domain
-  try {
-    const parsed = new URL(item.url);
-    const basePath = parsed.origin + parsed.pathname;
-    for (const [existingUrl] of tabStore.entries()) {
-      try {
-        const existingParsed = new URL(existingUrl);
-        if (existingParsed.origin + existingParsed.pathname === basePath) {
-          return;
-        }
-      } catch (e) {}
+  // If item already exists, enrich it with newer/better data
+  if (tabStore.has(item.url)) {
+    const existing = tabStore.get(item.url);
+    if (!existing.poster && (item.poster || tabPosters.has(tabId))) {
+      existing.poster = item.poster || tabPosters.get(tabId);
     }
-  } catch (e) {}
+    if (isGenericOrTechnicalTitle(existing.title) && item.title && !isGenericOrTechnicalTitle(item.title)) {
+      existing.title = item.title;
+    }
+    if ((!existing.variants || existing.variants.length === 0) && item.variants && item.variants.length > 0) {
+      existing.variants = item.variants;
+      existing.quality = item.quality;
+    }
+    return;
+  }
 
   if (!item.poster && tabPosters.has(tabId)) {
     item.poster = tabPosters.get(tabId);
@@ -290,15 +334,13 @@ function addMediaItem(tabId, item) {
     }
   } else if (item.title && !isGenericOrTechnicalTitle(item.title)) {
     tabTitles.set(tabId, item.title);
-    // Retroactively update earlier items in this tab that had tpl... or generic titles
+    // Retroactively update earlier items in this tab that had generic titles
     for (const existing of tabStore.values()) {
       if (isGenericOrTechnicalTitle(existing.title)) {
         existing.title = item.title;
       }
     }
   }
-
-  if (tabStore.has(item.url)) return;
 
   tabStore.set(item.url, item);
   updateBadge(tabId);
@@ -547,6 +589,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         tabTitles.set(message.tabId, knownTitle);
       }
     }
+
+    // Filter out any ad/announcement URLs and sort media items with main stream first
+    mediaList = mediaList.filter(m => !isAdOrAnnounceUrl(m.url));
+    mediaList.sort((a, b) => {
+      if (a.type === 'HLS' && b.type !== 'HLS') return -1;
+      if (b.type === 'HLS' && a.type !== 'HLS') return 1;
+      const aIsHD = (a.quality || '').includes('1080') || (a.quality || '').includes('720') || (a.quality || '').includes('HD');
+      const bIsHD = (b.quality || '').includes('1080') || (b.quality || '').includes('720') || (b.quality || '').includes('HD');
+      if (aIsHD && !bIsHD) return -1;
+      if (bIsHD && !aIsHD) return 1;
+      return (b.size || 0) - (a.size || 0);
+    });
 
     // 2. Ensure ALL items in this tab (including top streams) receive the authentic title
     if (knownTitle && !isGenericOrTechnicalTitle(knownTitle)) {
