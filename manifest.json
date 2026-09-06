@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PureShield: Ultimate Popup & Tracker Blocker",
+  "name": "ExtremeShield: Ultimate Tracker & Popup Blocker",
   "version": "1.0.0",
-  "description": "High-speed blocker for popups, overlays, trackers, and fingerprinting. 100% free with zero paywalls.",
+  "description": "Extreme high-speed defense against trackers, popups, fingerprinting, and redirects. 100% free with zero paywalls.",
   "permissions": [
     "storage",
     "declarativeNetRequest",
@@ -61,7 +61,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "PureShield Protection",
+    "default_title": "ExtremeShield Protection",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
@@ -75,14 +75,14 @@
         "default": "Alt+Shift+Z",
         "mac": "Alt+Shift+Z"
       },
-      "description": "Activate PureShield Element Zapper"
+      "description": "Activate ExtremeShield Element Zapper"
     },
     "toggle_protection": {
       "suggested_key": {
         "default": "Alt+Shift+P",
         "mac": "Alt+Shift+P"
       },
-      "description": "Toggle PureShield Protection ON/OFF"
+      "description": "Toggle ExtremeShield Protection ON/OFF"
     }
   },
   "icons": {

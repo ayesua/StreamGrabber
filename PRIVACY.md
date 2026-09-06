@@ -1,13 +1,13 @@
-# PureShield Privacy Policy
+# ExtremeShield Privacy Policy
 
 **Last Updated:** September 2026
 
-PureShield is built on the fundamental principle that **privacy is a human right**. PureShield is designed to protect your privacy without compromising it in return.
+ExtremeShield is built on the fundamental principle that **privacy is a human right**. ExtremeShield is designed to protect your privacy without compromising it in return.
 
 ---
 
 ## 1. Zero Data Collection & Zero Telemetry
-- PureShield **does NOT collect, store, transmit, or sell** any personal information, browsing history, DNS queries, visited URLs, IP addresses, or device identifiers.
+- ExtremeShield **does NOT collect, store, transmit, or sell** any personal information, browsing history, DNS queries, visited URLs, IP addresses, or device identifiers.
 - All filtering, rule evaluation, and popup detection take place **100% locally on your device** using Chrome's native Declarative Net Request API and local content scripts.
 
 ## 2. Permissions & Why They Are Needed
@@ -19,10 +19,10 @@ PureShield is built on the fundamental principle that **privacy is a human right
 - **`<all_urls>` Host Permission**: Required to defuse popunders, auto-dismiss cookie banners, and strip marketing tracking tokens across all visited websites.
 
 ## 3. Voluntary Community Donations
-- PureShield is 100% free and contains no paid tiers, subscriptions, or feature locks.
-- Voluntary donations made through external third-party platforms (Buy Me a Coffee, Ko-fi, GitHub Sponsors, Crypto networks) are subject to the privacy policies of those respective third-party payment providers. PureShield itself processes no financial transactions.
+- ExtremeShield is 100% free and contains no paid tiers, subscriptions, or feature locks.
+- Voluntary donations made through external third-party platforms (Ko-fi, Bitcoin, BNB/USDT) are subject to the privacy policies of those respective third-party payment providers. ExtremeShield itself processes no financial transactions.
 
 ---
 
 ## 4. Open Source & Transparency
-PureShield's source code is open and verifiable. You can inspect all rulesets, background service workers, and injected scripts directly.
+ExtremeShield's source code is open and verifiable. You can inspect all rulesets, background service workers, and injected scripts directly.

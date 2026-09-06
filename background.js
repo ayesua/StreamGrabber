@@ -1,5 +1,5 @@
 /**
- * PureShield - Background Service Worker (Manifest V3)
+ * ExtremeShield - Background Service Worker (Manifest V3)
  * Manages DNR rulesets, onRuleMatchedDebug telemetry, dynamic whitelisting,
  * WebRTC IP leak defense, memory garbage collection, hotkeys, and context menus.
  */
@@ -178,7 +178,7 @@ function setupContextMenus() {
 
     chrome.contextMenus.create({
       id: 'pureshield-options',
-      title: '⚙️ PureShield Settings',
+      title: '⚙️ ExtremeShield Settings',
       contexts: ['action']
     });
   });

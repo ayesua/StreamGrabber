@@ -1,7 +1,7 @@
 {
-  "name": "pureshield",
+  "name": "extremeshield",
   "version": "1.0.0",
-  "description": "PureShield - Ultimate Popup, Overlay, Tracker & Fingerprinting Blocker Chrome Extension (Manifest V3)",
+  "description": "ExtremeShield - Ultimate Tracker & Popup Blocker Chrome Extension (Manifest V3)",
   "scripts": {
     "package": "powershell -ExecutionPolicy Bypass -File ./package.ps1"
   },
@@ -14,6 +14,6 @@
     "chrome-extension",
     "manifest-v3"
   ],
-  "author": "PureShield Team",
+  "author": "ExtremeShield Team",
   "license": "MIT"
 }

@@ -1,5 +1,5 @@
 /**
- * PureShield - Options & Control Center Controller
+ * ExtremeShield - Options & Control Center Controller
  * Manages protection toggles, advanced optional shields, interactive info modals,
  * domain whitelists, custom cosmetic filters, activity logs, and backup/restore.
  */
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     },
     'fingerprint': {
       title: '🕵️ Máscara Contra Huella Digital (Canvas & Audio)',
-      whatItDoes: 'Las empresas usan el procesador gráfico y de audio de tu computadora para generar una "huella única" que te identifica sin cookies. PureShield inyecta una variación minúscula e invisible en las funciones de Canvas 2D y AudioContext.',
+      whatItDoes: 'Las empresas usan el procesador gráfico y de audio de tu computadora para generar una "huella única" que te identifica sin cookies. ExtremeShield inyecta una variación minúscula e invisible en las funciones de Canvas 2D y AudioContext.',
       benefit: 'Hace que tu computadora parezca un dispositivo completamente nuevo en cada sitio web, frustrando el rastreo avanzado.',
       compat: 'Totalmente invisible, no afecta cómo se ven las imágenes o juegos.'
     },
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     'toasts': {
       title: '💬 Alertas Flotantes de Popups Bloqueados',
       whatItDoes: 'Muestra una pequeña tarjeta en la esquina inferior derecha cuando se neutraliza un popup, dándote la opción de "Permitir una vez" o "Poner en lista blanca".',
-      benefit: 'Te da control total y visibilidad de lo que PureShield está bloqueando en tiempo real.',
+      benefit: 'Te da control total y visibilidad de lo que ExtremeShield está bloqueando en tiempo real.',
       compat: 'Puedes desactivarlo si prefieres un bloqueo 100% silencioso.'
     },
     'ping-audit': {

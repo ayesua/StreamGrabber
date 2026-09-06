@@ -1,5 +1,5 @@
-# PureShield - Chrome Web Store Production Packaging Script
-# Bundles strictly the production runtime files into PureShield-v<version>.zip
+# ExtremeShield - Chrome Web Store Production Packaging Script
+# Bundles strictly the production runtime files into ExtremeShield-v<version>.zip
 
 $ErrorActionPreference = "Stop"
 
@@ -10,11 +10,11 @@ Set-Location $workspace
 # Read version from manifest.json
 $manifestJson = Get-Content -Raw "manifest.json" | ConvertFrom-Json
 $version = $manifestJson.version
-$zipFileName = "PureShield-v$version.zip"
+$zipFileName = "ExtremeShield-v$version.zip"
 $zipPath = Join-Path $workspace $zipFileName
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host " Packing PureShield v$version for CWS" -ForegroundColor Cyan
+Write-Host " Packing ExtremeShield v$version for CWS" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 # Define strict list of runtime extension files
