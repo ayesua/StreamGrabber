@@ -7,7 +7,7 @@
     "storage",
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
-    "webRequest",
+    "activeTab",
     "tabs",
     "scripting",
     "privacy",
