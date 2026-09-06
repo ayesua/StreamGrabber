@@ -1,25 +1,28 @@
-﻿# Privacy Policy for StreamGrabber
+# PureShield Privacy Policy
 
-**Last Updated: September 2026**
+**Last Updated:** September 2026
 
-StreamGrabber (\"we\", \"our\", or \"the extension\") is committed to protecting your privacy. This Privacy Policy explains our practices regarding user information when you use the StreamGrabber Chrome extension.
+PureShield is built on the fundamental principle that **privacy is a human right**. PureShield is designed to protect your privacy without compromising it in return.
 
-## 1. Zero Personal Data Collection
-StreamGrabber does NOT collect, store, transmit, or monetize any personal information, browsing history, user credentials, IP addresses, or keystrokes. 
+---
 
-## 2. How the Extension Functions
-* **Local Processing:** All media detection, video frame capturing, and HLS stream reassembly occur entirely locally inside your browser on your machine.
-* **Network Inspection:** The extension monitors network response headers (such as Content-Type and Content-Length) strictly to identify downloadable media files (e.g., MP4, M3U8, WebM, MP3) requested by the web page you visit. None of this data is logged or transmitted to any external server.
-* **Storage Permission:** Used solely to store your local preferences (such as your chosen default format, concurrent download threads, and floating button toggle) within Chrome's local storage API (chrome.storage.sync / chrome.storage.local).
-* **Downloads Permission:** Used exclusively to save media files directly to your default Google Chrome Downloads folder upon your explicit action.
+## 1. Zero Data Collection & Zero Telemetry
+- PureShield **does NOT collect, store, transmit, or sell** any personal information, browsing history, DNS queries, visited URLs, IP addresses, or device identifiers.
+- All filtering, rule evaluation, and popup detection take place **100% locally on your device** using Chrome's native Declarative Net Request API and local content scripts.
 
-## 3. Third-Party Services & Remote Code
-StreamGrabber contains NO remote analytics, tracking pixels, ads, or third-party tracking scripts. All code is packaged and executed locally in compliance with Chrome Manifest V3 security standards.
+## 2. Permissions & Why They Are Needed
+- **`storage`**: Used exclusively to store your local settings, whitelisted domains, and custom cosmetic element hiding rules on your device.
+- **`declarativeNetRequest` & `declarativeNetRequestFeedback`**: Used to block tracking domains, popup ad networks, and strip URL tracking parameters via high-speed native browser rules.
+- **`privacy`**: Used to enforce WebRTC IP leak protection (`default_public_interface_only`).
+- **`contextMenus`**: Used to provide the right-click "Zap Element on Page" and "Whitelist Site" shortcuts.
+- **`scripting` & `tabs`**: Used to inject the Element Zapper overlay when requested and display blocked item badge counts per tab.
+- **`<all_urls>` Host Permission**: Required to defuse popunders, auto-dismiss cookie banners, and strip marketing tracking tokens across all visited websites.
 
-## 4. YouTube Compliance Notice
-StreamGrabber strictly complies with the Google Chrome Web Store Developer Program Policies and does not download or facilitate downloading from YouTube.
+## 3. Voluntary Community Donations
+- PureShield is 100% free and contains no paid tiers, subscriptions, or feature locks.
+- Voluntary donations made through external third-party platforms (Buy Me a Coffee, Ko-fi, GitHub Sponsors, Crypto networks) are subject to the privacy policies of those respective third-party payment providers. PureShield itself processes no financial transactions.
 
-## 5. Contact Us
-If you have questions, feedback, or need assistance regarding this Privacy Policy, please contact the developer at:
-* **Email:** ayesua@gmail.com
-* **GitHub:** https://github.com/ayesua/StreamGrabber
+---
+
+## 4. Open Source & Transparency
+PureShield's source code is open and verifiable. You can inspect all rulesets, background service workers, and injected scripts directly.

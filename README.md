@@ -1,61 +1,73 @@
-# StreamGrabber (Chrome Extension - Manifest V3)
+# 🛡️ PureShield: Ultimate Popup & Tracker Blocker
 
-Fast, reliable video, audio, and HLS (`.m3u8`) stream detector and downloader for Google Chrome.
+> **High-Performance Manifest V3 Privacy Armor**  
+> Combines the best features of **uBlock Origin**, **Poper Blocker**, **Privacy Badger**, **Ghostery**, and **AdGuard** into a 100% free, community-donation-powered Chrome Extension.
 
-## 🚀 Features
-
-- **In-Popup Video Preview Player:** Click on any video thumbnail or the Preview button to watch and verify streams directly inside the extension popup before downloading.
-- **Multi-Bitrate HLS Quality Selector:** Choose your preferred video resolution and bitrate (e.g. 1080p, 720p, 480p) from a dropdown on multi-variant streams.
-- **In-Page Floating Download Button:** Sleek on-hover download button attached directly to HTML5 video players on websites for instant 1-click downloading (configurable in Settings).
-- **Smart Network Sniffer:** Automatically captures media streams and direct files in the background by inspecting HTTP response headers (`video/mp4`, `application/x-mpegURL`, `application/dash+xml`, `audio/mpeg`, etc.).
-- **DOM & Player Detection:** Scans HTML5 `<video>`, `<audio>`, `<source>`, `<noscript>` fallback containers, OpenGraph/Twitter tags, and inline player configs.
-- **Pre-Play Detection:** Detects videos immediately upon page load (including players with noscript/poster overlays) without requiring user playback first.
-- **Anti-Hotlink Direct Downloader:** Automatically resolves cross-origin 302/301 redirects and injects required `Referer` / `Origin` headers at the network layer to bypass server hotlink protections.
-- **Native Chrome Downloads:** Streams video files directly to disk via Chrome's native download manager with zero memory overhead and native transfer speeds.
-- **Live Progress & Speed:** Real-time transfer progress bar with speed (MB/s) and percentage in the popup UI and native desktop notifications on completion.
-- **Unlimited HLS (`.m3u8`) Engine:** Parses master playlists, downloads `.ts` segments via parallel workers, handles AES-128 decryption, and merges into an intact file.
-- **Customizable Options:** Toggle whether to prompt for filename, enable/disable the in-page floating button, filter minimum file sizes, adjust concurrent connections, and set default formats (MP4, MKV, TS).
-- **Creator Support:** Built-in PayPal donation support (`paypal.me/yesarts`) requiring zero setup.
+![PureShield Banner](icon128.png)
 
 ---
 
-## 🛠️ Installation in Google Chrome
+## ✨ Features Overview
 
-1. Open Google Chrome and go to `chrome://extensions/`.
-2. Enable **Developer mode** (toggle in the top-right corner).
-3. Click **Load unpacked** (Cargar descomprimida).
-4. Select this project directory:
+### 🚫 1. Aggressive Popup & Popunder Interceptor
+- **Main World Execution Hook**: Overrides `window.open` at `document_start` to intercept unauthorized popup spam while preserving legitimate user-initiated actions.
+- **Popunder & Background Tab Defuser**: Traps `window.blur()`, `window.focus()`, and window order manipulation tricks.
+- **Synthetic Click Trapper**: Neutralizes hidden dynamic `<a>` anchor exploits (`target="_blank"` triggers).
+- **Discreet Toast Alert**: Floating bottom-right chip allowing instant 1-click **Allow Once** or **Whitelist Site**.
+
+### 🕵️ 2. Comprehensive Anti-Tracking & Fingerprint Shield
+- **Declarative Net Request (DNR) Rulesets**: Pre-compiled, ultra-fast filter lists blocking cross-site trackers, ad telemetry pixels, analytics beacons, and behavioral profiling networks.
+- **URL Parameter Stripper**: Automatically strips tracking query params (`utm_*`, `fbclid`, `gclid`, `twclid`, `mc_cid`, `msclkid`, etc.) from links and redirects.
+- **Canvas & Audio Fingerprinting Shield**: Injects imperceptible, deterministic noise into `toDataURL()`, `getImageData()`, and `AudioBuffer` to defeat cross-site canvas & acoustic fingerprint hashes.
+- **WebRTC IP Leak Defense**: Enforces `default_public_interface_only` policy to prevent local and public IP disclosures.
+- **Global Privacy Headers**: Broadcasts `Sec-GPC: 1` (Global Privacy Control) and `DNT: 1` (Do Not Track).
+
+### 🍪 3. Intrusive Overlay & Cookie Wall Hunter
+- **Cookie Consent Banner Auto-Dismissal**: Automatically removes GDPR/CCPA cookie walls without accepting tracking cookies.
+- **Scroll Lock Restorer**: Automatically detects anti-adblock / newsletter overlays locking the page (`overflow: hidden`) and unlocks natural scrolling.
+- **Anti-Adblock Defuser**: Neutralizes adblock detector traps (`window.canRunAds`, `window.isAdBlockActive = false`) to prevent page breakage.
+
+### ⚡ 4. Interactive Element Zapper
+- **Point-and-Click Highlighter**: Hover over any annoying floating banner, modal, or element to highlight it.
+- **Permanent Vaporization**: Click to remove the element and automatically save domain-specific cosmetic CSS hiding rules.
+
+### 📊 5. Live Telemetry & Tracker Inspector
+- **Categorized Drawer**: Visual breakdown of blocked items by **Analytics**, **Advertising**, **Social Trackers**, and **Fingerprinting/Popups**.
+- **Real-Time Counters**: Tab-level badges, total popups blocked, trackers blocked, annoyances dismissed, and estimated bandwidth/time saved.
+
+### 💖 6. 100% Free & Donation-Driven
+- **Zero Paywalls**: Every single feature is unlocked and completely free.
+- **Zero Telemetry**: No user data collection, no remote logging.
+- **Multi-Channel Donation Hub**: Built-in support for Buy Me a Coffee, Ko-fi, GitHub Sponsors, PayPal, and Crypto tips (BTC, ETH, SOL).
+
+---
+
+## 🚀 Installation & Loading (Developer Mode)
+
+1. Clone or download this repository.
+2. Open Google Chrome and navigate to `chrome://extensions`.
+3. Enable **Developer mode** toggle in the top-right corner.
+4. Click **Load unpacked** and select this directory:
    ```
    c:\Users\yesua\PY\Browser\Extension
    ```
-5. Pin the **StreamGrabber** icon to your Chrome toolbar.
+5. Pin **PureShield** to your Chrome toolbar.
 
 ---
 
-## 📦 Packaging for Chrome Web Store
+## 📦 Building Production Zip Package
 
-To generate the clean, lightweight production archive ready for upload to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole):
+To generate a clean, production-ready `.zip` package for the Chrome Web Store:
 
 ```powershell
-# Using npm
-npm run package
-
-# Or directly via PowerShell
-powershell -ExecutionPolicy Bypass -File .\package.ps1
+powershell -ExecutionPolicy Bypass -File ./package.ps1
 ```
 
-This generates `StreamGrabber-v3.2.0.zip` (~213 KB) containing strictly the 15 production runtime files while automatically excluding `node_modules`, git artifacts, development config, and promotional assets.
+This will produce `PureShield-v1.0.0.zip` ready for store submission.
 
 ---
 
-## 🛡️ Chrome Web Store Policy Compliance
+## 📄 License & Community Support
 
-* **YouTube Policy:** In strict compliance with Google Chrome Web Store Developer Program Policies and YouTube Terms of Service, downloading videos from YouTube is not supported.
-* **Single Purpose:** StreamGrabber focuses exclusively on detecting and downloading user-authorized multimedia streams.
-* **Privacy & Security:** StreamGrabber does not collect, transmit, or monetize any user personal data, browsing history, or keystrokes. All stream detection occurs locally within the user's browser.
-
----
-
-## 📄 License
-
-MIT License.
+PureShield is licensed under the [MIT License](LICENSE).
+Supported 100% by voluntary community donations.

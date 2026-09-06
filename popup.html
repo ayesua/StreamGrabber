@@ -3,172 +3,176 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StreamGrabber</title>
+  <title>PureShield</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-
-  <!-- Header Navbar -->
-  <header class="vdh-header">
-    <div class="vdh-brand">
-      <img src="icon48.png" class="vdh-logo-img" alt="StreamGrabber Icon" />
+<body class="popup-body">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#090d16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2.2"/>
+          <polygon points="9 8.5 15 8.5 17 11.5 12 16.5 7 11.5" stroke-width="1.6" fill="#090d16" fill-opacity="0.3"/>
+          <line x1="7" y1="11.5" x2="17" y2="11.5" stroke-width="1.2"/>
+          <polyline points="9 8.5 12 16.5 15 8.5" stroke-width="1.2"/>
+        </svg>
+      </div>
       <div>
-        <div class="vdh-title">StreamGrabber</div>
+        <h1 class="brand-title">PureShield</h1>
       </div>
     </div>
-
-    <!-- Top Donation Block: Donations label above PayPal button -->
-    <div class="top-donation-block">
-      <span class="top-donation-tag">Donations</span>
-      <button id="btnPayPal" class="btn-paypal-top" title="Donate via PayPal (paypal.me/yesarts)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
-        </svg>
-        <span>PayPal</span>
+    <div class="header-actions">
+      <!-- Master Power Toggle -->
+      <label class="master-switch" title="Turn PureShield ON / OFF Globally">
+        <input type="checkbox" id="master-power-toggle" checked>
+        <span class="master-slider"></span>
+      </label>
+      <button class="btn-donate-header" id="btn-header-donate" title="Support PureShield">
+        💖 Donate
       </button>
-    </div>
-
-    <div class="vdh-nav-actions">
-      <button id="btnRescan" class="icon-btn" title="Rescan videos and media frames">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6"/>
-          <path d="M1 20v-6h6"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      <button class="icon-btn" id="btn-quick-zap" title="Zap Element on Page">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
         </svg>
       </button>
-      <button id="btnOpenOptions" class="icon-btn" title="Settings">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      <button class="icon-btn" id="btn-open-options" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
       </button>
     </div>
   </header>
 
-  <!-- Subbar with Active Tab Info -->
-  <div class="vdh-subbar">
-    <div class="vdh-tab-title" id="currentTabTitle">Loading tab...</div>
-    <div class="vdh-media-count" id="mediaCount">0 detected</div>
-  </div>
-
-  <!-- Filter Pills Bar (All | Videos | Audio Only) -->
-  <div class="filter-pills-bar">
-    <button class="pill-btn active" id="pillAll" data-filter="all">All (<span id="countAll">0</span>)</button>
-    <button class="pill-btn" id="pillVideos" data-filter="video">Videos (<span id="countVideos">0</span>)</button>
-    <button class="pill-btn" id="pillAudios" data-filter="audio">Audio (<span id="countAudios">0</span>)</button>
-  </div>
-
-  <!-- Content Section -->
-  <div class="vdh-content">
-    
-    <!-- Active Downloads Progress Section -->
-    <div id="activeDownloadsContainer" class="active-downloads-section" style="display: none;">
-      <div class="section-title">⚡ Active Downloads</div>
-      <div id="activeDownloadsList"></div>
-    </div>
-
-    <!-- Media Cards List -->
-    <div id="mediaListContainer"></div>
-
-    <!-- Empty State -->
-    <div id="emptyState" class="vdh-empty-state">
-      <div class="vdh-empty-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="23 7 16 12 23 17 23 7"/>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="shield-button-wrapper" id="shield-toggle-btn">
+      <div class="shield-glow"></div>
+      <button class="shield-btn" aria-label="Toggle Protection">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
+          <polygon points="9 8.5 15 8.5 17 11.5 12 16.5 7 11.5" stroke-width="1.8" fill="currentColor" fill-opacity="0.15"/>
+          <line x1="7" y1="11.5" x2="17" y2="11.5" stroke-width="1.3"/>
+          <polyline points="9 8.5 12 16.5 15 8.5" stroke-width="1.3"/>
         </svg>
-      </div>
-      <div class="vdh-empty-title">No videos detected yet</div>
-      <div class="vdh-empty-text">Start playing the video on the web page so the sniffer can capture the complete stream and video frame.</div>
-    </div>
-
-  </div>
-
-  <!-- Footer -->
-  <footer class="vdh-footer">
-    <div class="footer-actions">
-      <button id="btnFeedback" class="btn-feedback" title="Send suggestions or report an issue">
-        <span>💬</span> <span>Feedback &amp; Suggestions</span>
       </button>
     </div>
-
-    <div class="footer-info">
-      <span class="version-label">v3.2.0</span>
+    <div>
+      <div class="status-domain" id="current-domain">Loading...</div>
+      <div class="status-indicator" id="status-pill">
+        <span class="status-dot"></span>
+        <span id="status-text">Protected</span>
+      </div>
     </div>
-  </footer>
 
-  <!-- Video Preview Modal -->
-  <div id="modalPreview" class="modal-overlay" style="display: none;">
-    <div class="modal-dialog preview-dialog">
-      <div class="preview-header">
-        <div class="modal-title preview-title" id="previewTitle">Video Preview</div>
-        <button id="modalPreviewBtnClose" class="btn-close-modal" title="Close Preview">✕</button>
-      </div>
-      <div class="preview-player-container">
-        <video id="previewPlayer" controls autoplay playsinline></video>
-        <div id="previewStatusMsg" class="preview-status-msg" style="display: none;"></div>
-      </div>
-      <div class="preview-actions-bar">
-        <div class="preview-info-row">
-          <span id="previewQualityBadge" class="thumbnail-badge-res">Auto HD</span>
-          <span id="previewTypeBadge" class="thumbnail-badge-type tag tag-type-mp4">MP4</span>
-        </div>
-        <div class="preview-download-row">
-          <select id="previewFormatSelect" class="format-select" title="Download format">
-            <option value="mp4" selected>MP4</option>
-            <option value="mkv">MKV</option>
-            <option value="ts">TS</option>
-          </select>
-          <button id="previewBtnDownload" class="btn-primary" style="display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Download Now
-          </button>
+    <!-- Main Widget Donation Card -->
+    <div class="main-donate-card" id="btn-main-donate">
+      <div class="donate-card-left">
+        <span class="heart-pulse">💖</span>
+        <div style="text-align: left;">
+          <div class="donate-card-title">Support PureShield</div>
+          <div class="donate-card-sub">100% Free • Powered by Donations</div>
         </div>
       </div>
+      <button class="btn-donate-chip">Tip / Donate &rarr;</button>
+    </div>
+  </section>
+
+  <!-- Live Stats -->
+  <section class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-label">Popups Blocked</span>
+      <span class="stat-value highlight" id="stat-popups">0</span>
+      <span class="stat-sub" id="stat-popups-total">Total: 0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Trackers Blocked</span>
+      <span class="stat-value highlight" id="stat-trackers">0</span>
+      <span class="stat-sub" id="stat-trackers-total">Total: 0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Annoyances Suppressed</span>
+      <span class="stat-value" id="stat-annoyances">0</span>
+      <span class="stat-sub" id="stat-annoyances-total">Total: 0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Estimated Saved</span>
+      <span class="stat-value" id="stat-saved">0 KB</span>
+      <span class="stat-sub" id="stat-time-saved">0.0s faster</span>
+    </div>
+  </section>
+
+  <!-- Quick Tools -->
+  <section class="tools-section">
+    <div class="section-title">Quick Protections</div>
+    <div class="tools-grid">
+      <button class="tool-btn active" id="btn-toggle-popups">
+        <span>🚫</span> Anti-Popups
+      </button>
+      <button class="tool-btn active" id="btn-toggle-cookies">
+        <span>🍪</span> Cookie Walls
+      </button>
+      <button class="tool-btn active" id="btn-toggle-adblock-defuse">
+        <span>🛡️</span> Defuse Anti-Ad
+      </button>
+      <button class="tool-btn active" id="btn-toggle-fingerprint">
+        <span>🕵️</span> Anti-Fingerprint
+      </button>
+    </div>
+  </section>
+
+  <!-- Tracker Inspector Accordion -->
+  <section class="inspector-section">
+    <div class="accordion-header" id="accordion-toggle">
+      <div class="accordion-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Trackers on this Page</span>
+      </div>
+      <span class="brand-badge" id="tracker-count-badge">0 detected</span>
+    </div>
+    <div class="accordion-content" id="accordion-body">
+      <div id="tracker-list-items">
+        <div style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 8px 0;">No trackers detected on this page.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Donation Modal -->
+  <div class="modal-overlay" id="donation-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">💖 Support PureShield</h3>
+        <button class="icon-btn" id="btn-close-modal">&times;</button>
+      </div>
+      <p style="font-size: 12px; color: var(--text-secondary);">
+        PureShield is completely free, zero-log, and has no locked features. Your tips keep server filter lists updated and servers online!
+      </p>
+      <div class="donation-options">
+        <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" class="donation-link-item" id="link-kofi" style="background: #72a4f2; border: 1px solid #5a8ee5; color: #ffffff; padding: 10px 14px;">
+          <span style="font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            ☕ Support me on Ko-fi
+          </span>
+          <span style="color: #ffffff; font-weight: 700;">&rarr;</span>
+        </a>
+      </div>
+      <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 6px;">CRYPTO TIPS (INSTANT & ANONYMOUS)</div>
+      <div class="crypto-box">
+        <span style="font-weight: 600; font-size: 11px; color: #f59e0b;">BTC</span>
+        <span class="crypto-addr" id="addr-btc">bc1qc92qpkma6k5yvypa9xs6dy8g8ah34ceu83nger</span>
+        <button class="btn-copy" data-copy="addr-btc">Copy</button>
+      </div>
+      <div class="crypto-box">
+        <span style="font-weight: 600; font-size: 11px; color: #06b6d4;">BNB/USDT</span>
+        <span class="crypto-addr" id="addr-eth">0x1466a8eD548A9e39829e142431fff185b0C15dF4</span>
+        <button class="btn-copy" data-copy="addr-eth">Copy</button>
+      </div>
     </div>
   </div>
 
-  <!-- Inline Filename Prompt Modal (Inside Popup UI, avoids prompt() dialog blocks) -->
-  <div id="modalFilename" class="modal-overlay" style="display: none;">
-    <div class="modal-dialog">
-      <div class="modal-title">Name Your Video</div>
-      <div class="modal-desc">Please choose a name for this download:</div>
-      <input type="text" id="modalInputFilename" class="modal-input" placeholder="Enter file name..." />
-      <div class="modal-actions">
-        <button id="modalBtnCancel" class="btn-secondary">Cancel</button>
-        <button id="modalBtnConfirm" class="btn-primary">Download</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Feedback Modal (Only appears when user clicks Feedback) -->
-  <div id="modalFeedback" class="modal-overlay" style="display: none;">
-    <div class="modal-dialog">
-      <div class="modal-title">💬 Feedback &amp; Suggestions</div>
-      <div class="modal-desc">Send your feedback, feature ideas, or issue reports directly to the developer:</div>
-      <div style="background: #f8fafc; border: 1px solid var(--vdh-border); border-radius: 8px; padding: 12px; margin-bottom: 14px; text-align: center;">
-        <div style="font-size: 13px; font-weight: 700; color: #0087cd; margin-bottom: 4px;">ayesua@gmail.com</div>
-        <div style="font-size: 11px; color: var(--vdh-text-muted);">Developer email address</div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
-        <button id="btnOpenFeedbackEmail" class="btn-primary" style="padding: 9px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-          ✉️ Open Email (ayesua@gmail.com)
-        </button>
-        <button id="btnCopyFeedbackEmail" class="btn-secondary" style="padding: 8px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-          📋 Copy Email Address
-        </button>
-      </div>
-      <div class="modal-actions">
-        <button id="modalFeedbackBtnClose" class="btn-secondary">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="hls.light.min.js"></script>
-  <script src="popup.js" type="module"></script>
+  <script src="popup.js"></script>
 </body>
 </html>

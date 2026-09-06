@@ -1,0 +1,176 @@
+/* PureShield Element Picker & On-Page UI Overlay */
+
+/* Highlighting overlay for targeted elements */
+.pureshield-picker-highlight {
+  outline: 2px dashed #10b981 !important;
+  outline-offset: -2px !important;
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  cursor: crosshair !important;
+  transition: all 0.1s ease-in-out !important;
+}
+
+/* Floating Banner / Toolbar for Element Picker */
+#pureshield-picker-toolbar {
+  position: fixed !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 2147483647 !important;
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 12px !important;
+  padding: 10px 18px !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(16, 185, 129, 0.2) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 13px !important;
+  pointer-events: auto !important;
+}
+
+#pureshield-picker-toolbar .pureshield-toolbar-title {
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: #34d399 !important;
+}
+
+#pureshield-picker-toolbar .pureshield-toolbar-desc {
+  color: #94a3b8 !important;
+}
+
+#pureshield-picker-toolbar .pureshield-btn-cancel {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+#pureshield-picker-toolbar .pureshield-btn-cancel:hover {
+  background: #475569 !important;
+}
+
+/* Discreet Toast Notification for Blocked Popups */
+#pureshield-toast-container {
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  pointer-events: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.pureshield-toast {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  border-left: 4px solid #10b981 !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  font-size: 13px !important;
+  pointer-events: auto !important;
+  animation: pureshield-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  max-width: 380px !important;
+}
+
+.pureshield-toast.pureshield-toast-fadeout {
+  animation: pureshield-fade-out 0.3s forwards !important;
+}
+
+.pureshield-toast-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  overflow: hidden !important;
+}
+
+.pureshield-toast-title {
+  font-weight: 600 !important;
+  color: #10b981 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.pureshield-toast-url {
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 200px !important;
+}
+
+.pureshield-toast-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-left: auto !important;
+}
+
+.pureshield-toast-btn {
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+}
+
+.pureshield-toast-btn:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
+
+.pureshield-toast-close {
+  background: transparent !important;
+  border: none !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  padding: 2px 4px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+.pureshield-toast-close:hover {
+  color: #f8fafc !important;
+}
+
+@keyframes pureshield-slide-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pureshield-fade-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}

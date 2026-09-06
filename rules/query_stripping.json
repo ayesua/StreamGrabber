@@ -1,0 +1,54 @@
+[
+  {
+    "id": 3001,
+    "priority": 2,
+    "action": {
+      "type": "redirect",
+      "redirect": {
+        "transform": {
+          "queryTransform": {
+            "removeParams": [
+              "utm_source",
+              "utm_medium",
+              "utm_campaign",
+              "utm_term",
+              "utm_content",
+              "utm_id",
+              "utm_reader",
+              "utm_place",
+              "utm_userid",
+              "fbclid",
+              "gclid",
+              "gclsrc",
+              "dclid",
+              "twclid",
+              "yclid",
+              "mc_cid",
+              "mc_eid",
+              "igshid",
+              "msclkid",
+              "_hsenc",
+              "_hsmi",
+              "_openstat",
+              "zanpid",
+              "s_kwcid",
+              "ref_src",
+              "ref_url",
+              "sc_campaign",
+              "sc_channel",
+              "sc_content",
+              "sc_medium",
+              "sc_outcome",
+              "sc_geo",
+              "sc_country"
+            ]
+          }
+        }
+      }
+    },
+    "condition": {
+      "urlFilter": "|http*",
+      "resourceTypes": ["main_frame", "sub_frame"]
+    }
+  }
+]

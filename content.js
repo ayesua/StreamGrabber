@@ -1,598 +1,451 @@
 /**
- * StreamGrabber - DOM & Media Sniffer Content Script
- * Extracts video crop rectangles & provides in-page fetch bridge to bypass HTTP 412 / CORS / auth issues.
+ * PureShield - Content Script
+ * Handles scriptlet injection, intrusive overlay/modal removal, cookie banner dismissal,
+ * DOM tracking element interception, element zapper, and toast alerts.
  */
+(() => {
+  'use strict';
 
-(function () {
-  // Chrome Web Store Compliance: Completely bypass YouTube
-  if (location.hostname.includes('youtube.com') || location.hostname.includes('youtu.be')) {
-    return;
-  }
+  const hostname = window.location.hostname;
+  let isWhitelisted = false;
+  let settings = {
+    blockPopups: true,
+    blockTrackers: true,
+    blockFingerprinting: true,
+    defuseAntiAdblock: true,
+    dismissCookieBanners: true,
+    removeOverlays: true,
+    showToastNotifications: true
+  };
 
-  if (window.__STREAMGRABBER_INITIALIZED__) return;
-  window.__STREAMGRABBER_INITIALIZED__ = true;
-
-  const detectedUrls = new Set();
-  let cachedPoster = null;
-
-  function getPageTitle() {
-    const ogTitle = document.querySelector('meta[property="og:title"]')?.content;
-    const twitterTitle = document.querySelector('meta[name="twitter:title"]')?.content;
-    const h1 = document.querySelector('h1')?.innerText;
-    let raw = ogTitle || twitterTitle || h1 || document.title || 'Video';
-    let clean = raw.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
-    return clean || 'Video';
-  }
-
-  /**
-   * Find video bounding rectangle for cropping tab screenshots to ONLY the video
-   */
-  function getVideoBoundingRect() {
-    const video = document.querySelector('video');
-    if (video) {
-      const rect = video.getBoundingClientRect();
-      // Ensure it's a visible video element on screen
-      if (rect.width > 120 && rect.height > 80 && rect.top >= 0 && rect.bottom <= window.innerHeight + 100) {
-        return {
-          x: Math.max(0, Math.round(rect.left)),
-          y: Math.max(0, Math.round(rect.top)),
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
-          viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight
-        };
-      }
-    }
-
-    return null;
-  }
-
-  function findVideoPoster() {
-    if (cachedPoster) return cachedPoster;
-
-    // 1. Direct poster attribute on video element
-    const video = document.querySelector('video');
-    if (video && video.poster && video.poster.startsWith('http')) {
-      cachedPoster = video.poster;
-      return cachedPoster;
-    }
-
-    // 2. OpenGraph / Twitter / Link image_src video cover image
-    const ogImage = document.querySelector('meta[property="og:image"]')?.content ||
-                    document.querySelector('meta[property="og:image:secure_url"]')?.content ||
-                    document.querySelector('meta[name="twitter:image"]')?.content ||
-                    document.querySelector('link[rel="image_src"]')?.href;
-    if (ogImage && ogImage.startsWith('http')) {
-      cachedPoster = ogImage;
-      return cachedPoster;
-    }
-
-    // 3. Scan <noscript> tags (e.g. xhamster and other players render fallback video/img inside noscript)
+  /* ==========================================================================
+     1. INJECT MAIN WORLD SCRIPTLET
+     ========================================================================== */
+  function injectScriptlet() {
     try {
-      const noscripts = document.querySelectorAll('noscript');
-      for (const ns of noscripts) {
-        const text = ns.textContent || ns.innerHTML || '';
-        const match = text.match(/poster=["']([^"']+)["']/i) ||
-                      text.match(/src=["']([^"']+\.(?:jpg|jpeg|webp|png)[^"']*)["']/i);
-        if (match && match[1] && match[1].startsWith('http')) {
-          cachedPoster = match[1];
-          return cachedPoster;
+      const script = document.createElement('script');
+      script.src = chrome.runtime.getURL('injected.js');
+      script.onload = () => script.remove();
+      (document.head || document.documentElement).appendChild(script);
+    } catch (err) {
+      console.warn('[PureShield] Scriptlet injection failed:', err);
+    }
+  }
+  injectScriptlet();
+
+  /* ==========================================================================
+     2. SYNC SETTINGS & WHITELIST STATUS
+     ========================================================================== */
+  function syncSettings() {
+    chrome.storage.local.get(['settings', 'whitelistedDomains', 'customCosmeticRules'], (data) => {
+      if (data.settings) {
+        settings = { ...settings, ...data.settings };
+      }
+      const whitelist = data.whitelistedDomains || [];
+      isWhitelisted = whitelist.some(domain => hostname === domain || hostname.endsWith('.' + domain));
+
+      // Broadcast config to injected.js
+      window.dispatchEvent(new CustomEvent('pureshield-config-sync', {
+        detail: {
+          blockPopups: settings.blockPopups,
+          blockTrackers: settings.blockTrackers,
+          blockFingerprinting: settings.blockFingerprinting,
+          defuseAntiAdblock: settings.defuseAntiAdblock,
+          whitelisted: isWhitelisted
         }
-      }
-    } catch (e) {}
+      }));
 
-    // 4. Scan player container preview images
-    try {
-      const previewImg = document.querySelector(
-        '.player-container img, [class*="player"] img, [class*="thumb-preview"] img, [class*="thumb-image"] img, img[data-role="thumb-preview-img"], img[alt*="preview" i], img[alt*="vista previa" i]'
-      );
-      if (previewImg) {
-        const src = previewImg.currentSrc || previewImg.src || previewImg.getAttribute('data-src');
-        if (src && src.startsWith('http') && !src.includes('avatar') && !src.includes('logo')) {
-          cachedPoster = src;
-          return cachedPoster;
-        }
-      }
-    } catch (e) {}
+      // Apply custom cosmetic hiding rules for this domain
+      applyCustomCosmeticRules(data.customCosmeticRules || {});
+    });
+  }
+  syncSettings();
 
-    // 5. Scan inline player scripts for thumbUrl or poster JSON
-    try {
-      const scripts = document.querySelectorAll('script:not([src])');
-      for (const s of scripts) {
-        const txt = s.textContent || '';
-        if (txt.includes('thumbUrl') || txt.includes('xplayerSettings') || txt.includes('initials')) {
-          const match = txt.match(/["']thumbUrl["']\s*:\s*["']([^"']+)["']/i) ||
-                        txt.match(/["']poster["']\s*:\s*["']([^"']+)["']/i);
-          if (match && match[1] && match[1].startsWith('http')) {
-            cachedPoster = match[1].replace(/\\/g, '');
-            return cachedPoster;
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local') {
+      syncSettings();
+    }
+  });
+
+  /* ==========================================================================
+     3. EVENT LISTENER FROM INJECTED SCRIPTLET & DOM TRACKER HUNTER
+     ========================================================================== */
+  window.addEventListener('pureshield-event', (e) => {
+    if (!e.detail || isWhitelisted) return;
+
+    const { type, url } = e.detail;
+
+    // Send telemetry to background service worker
+    chrome.runtime.sendMessage({
+      action: 'recordBlockedEvent',
+      data: {
+        type: type || 'tracker',
+        url: url || 'Blocked Resource',
+        domain: hostname,
+        timestamp: Date.now()
+      }
+    });
+
+    if (type === 'popup' && settings.showToastNotifications) {
+      showBlockedPopupToast(url);
+    }
+  });
+
+  // DOM Tracking Elements Detection (Tracking Pixels, Telemetry Scripts)
+  const TRACKER_DOM_PATTERNS = [
+    'google-analytics',
+    'gtm.js',
+    'fbevents.js',
+    'facebook.com/tr',
+    'criteo',
+    'hotjar',
+    'clarity.ms',
+    'taboola',
+    'outbrain',
+    'scorecardresearch',
+    'doubleclick',
+    'analytics.tiktok',
+    'mc.yandex'
+  ];
+
+  const processedNodes = new WeakSet();
+
+  function scanDomForTrackers() {
+    if (isWhitelisted || !settings.blockTrackers) return;
+
+    const elements = document.querySelectorAll('script[src], img[src], iframe[src]');
+    elements.forEach(el => {
+      if (processedNodes.has(el)) return;
+      processedNodes.add(el);
+
+      const src = el.src || '';
+      if (!src) return;
+
+      const isMatch = TRACKER_DOM_PATTERNS.some(pat => src.toLowerCase().includes(pat));
+      if (isMatch) {
+        console.log('[PureShield] Detected and suppressed tracking element:', src);
+        chrome.runtime.sendMessage({
+          action: 'recordBlockedEvent',
+          data: {
+            type: 'tracker',
+            url: src,
+            domain: hostname,
+            timestamp: Date.now()
           }
-        }
-      }
-    } catch (e) {}
-
-    // 6. Direct canvas frame extraction from video as final fallback
-    if (video) {
-      try {
-        if (video.readyState >= 2 && video.videoWidth > 50) {
-          const c = document.createElement('canvas');
-          c.width = Math.min(video.videoWidth, 480);
-          c.height = Math.min(video.videoHeight, 270);
-          const ctx = c.getContext('2d');
-          ctx.drawImage(video, 0, 0, c.width, c.height);
-          const data = c.toDataURL('image/jpeg', 0.8);
-          if (data && data.startsWith('data:image')) {
-            cachedPoster = data;
-            return cachedPoster;
-          }
-        }
-      } catch (e) {}
-    }
-
-    return null;
-  }
-
-  function isExcludedUrl(url) {
-    if (!url) return true;
-    const lower = url.toLowerCase();
-
-    if (lower.match(/\.(html|htm|php|asp|aspx|jsp|shtml|cgi)(\?.*)?$/)) return true;
-    if (lower.startsWith('data:') || lower.startsWith('javascript:')) return true;
-
-    // Filter out isolated fragment chunks (.ts / .m4s / .aac)
-    if (lower.match(/\.(ts|m4s)(\?.*)?$/) || lower.includes('/segment') || lower.includes('/seg-') || lower.includes('/fragment-')) {
-      return true;
-    }
-
-    return false;
-  }
-
-  function reportMedia(mediaItem) {
-    if (!mediaItem.url || isExcludedUrl(mediaItem.url) || detectedUrls.has(mediaItem.url)) return;
-
-    detectedUrls.add(mediaItem.url);
-
-    const fullItem = {
-      id: 'dom_' + Math.random().toString(36).substr(2, 9),
-      url: mediaItem.url,
-      title: mediaItem.title || getPageTitle(),
-      type: mediaItem.type || detectTypeFromUrl(mediaItem.url),
-      quality: mediaItem.quality || 'Auto HD',
-      size: mediaItem.size || null,
-      poster: mediaItem.poster || findVideoPoster(),
-      source: 'DOM',
-      pageUrl: window.location.href,
-      pageTitle: document.title,
-      timestamp: Date.now()
-    };
-
-    try {
-      chrome.runtime.sendMessage({
-        action: 'MEDIA_DETECTED',
-        data: fullItem,
-        poster: fullItem.poster
-      }, () => {
-        if (chrome.runtime.lastError) {
-          // Handled: suppresses unchecked runtime.lastError
-        }
-      });
-    } catch (e) {}
-  }
-
-  function detectTypeFromUrl(url) {
-    const lower = url.toLowerCase();
-    if (lower.includes('.m3u8') || lower.includes('mpegurl')) return 'HLS';
-    if (lower.includes('.mpd') || lower.includes('dash+xml')) return 'DASH';
-    if (lower.includes('.mp3') || lower.includes('.aac') || lower.includes('.ogg') || lower.includes('.wav') || lower.includes('.m4a')) return 'Audio';
-    if (lower.includes('.webm')) return 'WebM';
-    if (lower.includes('.flv')) return 'FLV';
-    return 'MP4';
-  }
-
-  function scanMediaElements() {
-    const poster = findVideoPoster();
-
-    const videoElements = document.querySelectorAll('video');
-    videoElements.forEach(video => {
-      const quality = video.videoWidth ? `${video.videoWidth}x${video.videoHeight}` : 'Auto HD';
-      const videoPoster = (video.poster && video.poster.startsWith('http')) ? video.poster : poster;
-
-      if (video.src && !video.src.startsWith('blob:') && !isExcludedUrl(video.src)) {
-        reportMedia({
-          url: video.src,
-          quality: quality,
-          type: detectTypeFromUrl(video.src),
-          poster: videoPoster
         });
       }
-      if (video.currentSrc && !video.currentSrc.startsWith('blob:') && !isExcludedUrl(video.currentSrc)) {
-        reportMedia({
-          url: video.currentSrc,
-          quality: quality,
-          type: detectTypeFromUrl(video.currentSrc),
-          poster: videoPoster
-        });
-      }
-
-      const sources = video.querySelectorAll('source');
-      sources.forEach(srcEl => {
-        if (srcEl.src && !srcEl.src.startsWith('blob:') && !isExcludedUrl(srcEl.src)) {
-          reportMedia({
-            url: srcEl.src,
-            quality: srcEl.getAttribute('res') || quality,
-            type: detectTypeFromUrl(srcEl.src),
-            poster: videoPoster
-          });
-        }
-      });
     });
   }
 
-  function scanPerformanceResources() {
+  /* ==========================================================================
+     4. DISCREET TOAST NOTIFICATION
+     ========================================================================== */
+  let toastContainer = null;
+
+  function ensureToastContainer() {
+    if (!toastContainer || !document.body.contains(toastContainer)) {
+      toastContainer = document.createElement('div');
+      toastContainer.id = 'pureshield-toast-container';
+      (document.body || document.documentElement).appendChild(toastContainer);
+    }
+    return toastContainer;
+  }
+
+  function showBlockedPopupToast(popupUrl) {
+    if (!document.body) return;
+    const container = ensureToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = 'pureshield-toast';
+
+    let displayUrl = popupUrl || 'Unrequested Window';
     try {
-      const resources = window.performance.getEntriesByType('resource');
-      resources.forEach(r => {
-        const name = r.name;
-        if (name && (name.includes('.m3u8') || name.includes('.mpd'))) {
-          if (!isExcludedUrl(name)) {
-            reportMedia({
-              url: name,
-              quality: 'HD Stream',
-              type: detectTypeFromUrl(name),
-              poster: findVideoPoster()
-            });
-          }
-        }
-      });
-    } catch (e) {}
-  }
-
-  function scanNoscriptMedia() {
-    try {
-      const noscripts = document.querySelectorAll('noscript');
-      for (const ns of noscripts) {
-        const text = ns.textContent || ns.innerHTML || '';
-        const videoSrcMatch = text.match(/<video[^>]+src=["']([^"']+)["']/i) ||
-                              text.match(/<source[^>]+src=["']([^"']+)["']/i) ||
-                              text.match(/src=["'](https?:\/\/[^"']+\.(?:mp4|webm|m3u8)[^"']*)["']/i);
-        if (videoSrcMatch && videoSrcMatch[1] && !isExcludedUrl(videoSrcMatch[1])) {
-          const posterMatch = text.match(/poster=["']([^"']+)["']/i);
-          reportMedia({
-            url: videoSrcMatch[1],
-            quality: 'Auto HD',
-            type: detectTypeFromUrl(videoSrcMatch[1]),
-            poster: (posterMatch && posterMatch[1]) ? posterMatch[1] : findVideoPoster()
-          });
-        }
+      if (popupUrl && popupUrl.startsWith('http')) {
+        displayUrl = new URL(popupUrl).hostname;
       }
-    } catch (e) {}
-  }
+    } catch (_) {}
 
-  function runScan() {
-    scanMediaElements();
-    scanNoscriptMedia();
-    scanPerformanceResources();
-
-    // Only the top frame reports page title & poster to avoid ad iframe overrides
-    if (window.self === window.top) {
-      try {
-        chrome.runtime.sendMessage({
-          action: 'TAB_INFO_UPDATE',
-          title: getPageTitle(),
-          poster: findVideoPoster()
-        }, () => {
-          if (chrome.runtime.lastError) {
-            // Handled: suppresses unchecked runtime.lastError
-          }
-        });
-      } catch (e) {}
-    }
-  }
-
-  runScan();
-  setTimeout(runScan, 1500);
-  setTimeout(runScan, 4000);
-
-  // 4. In-page Message Listener: Handles Crop Rect & In-Page Fetch to prevent HTTP 412
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    // Request Video Bounding Box for crop
-    if (request.action === 'GET_VIDEO_CROP_RECT') {
-      const rect = getVideoBoundingRect();
-      sendResponse({ found: Boolean(rect), rect });
-      return true;
-    }
-
-
-    // In-Page Manifest Fetch (Runs with page's cookies, origin & headers -> Bypasses HTTP 412)
-    if (request.action === 'PAGE_FETCH_TEXT') {
-      fetch(request.url, {
-        credentials: 'include',
-        headers: {
-          'Accept': '*/*',
-          ...(request.headers || {})
-        }
-      })
-      .then(resp => {
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.text();
-      })
-      .then(text => sendResponse({ success: true, text }))
-      .catch(err => sendResponse({ success: false, error: err.message }));
-      return true;
-    }
-
-    // In-Page ArrayBuffer Segment Fetch
-    if (request.action === 'PAGE_FETCH_BUFFER') {
-      fetch(request.url, {
-        credentials: 'include',
-        headers: {
-          'Accept': '*/*',
-          ...(request.headers || {})
-        }
-      })
-      .then(resp => {
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.arrayBuffer();
-      })
-      .then(buffer => {
-        // Convert buffer to binary string / base64 for message passing
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        const base64 = btoa(binary);
-        sendResponse({ success: true, base64, size: buffer.byteLength });
-      })
-      .catch(err => sendResponse({ success: false, error: err.message }));
-      return true;
-    }
-  });
-
-  // 5. In-Page Floating Video Download Button (Featuring StreamGrabber App Icon)
-  let floatingBtn = null;
-  let activeVideo = null;
-  let isFloatingBtnEnabled = true;
-  let isMouseOverBtn = false;
-
-  const appIconUrl = chrome.runtime.getURL('icon48.png');
-
-  chrome.storage.sync.get({ showFloatingBtn: true }, (res) => {
-    isFloatingBtnEnabled = Boolean(res?.showFloatingBtn ?? true);
-    if (isFloatingBtnEnabled) {
-      initFloatingButton();
-    }
-  });
-
-  chrome.storage.onChanged.addListener((changes) => {
-    if (changes.showFloatingBtn) {
-      isFloatingBtnEnabled = Boolean(changes.showFloatingBtn.newValue);
-      if (!isFloatingBtnEnabled && floatingBtn) {
-        floatingBtn.style.display = 'none';
-      } else if (isFloatingBtnEnabled) {
-        initFloatingButton();
-      }
-    }
-  });
-
-  function createFloatingButton() {
-    if (floatingBtn) return floatingBtn;
-
-    const btn = document.createElement('div');
-    btn.id = 'streamgrabber-floating-btn';
-    btn.className = 'streamgrabber-floating-btn';
-    btn.setAttribute('data-streamgrabber', 'true');
-    btn.title = 'StreamGrabber - Click to download this video';
-    btn.innerHTML = `
-      <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber" style="width: 24px; height: 24px; border-radius: 6px; display: block; flex-shrink: 0; pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,0.3);" />
-      <span class="streamgrabber-btn-text" style="font-weight: 700; font-size: 12px; color: #ffffff; pointer-events: none; white-space: nowrap; line-height: 1;">Download</span>
+    toast.innerHTML = `
+      <div class="pureshield-toast-info">
+        <div class="pureshield-toast-title">🛡️ Popup Blocked</div>
+        <div class="pureshield-toast-url" title="${displayUrl}">${displayUrl}</div>
+      </div>
+      <div class="pureshield-toast-actions">
+        <button class="pureshield-toast-btn" id="ps-btn-allow-once">Allow Once</button>
+        <button class="pureshield-toast-btn" id="ps-btn-whitelist">Whitelist</button>
+        <button class="pureshield-toast-close" title="Close">&times;</button>
+      </div>
     `;
 
-    Object.assign(btn.style, {
-      position: 'fixed',
-      zIndex: '2147483647',
-      display: 'none',
-      alignItems: 'center',
-      gap: '7px',
-      background: 'rgba(15, 23, 42, 0.94)',
-      color: '#ffffff',
-      border: '1.5px solid #0087cd',
-      borderRadius: '24px',
-      padding: '5px 12px 5px 6px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '12px',
-      fontWeight: '700',
-      cursor: 'pointer',
-      boxShadow: '0 4px 18px rgba(0, 135, 205, 0.45)',
-      backdropFilter: 'blur(8px)',
-      userSelect: 'none',
-      pointerEvents: 'auto',
-      transition: 'opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease',
-      opacity: '0.9'
-    });
+    const allowBtn = toast.querySelector('#ps-btn-allow-once');
+    const whitelistBtn = toast.querySelector('#ps-btn-whitelist');
+    const closeBtn = toast.querySelector('.pureshield-toast-close');
 
-    btn.addEventListener('mouseenter', () => {
-      isMouseOverBtn = true;
-      btn.style.opacity = '1';
-      btn.style.transform = 'scale(1.06)';
-      btn.style.background = '#0087cd';
-      btn.style.borderColor = '#38bdf8';
-    });
+    if (allowBtn) {
+      allowBtn.addEventListener('click', () => {
+        if (popupUrl && popupUrl.startsWith('http')) {
+          window.open(popupUrl, '_blank');
+        }
+        dismissToast(toast);
+      });
+    }
 
-    btn.addEventListener('mouseleave', () => {
-      isMouseOverBtn = false;
-      btn.style.opacity = '0.9';
-      btn.style.transform = 'scale(1)';
-      btn.style.background = 'rgba(15, 23, 42, 0.94)';
-      btn.style.borderColor = '#0087cd';
-    });
+    if (whitelistBtn) {
+      whitelistBtn.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ action: 'whitelistCurrentDomain', domain: hostname }, () => {
+          syncSettings();
+          dismissToast(toast);
+        });
+      });
+    }
 
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      handleFloatingDownload();
-    }, true);
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => dismissToast(toast));
+    }
 
-    const targetRoot = document.fullscreenElement || document.body || document.documentElement;
-    targetRoot.appendChild(btn);
-    floatingBtn = btn;
-    return btn;
+    container.appendChild(toast);
+
+    const timer = setTimeout(() => dismissToast(toast), 4500);
+    toast.addEventListener('mouseenter', () => clearTimeout(timer));
   }
 
-  function positionFloatingButton(video) {
-    if (!video || !isFloatingBtnEnabled) return;
-    const btn = floatingBtn || createFloatingButton();
-    const rect = video.getBoundingClientRect();
-
-    if (rect.width < 140 || rect.height < 90) {
-      if (!isMouseOverBtn) btn.style.display = 'none';
-      return;
-    }
-
-    if (rect.bottom < 40 || rect.top > window.innerHeight - 40 || rect.right < 40 || rect.left > window.innerWidth - 40) {
-      if (!isMouseOverBtn) btn.style.display = 'none';
-      return;
-    }
-
-    const btnWidth = btn.offsetWidth || 116;
-    const btnHeight = btn.offsetHeight || 36;
-
-    const left = Math.max(10, Math.min(window.innerWidth - btnWidth - 10, rect.right - btnWidth - 12));
-    const top = Math.max(10, Math.min(window.innerHeight - btnHeight - 10, rect.top + 12));
-
-    btn.style.left = `${Math.round(left)}px`;
-    btn.style.top = `${Math.round(top)}px`;
-    btn.style.display = 'flex';
-
-    if (document.fullscreenElement && btn.parentElement !== document.fullscreenElement) {
-      document.fullscreenElement.appendChild(btn);
-    } else if (!document.fullscreenElement && btn.parentElement !== (document.body || document.documentElement)) {
-      (document.body || document.documentElement).appendChild(btn);
-    }
+  function dismissToast(toast) {
+    if (!toast) return;
+    toast.classList.add('pureshield-toast-fadeout');
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
   }
 
-  function findVideoUnderCursor(e) {
-    if (!e || !e.clientX) return null;
-    try {
-      const elements = document.elementsFromPoint(e.clientX, e.clientY);
-      if (elements) {
-        for (const el of elements) {
-          if (el === floatingBtn || floatingBtn?.contains(el)) continue;
-          if (el.tagName === 'VIDEO') return el;
-          if (el.querySelector) {
-            const v = el.querySelector('video');
-            if (v) return v;
+  /* ==========================================================================
+     5. OVERLAY, MODAL & COOKIE BANNER HUNTER
+     ========================================================================== */
+  const COOKIE_BANNER_SELECTORS = [
+    '#onetrust-consent-sdk',
+    '#CookiebotWidget',
+    '#didomi-host',
+    '.qc-cmp2-container',
+    '.cmplz-cookiebanner',
+    '#CybotCookiebotDialog',
+    '#usercentrics-root',
+    '.evidon-banner',
+    '#cookie-notice',
+    '.cc-window',
+    '#klaro',
+    '.cookie-consent',
+    '#truste-consent-track'
+  ];
+
+  function huntOverlaysAndBanners() {
+    if (isWhitelisted) return;
+
+    // Scan for trackers in DOM
+    scanDomForTrackers();
+
+    // Auto-dismiss or hide known cookie banners
+    if (settings.dismissCookieBanners) {
+      COOKIE_BANNER_SELECTORS.forEach(selector => {
+        const banners = document.querySelectorAll(selector);
+        banners.forEach(banner => {
+          if (banner.style.display !== 'none') {
+            banner.style.setProperty('display', 'none', 'important');
+            banner.setAttribute('aria-hidden', 'true');
+            console.log('[PureShield] Auto-dismissed cookie wall:', selector);
+            chrome.runtime.sendMessage({
+              action: 'recordBlockedEvent',
+              data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
+            });
           }
-        }
-      }
-    } catch (err) {}
-    return null;
-  }
-
-  function findMostVisibleVideo() {
-    const videos = Array.from(document.querySelectorAll('video'));
-    if (videos.length === 0) return null;
-
-    const playing = videos.find(v => !v.paused && v.readyState >= 1);
-    if (playing) {
-      const r = playing.getBoundingClientRect();
-      if (r.width >= 140 && r.height >= 90 && r.bottom > 40 && r.top < window.innerHeight - 40) {
-        return playing;
-      }
+        });
+      });
     }
 
-    let best = null;
-    let maxArea = 0;
-    for (const v of videos) {
-      const r = v.getBoundingClientRect();
-      if (r.width >= 140 && r.height >= 90 && r.bottom > 40 && r.top < window.innerHeight - 40) {
-        const area = r.width * r.height;
-        if (area > maxArea) {
-          maxArea = area;
-          best = v;
-        }
+    // Body scroll lock restoration (anti-adblock / paywall overlays)
+    if (settings.removeOverlays) {
+      const bodyStyle = window.getComputedStyle(document.body);
+      const htmlStyle = window.getComputedStyle(document.documentElement);
+
+      if (bodyStyle.overflow === 'hidden' || htmlStyle.overflow === 'hidden') {
+        const blockingOverlays = document.querySelectorAll('div[style*="z-index"][style*="fixed"], div[style*="z-index"][style*="absolute"]');
+        blockingOverlays.forEach(el => {
+          const style = window.getComputedStyle(el);
+          const zIndex = parseInt(style.zIndex, 10);
+          if (zIndex > 9999 && (style.position === 'fixed' || style.position === 'absolute') && el.offsetWidth >= window.innerWidth * 0.9 && el.offsetHeight >= window.innerHeight * 0.9) {
+            el.style.setProperty('display', 'none', 'important');
+            console.log('[PureShield] Suppressed fullscreen overlay modal');
+          }
+        });
+
+        document.body.style.setProperty('overflow', 'auto', 'important');
+        document.documentElement.style.setProperty('overflow', 'auto', 'important');
       }
     }
-    return best;
   }
 
-  function updateTracker() {
-    if (!isFloatingBtnEnabled) {
-      if (floatingBtn) floatingBtn.style.display = 'none';
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', huntOverlaysAndBanners);
+  } else {
+    huntOverlaysAndBanners();
+  }
+
+  const observer = new MutationObserver(() => {
+    huntOverlaysAndBanners();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  /* ==========================================================================
+     6. CUSTOM COSMETIC RULES ENGINE
+     ========================================================================== */
+  let cosmeticStyleTag = null;
+
+  function applyCustomCosmeticRules(customRules) {
+    const rules = customRules[hostname] || [];
+    if (!cosmeticStyleTag) {
+      cosmeticStyleTag = document.createElement('style');
+      cosmeticStyleTag.id = 'pureshield-cosmetic-styles';
+      (document.head || document.documentElement).appendChild(cosmeticStyleTag);
+    }
+
+    if (rules.length === 0 || isWhitelisted) {
+      cosmeticStyleTag.textContent = '';
       return;
     }
 
-    if (isMouseOverBtn) return;
+    const css = rules.map(selector => `${selector} { display: none !important; }`).join('\n');
+    cosmeticStyleTag.textContent = css;
+  }
 
-    const targetVideo = activeVideo || findMostVisibleVideo();
-    if (targetVideo) {
-      positionFloatingButton(targetVideo);
-    } else if (floatingBtn) {
-      floatingBtn.style.display = 'none';
+  /* ==========================================================================
+     7. INTERACTIVE ELEMENT ZAPPER / PICKER TOOL
+     ========================================================================== */
+  let pickerActive = false;
+  let hoveredElement = null;
+  let pickerToolbar = null;
+
+  function activateElementPicker() {
+    if (pickerActive) return;
+    pickerActive = true;
+
+    pickerToolbar = document.createElement('div');
+    pickerToolbar.id = 'pureshield-picker-toolbar';
+    pickerToolbar.innerHTML = `
+      <div class="pureshield-toolbar-title">⚡ Element Zapper</div>
+      <div class="pureshield-toolbar-desc">Hover and click any element to permanently vaporize it.</div>
+      <button class="pureshield-btn-cancel" id="pureshield-picker-cancel">Exit (Esc)</button>
+    `;
+    document.body.appendChild(pickerToolbar);
+
+    const cancelBtn = pickerToolbar.querySelector('#pureshield-picker-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', deactivateElementPicker);
+
+    document.addEventListener('mouseover', handlePickerMouseOver, true);
+    document.addEventListener('mouseout', handlePickerMouseOut, true);
+    document.addEventListener('click', handlePickerClick, true);
+    document.addEventListener('keydown', handlePickerKeyDown, true);
+  }
+
+  function deactivateElementPicker() {
+    if (!pickerActive) return;
+    pickerActive = false;
+
+    if (hoveredElement) {
+      hoveredElement.classList.remove('pureshield-picker-highlight');
+      hoveredElement = null;
+    }
+
+    if (pickerToolbar && pickerToolbar.parentNode) {
+      pickerToolbar.parentNode.removeChild(pickerToolbar);
+      pickerToolbar = null;
+    }
+
+    document.removeEventListener('mouseover', handlePickerMouseOver, true);
+    document.removeEventListener('mouseout', handlePickerMouseOut, true);
+    document.removeEventListener('click', handlePickerClick, true);
+    document.removeEventListener('keydown', handlePickerKeyDown, true);
+  }
+
+  function handlePickerMouseOver(e) {
+    if (!pickerActive) return;
+    const target = e.target;
+    if (target === pickerToolbar || (pickerToolbar && pickerToolbar.contains(target))) return;
+
+    if (hoveredElement && hoveredElement !== target) {
+      hoveredElement.classList.remove('pureshield-picker-highlight');
+    }
+    hoveredElement = target;
+    hoveredElement.classList.add('pureshield-picker-highlight');
+  }
+
+  function handlePickerMouseOut(e) {
+    if (!pickerActive) return;
+    if (e.target && e.target.classList) {
+      e.target.classList.remove('pureshield-picker-highlight');
     }
   }
 
-  function handleFloatingDownload() {
-    if (!floatingBtn) return;
-    const textEl = floatingBtn.querySelector('.streamgrabber-btn-text');
-    const originalText = 'Download';
-    const video = activeVideo || findMostVisibleVideo();
-
-    if (textEl) textEl.textContent = '⏳ Starting...';
-    floatingBtn.style.background = '#0284c7';
-
-    const videoSrc = video ? (video.currentSrc || video.src || '') : '';
-
-    chrome.runtime.sendMessage({
-      action: 'START_FLOATING_DOWNLOAD',
-      videoSrc: videoSrc
-    }, (response) => {
-      if (chrome.runtime.lastError || !response || !response.success) {
-        if (textEl) textEl.textContent = '⚠️ Play video 1st';
-        floatingBtn.style.background = '#e11d48';
-      } else {
-        if (textEl) textEl.textContent = '✅ Downloading!';
-        floatingBtn.style.background = '#16a34a';
+  function getUniqueSelector(el) {
+    if (el.id) return `#${CSS.escape(el.id)}`;
+    
+    let path = [];
+    while (el && el.nodeType === Node.ELEMENT_NODE) {
+      let selector = el.nodeName.toLowerCase();
+      if (el.className && typeof el.className === 'string') {
+        const validClasses = el.className.split(/\s+/).filter(c => c && !c.startsWith('pureshield-') && !c.includes(':'));
+        if (validClasses.length > 0) {
+          selector += '.' + validClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
+        }
       }
+      path.unshift(selector);
+      if (path.length >= 3) break;
+      el = el.parentNode;
+    }
+    return path.join(' > ');
+  }
 
-      setTimeout(() => {
-        if (textEl) textEl.textContent = originalText;
-        floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
-      }, 2500);
+  function handlePickerClick(e) {
+    if (!pickerActive) return;
+    const target = e.target;
+    if (target === pickerToolbar || (pickerToolbar && pickerToolbar.contains(target))) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const selector = getUniqueSelector(target);
+    target.style.setProperty('display', 'none', 'important');
+
+    chrome.storage.local.get(['customCosmeticRules'], (data) => {
+      const customRules = data.customCosmeticRules || {};
+      if (!customRules[hostname]) {
+        customRules[hostname] = [];
+      }
+      if (!customRules[hostname].includes(selector)) {
+        customRules[hostname].push(selector);
+      }
+      chrome.storage.local.set({ customCosmeticRules: customRules }, () => {
+        applyCustomCosmeticRules(customRules);
+        deactivateElementPicker();
+        showBlockedPopupToast(`Zapped & hidden: ${selector}`);
+      });
     });
   }
 
-  function initFloatingButton() {
-    createFloatingButton();
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isFloatingBtnEnabled) return;
-      if (isMouseOverBtn) return;
-
-      const video = findVideoUnderCursor(e);
-      if (video) {
-        activeVideo = video;
-        positionFloatingButton(video);
-      }
-    }, { passive: true });
-
-    window.addEventListener('scroll', updateTracker, { passive: true });
-    window.addEventListener('resize', updateTracker, { passive: true });
-
-    document.addEventListener('play', (e) => {
-      if (e.target && e.target.tagName === 'VIDEO') {
-        activeVideo = e.target;
-        positionFloatingButton(e.target);
-      }
-    }, true);
-
-    setInterval(updateTracker, 1500);
-    setTimeout(updateTracker, 500);
-    setTimeout(updateTracker, 1500);
+  function handlePickerKeyDown(e) {
+    if (e.key === 'Escape') {
+      deactivateElementPicker();
+    }
   }
 
-  const observer = new MutationObserver(() => scanMediaElements());
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  /* ==========================================================================
+     8. MESSAGE HANDLER FROM POPUP & BACKGROUND
+     ========================================================================== */
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'startElementPicker') {
+      activateElementPicker();
+      sendResponse({ status: 'picker_started' });
+    } else if (message.action === 'syncSettings') {
+      syncSettings();
+      sendResponse({ status: 'synced' });
+    }
+    return true;
+  });
 })();

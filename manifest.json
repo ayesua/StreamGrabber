@@ -1,21 +1,45 @@
 {
   "manifest_version": 3,
-  "name": "StreamGrabber",
-  "version": "3.2.0",
-  "description": "Fast video & HLS stream downloader with player preview. Note: YouTube is not supported due to Chrome Web Store policy.",
+  "name": "PureShield: Ultimate Popup & Tracker Blocker",
+  "version": "1.0.0",
+  "description": "High-speed blocker for popups, overlays, trackers, and fingerprinting. 100% free with zero paywalls.",
   "permissions": [
     "storage",
-    "downloads",
-    "notifications",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
     "webRequest",
     "tabs",
     "scripting",
-    "declarativeNetRequest",
-    "offscreen"
+    "privacy",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_trackers",
+        "enabled": true,
+        "path": "rules/trackers.json"
+      },
+      {
+        "id": "ruleset_popups",
+        "enabled": true,
+        "path": "rules/popups.json"
+      },
+      {
+        "id": "ruleset_query_stripping",
+        "enabled": true,
+        "path": "rules/query_stripping.json"
+      },
+      {
+        "id": "ruleset_annoyances",
+        "enabled": true,
+        "path": "rules/annoyances.json"
+      }
+    ]
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -28,13 +52,16 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_idle",
+      "css": [
+        "element-picker.css"
+      ],
+      "run_at": "document_start",
       "all_frames": true
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "StreamGrabber Downloader",
+    "default_title": "PureShield Protection",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
@@ -50,6 +77,8 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "injected.js",
+        "element-picker.css",
         "icon16.png",
         "icon48.png",
         "icon128.png"

@@ -1,12 +1,19 @@
 {
-  "name": "streamgrabber",
-  "version": "3.2.0",
-  "description": "StreamGrabber - Fast Media, Audio and HLS Stream Downloader Chrome Extension (Manifest V3)",
+  "name": "pureshield",
+  "version": "1.0.0",
+  "description": "PureShield - Ultimate Popup, Overlay, Tracker & Fingerprinting Blocker Chrome Extension (Manifest V3)",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 0",
     "package": "powershell -ExecutionPolicy Bypass -File ./package.ps1"
   },
-  "dependencies": {
-    "hls.js": "^1.7.2"
-  }
+  "keywords": [
+    "adblock",
+    "popup-blocker",
+    "privacy",
+    "anti-tracking",
+    "fingerprint-protection",
+    "chrome-extension",
+    "manifest-v3"
+  ],
+  "author": "PureShield Team",
+  "license": "MIT"
 }

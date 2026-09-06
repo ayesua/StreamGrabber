@@ -3,207 +3,232 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings - StreamGrabber</title>
+  <title>PureShield - Control Center & Settings</title>
   <link rel="stylesheet" href="styles.css">
-  <style>
-    body {
-      width: 100%;
-      min-height: 100vh;
-      background: var(--vdh-bg);
-      color: var(--vdh-text);
-      font-family: var(--font-main);
-      padding: 40px 20px;
-    }
-    .options-card {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid var(--vdh-border);
-      border-radius: var(--vdh-radius);
-      padding: 24px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .options-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--vdh-header-bg);
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--vdh-blue);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-    .form-help {
-      font-size: 12px;
-      color: var(--vdh-text-muted);
-      margin-top: 4px;
-    }
-    input[type="number"], input[type="text"], input[type="url"], select {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 10px;
-      border: 1px solid var(--vdh-border);
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    .btn-save {
-      background: var(--vdh-green);
-      color: #ffffff;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      width: 100%;
-    }
-    .toast {
-      display: none;
-      background: #dcfce7;
-      color: #15803d;
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 12px;
-      text-align: center;
-      font-weight: 600;
-      font-size: 13px;
-    }
-    /* Switch Toggle */
-    .toggle-group {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 14px;
-      background: #f8fafc;
-      border: 1px solid var(--vdh-border);
-      border-radius: 8px;
-    }
-    .toggle-label-wrap {
-      flex: 1;
-    }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 46px;
-      height: 26px;
-      flex-shrink: 0;
-    }
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #cbd5e1;
-      transition: .3s ease;
-      border-radius: 26px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 20px;
-      width: 20px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .3s ease;
-      border-radius: 50%;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    input:checked + .slider {
-      background-color: #00a63d;
-    }
-    input:checked + .slider:before {
-      transform: translateX(20px);
-    }
-  </style>
 </head>
-<body>
+<body style="background-color: var(--bg-primary);">
+  <div class="options-container">
+    <!-- Header -->
+    <header class="options-header">
+      <div class="brand">
+        <div class="brand-icon" style="width: 36px; height: 36px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#090d16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2.2"/>
+            <polygon points="9 8.5 15 8.5 17 11.5 12 16.5 7 11.5" stroke-width="1.6" fill="#090d16" fill-opacity="0.3"/>
+            <line x1="7" y1="11.5" x2="17" y2="11.5" stroke-width="1.2"/>
+            <polyline points="9 8.5 12 16.5 15 8.5" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <div>
+          <h1 style="font-size: 20px; font-weight: 700; color: #fff;">PureShield Settings</h1>
+          <p style="font-size: 12px; color: var(--text-secondary);">Manifest V3 High-Performance Popup & Tracker Armor</p>
+        </div>
+      </div>
+    </header>
 
-  <div class="options-card">
-    <div class="options-title">
-      <span>StreamGrabber Settings</span>
+    <!-- Navigation Tabs -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-filters">🛡️ Protections</button>
+      <button class="tab-btn" data-tab="tab-whitelist">🌐 Whitelist & Custom</button>
+      <button class="tab-btn" data-tab="tab-logs">📜 Live Activity Log</button>
+      <button class="tab-btn" data-tab="tab-backup">💾 Backup & Restore</button>
+      <button class="tab-btn" data-tab="tab-donations">💖 Support & Donations</button>
+    </nav>
+
+    <!-- TAB 1: PROTECTIONS & FILTERS -->
+    <div class="tab-panel active" id="tab-filters">
+      <div class="setting-card">
+        <h2 style="font-size: 16px; margin-bottom: 14px; color: var(--accent-emerald);">Core Defense Engines</h2>
+        
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">Aggressive Popup & Popunder Blocker</span>
+            <span class="setting-desc">Traps unrequested window spawns, synthetic anchor click exploits, and background window refocusing.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-blockPopups" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">Tracking & Telemetry Armor</span>
+            <span class="setting-desc">Blocks cross-site trackers, ad telemetry pixels, analytics beacons, and behavioral profiling networks.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-blockTrackers" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">URL Tracking Parameter Stripper</span>
+            <span class="setting-desc">Automatically cleans query tracking tokens (utm_*, fbclid, gclid, mc_cid, etc.) from clicked links and URLs.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-stripParams" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">Canvas & Audio Fingerprint Randomizer</span>
+            <span class="setting-desc">Injects imperceptible deterministic noise into canvas and AudioContext APIs to defeat device fingerprinting.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-blockFingerprinting" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">WebRTC IP Leak Defense</span>
+            <span class="setting-desc">Eliminates WebRTC local/public IP address disclosure on non-proxied UDP connections.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-blockWebRTCLeaks" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">Cookie Consent Banner Auto-Dismissal</span>
+            <span class="setting-desc">Automatically dismisses or hides intrusive GDPR/CCPA cookie consent banners without accepting tracking.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-dismissCookieBanners" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">Anti-Adblock Defuser</span>
+            <span class="setting-desc">Neutralizes anti-adblock traps and provides safe dummy variables to prevent page breakage.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-defuseAntiAdblock" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">Popup Blocked Toast Notifications</span>
+            <span class="setting-desc">Displays a subtle floating badge at the bottom corner when a popup is intercepted with 1-click allow/whitelist.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-showToastNotifications" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
     </div>
 
-    <form id="optionsForm">
-      <!-- Ask File Name Toggle Option -->
-      <div class="form-group toggle-group">
-        <div class="toggle-label-wrap">
-          <label for="askFilename" style="margin-bottom: 2px;">Ask for file name before downloading</label>
-          <div class="form-help">When enabled, you will be prompted to enter or customize the file name before saving.</div>
+    <!-- TAB 2: WHITELIST & CUSTOM COSMETIC RULES -->
+    <div class="tab-panel" id="tab-whitelist">
+      <div class="setting-card">
+        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);">Trusted Whitelisted Domains</h2>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">PureShield will remain completely disabled on these websites.</p>
+        
+        <div class="input-group">
+          <input type="text" id="input-whitelist" class="text-input" placeholder="e.g. internal.company.com or example.org">
+          <button class="btn-primary" id="btn-add-whitelist">Add Domain</button>
         </div>
-        <label class="switch">
-          <input type="checkbox" id="askFilename">
-          <span class="slider"></span>
-        </label>
-      </div>
 
-      <!-- Floating Download Button on Video Players Toggle Option -->
-      <div class="form-group toggle-group">
-        <div class="toggle-label-wrap">
-          <label for="showFloatingBtn" style="margin-bottom: 2px;">Show floating download button on video players</label>
-          <div class="form-help">Displays a discreet hover button on HTML5 video players on websites to download with one click.</div>
+        <div class="items-list" id="whitelist-container">
+          <div style="color: var(--text-muted); font-size: 12px;">No whitelisted domains yet.</div>
         </div>
-        <label class="switch">
-          <input type="checkbox" id="showFloatingBtn" checked>
-          <span class="slider"></span>
-        </label>
       </div>
 
-      <div class="form-group">
-        <label for="minSize">Minimum File Size Filter (KB)</label>
-        <input type="number" id="minSize" value="100" min="0" step="50">
-        <div class="form-help">Ignore small video clips, ads, or audio effects below this size threshold.</div>
-      </div>
+      <div class="setting-card">
+        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);">Zapped Elements (Custom Cosmetic Filters)</h2>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">Selectors hidden permanently using the Element Zapper tool.</p>
 
-      <div class="form-group">
-        <label for="maxThreads">Simultaneous HLS Connections (.m3u8)</label>
-        <select id="maxThreads">
-          <option value="3">3 Connections (Standard)</option>
-          <option value="5" selected>5 Connections (Fast - Recommended)</option>
-          <option value="8">8 Connections (Ultra Fast)</option>
-        </select>
-        <div class="form-help">Number of streaming segments downloaded concurrently.</div>
+        <div class="items-list" id="cosmetic-container">
+          <div style="color: var(--text-muted); font-size: 12px;">No custom hidden elements saved yet.</div>
+        </div>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="defaultFormat">Default Download Format</label>
-        <select id="defaultFormat">
-          <option value="mp4" selected>MP4 (Universal - High Compatibility)</option>
-          <option value="mkv">MKV (Matroska)</option>
-          <option value="ts">TS (Transport Stream)</option>
-        </select>
-        <div class="form-help">Preferred format for saving video streams. The highest available resolution will always be selected.</div>
+    <!-- TAB 3: LIVE ACTIVITY LOG -->
+    <div class="tab-panel" id="tab-logs">
+      <div class="setting-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+          <div>
+            <h2 style="font-size: 16px; color: var(--accent-emerald);">Recent Blocked Events</h2>
+            <p style="font-size: 12px; color: var(--text-secondary);">Real-time stream of intercepted popups, blocked trackers, and stripped URLs.</p>
+          </div>
+          <button class="btn-primary" id="btn-clear-logs" style="background: #334155; color: #fff;">Clear Log</button>
+        </div>
+
+        <div class="items-list" id="logs-container" style="max-height: 400px;">
+          <div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">No events recorded in this session.</div>
+        </div>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="autoDetect">Automatic Network Detection</label>
-        <select id="autoDetect">
-          <option value="true" selected>Enabled (Recommended)</option>
-          <option value="false">Disabled</option>
-        </select>
+    <!-- TAB 4: BACKUP & RESTORE -->
+    <div class="tab-panel" id="tab-backup">
+      <div class="setting-card">
+        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);">Export & Import Configuration</h2>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 18px;">Easily transfer your custom rules, whitelist, and settings across devices.</p>
+
+        <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+          <button class="btn-primary" id="btn-export-json">📥 Export Settings JSON</button>
+          <button class="btn-primary" id="btn-import-json-trigger" style="background: #334155; color: #fff;">📤 Import Settings JSON</button>
+          <input type="file" id="file-import-json" accept=".json" style="display: none;">
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
+
+        <h3 style="font-size: 14px; color: var(--accent-rose); margin-bottom: 6px;">Reset to Factory Defaults</h3>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Wipes all custom rules, whitelists, and restores original recommended protection settings.</p>
+        <button class="btn-primary" id="btn-reset-defaults" style="background: var(--accent-rose); color: #fff;">Reset All Settings</button>
       </div>
+    </div>
 
-      <button type="submit" class="btn-save">Save Preferences</button>
-      <div id="toast" class="toast">Preferences saved successfully!</div>
-    </form>
+    <!-- TAB 5: SUPPORT & DONATIONS -->
+    <div class="tab-panel" id="tab-donations">
+      <div class="setting-card">
+        <h2 style="font-size: 18px; margin-bottom: 8px; color: var(--accent-emerald);">💖 100% Free & Open Privacy Model</h2>
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px;">
+          Unlike commercial adblockers that sell user telemetry or charge monthly subscriptions for "premium" features, <strong>PureShield is 100% free, forever, with zero paywalls</strong>. We rely strictly on voluntary community donations from users who value high-speed, private browsing.
+        </p>
+
+        <h3 style="font-size: 14px; color: var(--text-primary); margin-bottom: 14px;">Ways to Support PureShield</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; max-width: 480px;">
+          <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" style="text-decoration: none;">
+            <div style="background: #72a4f2; color: #ffffff; padding: 12px 20px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; font-weight: 700; box-shadow: 0 4px 14px rgba(114, 164, 242, 0.35); transition: transform 0.2s;">
+              <span style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                ☕ Support me on Ko-fi
+              </span>
+              <span>&rarr;</span>
+            </div>
+          </a>
+
+          <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">CRYPTO DONATIONS</div>
+          
+          <div class="crypto-box">
+            <span style="font-weight: 600; font-size: 12px; color: #f59e0b;">Bitcoin (BTC)</span>
+            <span class="crypto-addr" id="opt-addr-btc">bc1qc92qpkma6k5yvypa9xs6dy8g8ah34ceu83nger</span>
+            <button class="btn-copy" data-copy="opt-addr-btc">Copy</button>
+          </div>
+
+          <div class="crypto-box">
+            <span style="font-weight: 600; font-size: 12px; color: #06b6d4;">BNB Smart Chain / USDT (BEP20)</span>
+            <span class="crypto-addr" id="opt-addr-bsc">0x1466a8eD548A9e39829e142431fff185b0C15dF4</span>
+            <button class="btn-copy" data-copy="opt-addr-bsc">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="options.js"></script>
