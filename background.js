@@ -1,7 +1,7 @@
 /**
  * PureShield - Background Service Worker (Manifest V3)
  * Manages DNR rulesets, onRuleMatchedDebug telemetry, dynamic whitelisting,
- * WebRTC IP leak defense, per-tab blocked counters, action badges, and context menus.
+ * WebRTC IP leak defense, memory garbage collection, hotkeys, and context menus.
  */
 
 const DEFAULT_SETTINGS = {
@@ -13,7 +13,12 @@ const DEFAULT_SETTINGS = {
   removeOverlays: true,
   stripParams: true,
   showToastNotifications: true,
-  blockWebRTCLeaks: true
+  blockWebRTCLeaks: true,
+  // Advanced Optional Features
+  stripPingAttributes: false,
+  trimReferrers: false,
+  unlockRightClick: false,
+  blockAutoplay: false
 };
 
 const DEFAULT_DONATION_SETTINGS = {
@@ -22,8 +27,9 @@ const DEFAULT_DONATION_SETTINGS = {
   eth: '0x1466a8eD548A9e39829e142431fff185b0C15dF4'
 };
 
-// In-memory per-tab stats
+// In-memory per-tab stats with last active timestamps for GC
 const tabStats = new Map();
+const ALL_RULESETS = ['ruleset_trackers', 'ruleset_popups', 'ruleset_query_stripping', 'ruleset_annoyances'];
 
 /* ==========================================================================
    1. EXTENSION INITIALIZATION & LIFECYCLE
@@ -36,12 +42,15 @@ chrome.runtime.onInstalled.addListener(async () => {
     'customCosmeticRules',
     'stats',
     'trackerLogs',
-    'donationSettings'
+    'donationSettings',
+    'pauseUntil'
   ]);
 
   const initialData = {};
   if (data.masterEnabled === undefined) initialData.masterEnabled = true;
   if (!data.settings) initialData.settings = DEFAULT_SETTINGS;
+  else initialData.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+
   if (!data.whitelistedDomains) initialData.whitelistedDomains = [];
   if (!data.customCosmeticRules) initialData.customCosmeticRules = {};
   if (!data.stats) {
@@ -55,13 +64,12 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
   if (!data.trackerLogs) initialData.trackerLogs = [];
   if (!data.donationSettings) initialData.donationSettings = DEFAULT_DONATION_SETTINGS;
+  if (!data.pauseUntil) initialData.pauseUntil = 0;
 
-  if (Object.keys(initialData).length > 0) {
-    await chrome.storage.local.set(initialData);
-  }
+  await chrome.storage.local.set(initialData);
 
   // Setup WebRTC IP Leak Defense
-  applyWebRTCProtection(data.settings?.blockWebRTCLeaks ?? true);
+  applyWebRTCProtection(initialData.settings?.blockWebRTCLeaks ?? true);
 
   // Setup Context Menus
   setupContextMenus();
@@ -70,7 +78,43 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 /* ==========================================================================
-   2. DECLARATIVE NET REQUEST (DNR) RULE MATCHED TELEMETRY
+   2. MEMORY OPTIMIZATION & GARBAGE COLLECTION
+   ========================================================================== */
+// Periodically purge tab stats for inactive or closed tabs
+function runMemoryGarbageCollection() {
+  const now = Date.now();
+  chrome.tabs.query({}, (activeTabs) => {
+    const activeTabIds = new Set(activeTabs.map(t => t.id));
+    for (const [tabId, info] of tabStats.entries()) {
+      if (!activeTabIds.has(tabId) || (now - info.lastUpdated > 15 * 60 * 1000)) {
+        tabStats.delete(tabId);
+      }
+    }
+  });
+}
+
+// Run GC every 10 minutes
+setInterval(runMemoryGarbageCollection, 10 * 60 * 1000);
+
+/* ==========================================================================
+   3. KEYBOARD SHORTCUTS (COMMANDS)
+   ========================================================================== */
+chrome.commands.onCommand.addListener(async (command) => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) return;
+
+  if (command === 'zap_element') {
+    chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' });
+  } else if (command === 'toggle_protection') {
+    const data = await chrome.storage.local.get(['masterEnabled']);
+    const newState = !(data.masterEnabled !== false);
+    await setGlobalProtection(newState);
+    chrome.tabs.reload(tab.id);
+  }
+});
+
+/* ==========================================================================
+   4. DECLARATIVE NET REQUEST (DNR) TELEMETRY
    ========================================================================== */
 if (chrome.declarativeNetRequest && chrome.declarativeNetRequest.onRuleMatchedDebug) {
   chrome.declarativeNetRequest.onRuleMatchedDebug.addListener((info) => {
@@ -99,11 +143,10 @@ if (chrome.declarativeNetRequest && chrome.declarativeNetRequest.onRuleMatchedDe
       timestamp: Date.now()
     });
   });
-  console.log('[PureShield] DNR onRuleMatchedDebug listener registered.');
 }
 
 /* ==========================================================================
-   3. WEBRTC IP LEAK DEFENSE
+   5. WEBRTC IP LEAK DEFENSE
    ========================================================================== */
 function applyWebRTCProtection(enable) {
   if (chrome.privacy && chrome.privacy.network && chrome.privacy.network.webRTCIPHandlingPolicy) {
@@ -116,13 +159,13 @@ function applyWebRTCProtection(enable) {
 }
 
 /* ==========================================================================
-   4. CONTEXT MENUS
+   6. CONTEXT MENUS
    ========================================================================== */
 function setupContextMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: 'pureshield-zap-element',
-      title: '⚡ Zap Element on this Page',
+      title: '⚡ Zap Element on this Page (Alt+Shift+Z)',
       contexts: ['all']
     });
 
@@ -156,7 +199,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 /* ==========================================================================
-   5. TAB TRACKING & BADGE MANAGEMENT
+   7. TAB TRACKING & BADGE MANAGEMENT
    ========================================================================== */
 function getTabInfo(tabId) {
   if (!tabStats.has(tabId)) {
@@ -164,10 +207,13 @@ function getTabInfo(tabId) {
       popups: 0,
       trackers: 0,
       annoyances: 0,
-      items: []
+      items: [],
+      lastUpdated: Date.now()
     });
   }
-  return tabStats.get(tabId);
+  const info = tabStats.get(tabId);
+  info.lastUpdated = Date.now();
+  return info;
 }
 
 function updateTabBadge(tabId) {
@@ -185,7 +231,7 @@ function updateTabBadge(tabId) {
 // Reset tab stats on new navigation
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === 'loading') {
-    tabStats.set(tabId, { popups: 0, trackers: 0, annoyances: 0, items: [] });
+    tabStats.set(tabId, { popups: 0, trackers: 0, annoyances: 0, items: [], lastUpdated: Date.now() });
     updateTabBadge(tabId);
   }
 });
@@ -195,7 +241,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 /* ==========================================================================
-   6. EVENT RECORDING & TELEMETRY
+   8. EVENT RECORDING & TELEMETRY
    ========================================================================== */
 async function recordBlockedItem(senderTabId, eventData) {
   const { type, url, domain, timestamp } = eventData;
@@ -207,7 +253,6 @@ async function recordBlockedItem(senderTabId, eventData) {
     else if (type === 'annoyance') tStats.annoyances++;
     else tStats.trackers++;
 
-    // Categorize domain/url
     const category = categorizeTracker(url || domain);
     tStats.items.unshift({
       type,
@@ -233,7 +278,7 @@ async function recordBlockedItem(senderTabId, eventData) {
 
   if (type === 'popup') {
     stats.totalPopupsBlocked++;
-    stats.totalDataSavedKB += 120; // Avg popup page size
+    stats.totalDataSavedKB += 120;
     stats.totalTimeSavedSec += 0.8;
   } else if (type === 'annoyance') {
     stats.totalAnnoyancesBlocked++;
@@ -241,7 +286,7 @@ async function recordBlockedItem(senderTabId, eventData) {
     stats.totalTimeSavedSec += 0.2;
   } else {
     stats.totalTrackersBlocked++;
-    stats.totalDataSavedKB += 45; // Avg tracking script weight
+    stats.totalDataSavedKB += 45;
     stats.totalTimeSavedSec += 0.3;
   }
 
@@ -254,8 +299,7 @@ async function recordBlockedItem(senderTabId, eventData) {
     timestamp: timestamp || Date.now()
   });
 
-  // Keep logs at a manageable size
-  if (logs.length > 150) logs.pop();
+  if (logs.length > 100) logs.pop();
 
   await chrome.storage.local.set({ stats, trackerLogs: logs });
 }
@@ -278,12 +322,10 @@ function categorizeTracker(url) {
 }
 
 /* ==========================================================================
-   7. GLOBAL PROTECTION & WHITELISTS
+   9. GLOBAL PROTECTION & TIMED PAUSES
    ========================================================================== */
-const ALL_RULESETS = ['ruleset_trackers', 'ruleset_popups', 'ruleset_query_stripping', 'ruleset_annoyances'];
-
 async function setGlobalProtection(enabled) {
-  await chrome.storage.local.set({ masterEnabled: enabled });
+  await chrome.storage.local.set({ masterEnabled: enabled, pauseUntil: 0 });
 
   if (enabled) {
     await chrome.declarativeNetRequest.updateEnabledRulesets({
@@ -300,6 +342,22 @@ async function setGlobalProtection(enabled) {
     chrome.action.setBadgeBackgroundColor({ color: '#64748b' });
     console.log('[PureShield] Global protection: DISABLED');
   }
+}
+
+async function pauseProtectionForMinutes(minutes) {
+  const pauseUntil = Date.now() + (minutes * 60 * 1000);
+  await chrome.storage.local.set({ masterEnabled: false, pauseUntil });
+  await chrome.declarativeNetRequest.updateEnabledRulesets({ disableRulesetIds: ALL_RULESETS });
+  chrome.action.setBadgeText({ text: 'PAUSE' });
+  chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+
+  // Schedule auto-reactivation
+  setTimeout(async () => {
+    const data = await chrome.storage.local.get(['pauseUntil']);
+    if (data.pauseUntil && Date.now() >= data.pauseUntil) {
+      await setGlobalProtection(true);
+    }
+  }, minutes * 60 * 1000);
 }
 
 async function whitelistDomain(domain) {
@@ -323,13 +381,16 @@ async function removeWhitelistedDomain(domain) {
 }
 
 /* ==========================================================================
-   8. MESSAGE DISPATCHER
+   10. MESSAGE DISPATCHER
    ========================================================================== */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const senderTabId = sender?.tab?.id;
 
   if (message.action === 'toggleGlobalProtection') {
     setGlobalProtection(message.enabled).then(() => sendResponse({ status: 'ok' }));
+    return true;
+  } else if (message.action === 'pauseProtection') {
+    pauseProtectionForMinutes(message.minutes || 15).then(() => sendResponse({ status: 'ok' }));
     return true;
   } else if (message.action === 'recordBlockedEvent') {
     recordBlockedItem(senderTabId || message.tabId, message.data);

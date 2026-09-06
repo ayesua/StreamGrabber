@@ -42,7 +42,10 @@
         
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">Aggressive Popup & Popunder Blocker</span>
+            <span class="setting-title">
+              Aggressive Popup & Popunder Blocker
+              <button class="info-btn" data-info="popups" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Traps unrequested window spawns, synthetic anchor click exploits, and background window refocusing.</span>
           </div>
           <label class="switch">
@@ -53,7 +56,10 @@
 
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">Tracking & Telemetry Armor</span>
+            <span class="setting-title">
+              Tracking & Telemetry Armor
+              <button class="info-btn" data-info="trackers" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Blocks cross-site trackers, ad telemetry pixels, analytics beacons, and behavioral profiling networks.</span>
           </div>
           <label class="switch">
@@ -64,7 +70,10 @@
 
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">URL Tracking Parameter Stripper</span>
+            <span class="setting-title">
+              URL Tracking Parameter Stripper
+              <button class="info-btn" data-info="url-params" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Automatically cleans query tracking tokens (utm_*, fbclid, gclid, mc_cid, etc.) from clicked links and URLs.</span>
           </div>
           <label class="switch">
@@ -75,7 +84,10 @@
 
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">Canvas & Audio Fingerprint Randomizer</span>
+            <span class="setting-title">
+              Canvas & Audio Fingerprint Randomizer
+              <button class="info-btn" data-info="fingerprint" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Injects imperceptible deterministic noise into canvas and AudioContext APIs to defeat device fingerprinting.</span>
           </div>
           <label class="switch">
@@ -86,7 +98,10 @@
 
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">WebRTC IP Leak Defense</span>
+            <span class="setting-title">
+              WebRTC IP Leak Defense
+              <button class="info-btn" data-info="webrtc" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Eliminates WebRTC local/public IP address disclosure on non-proxied UDP connections.</span>
           </div>
           <label class="switch">
@@ -97,7 +112,10 @@
 
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">Cookie Consent Banner Auto-Dismissal</span>
+            <span class="setting-title">
+              Cookie Consent Banner Auto-Dismissal
+              <button class="info-btn" data-info="cookies" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Automatically dismisses or hides intrusive GDPR/CCPA cookie consent banners without accepting tracking.</span>
           </div>
           <label class="switch">
@@ -108,7 +126,10 @@
 
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">Anti-Adblock Defuser</span>
+            <span class="setting-title">
+              Anti-Adblock Defuser
+              <button class="info-btn" data-info="adblock-defuse" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Neutralizes anti-adblock traps and provides safe dummy variables to prevent page breakage.</span>
           </div>
           <label class="switch">
@@ -119,11 +140,75 @@
 
         <div class="setting-row">
           <div class="setting-info">
-            <span class="setting-title">Popup Blocked Toast Notifications</span>
+            <span class="setting-title">
+              Popup Blocked Toast Notifications
+              <button class="info-btn" data-info="toasts" title="Información detallada">ℹ</button>
+            </span>
             <span class="setting-desc">Displays a subtle floating badge at the bottom corner when a popup is intercepted with 1-click allow/whitelist.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="opt-showToastNotifications" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Advanced Optional Shields -->
+      <div class="setting-card">
+        <h2 style="font-size: 16px; margin-bottom: 14px; color: var(--accent-cyan);">Advanced Experimental Shields (Optional)</h2>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
+              Hyperlink Auditing Stripper (&lt;a ping="..."&gt;)
+              <button class="info-btn" data-info="ping-audit" title="Información detallada">ℹ</button>
+            </span>
+            <span class="setting-desc">Removes stealth click-tracking ping beacons embedded in links by search engines and social platforms.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-stripPingAttributes">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
+              Strict Referrer Policy Enforcement
+              <button class="info-btn" data-info="referrer" title="Información detallada">ℹ</button>
+            </span>
+            <span class="setting-desc">Limits the HTTP Referer header on cross-origin navigations so destination sites cannot see exact page URLs.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-trimReferrers">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
+              Unlock Right-Click &amp; Text Selection
+              <button class="info-btn" data-info="unlock-rightclick" title="Información detallada">ℹ</button>
+            </span>
+            <span class="setting-desc">Re-enables right-click context menu, text highlighting, and clipboard copy on sites attempting to disable them.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-unlockRightClick">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
+              Anti-Autoplay Video Shield
+              <button class="info-btn" data-info="autoplay" title="Información detallada">ℹ</button>
+            </span>
+            <span class="setting-desc">Prevents background floating video players from auto-playing loud media without your explicit click.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-blockAutoplay">
             <span class="slider"></span>
           </label>
         </div>
@@ -227,6 +312,22 @@
             <button class="btn-copy" data-copy="opt-addr-bsc">Copy</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Information Modal -->
+  <div class="modal-overlay" id="feature-info-modal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="info-modal-title">Feature Information</h3>
+        <button class="icon-btn" id="btn-close-info-modal">&times;</button>
+      </div>
+      <div id="info-modal-content" style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+        <!-- Injected dynamically by options.js -->
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+        <button class="btn-primary" id="btn-info-modal-ok">Entendido</button>
       </div>
     </div>
   </div>

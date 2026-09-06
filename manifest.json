@@ -69,6 +69,22 @@
     }
   },
   "options_page": "options.html",
+  "commands": {
+    "zap_element": {
+      "suggested_key": {
+        "default": "Alt+Shift+Z",
+        "mac": "Alt+Shift+Z"
+      },
+      "description": "Activate PureShield Element Zapper"
+    },
+    "toggle_protection": {
+      "suggested_key": {
+        "default": "Alt+Shift+P",
+        "mac": "Alt+Shift+P"
+      },
+      "description": "Toggle PureShield Protection ON/OFF"
+    }
+  },
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",

@@ -1,7 +1,7 @@
 /**
- * PureShield - Content Script
- * Handles scriptlet injection, intrusive overlay/modal removal, cookie banner dismissal,
- * DOM tracking element interception, element zapper, and toast alerts.
+ * PureShield - Content Script (Optimized Engine)
+ * Features requestIdleCallback debounced scanning, addedNodes differential inspection,
+ * hyperlink auditing stripping, context-menu unblocker, anti-autoplay, and cookie dismissal.
  */
 (() => {
   'use strict';
@@ -15,7 +15,12 @@
     defuseAntiAdblock: true,
     dismissCookieBanners: true,
     removeOverlays: true,
-    showToastNotifications: true
+    showToastNotifications: true,
+    // Advanced Optional Shields
+    stripPingAttributes: false,
+    trimReferrers: false,
+    unlockRightClick: false,
+    blockAutoplay: false
   };
 
   /* ==========================================================================
@@ -55,8 +60,11 @@
         }
       }));
 
-      // Apply custom cosmetic hiding rules for this domain
+      // Apply custom cosmetic hiding rules
       applyCustomCosmeticRules(data.customCosmeticRules || {});
+
+      // Apply Advanced Optional Features
+      applyAdvancedFeatures();
     });
   }
   syncSettings();
@@ -68,14 +76,58 @@
   });
 
   /* ==========================================================================
-     3. EVENT LISTENER FROM INJECTED SCRIPTLET & DOM TRACKER HUNTER
+     3. ADVANCED OPTIONAL SHIELDS
+     ========================================================================== */
+  function applyAdvancedFeatures() {
+    if (isWhitelisted) return;
+
+    // 1. Hyperlink Auditing Stripper (<a ping="...">)
+    if (settings.stripPingAttributes) {
+      document.querySelectorAll('a[ping]').forEach(a => {
+        a.removeAttribute('ping');
+      });
+    }
+
+    // 2. Referrer Trimming Policy
+    if (settings.trimReferrers) {
+      let metaRef = document.querySelector('meta[name="referrer"]');
+      if (!metaRef) {
+        metaRef = document.createElement('meta');
+        metaRef.name = 'referrer';
+        (document.head || document.documentElement).appendChild(metaRef);
+      }
+      metaRef.content = 'strict-origin-when-cross-origin';
+    }
+
+    // 3. Unlock Right Click & Text Selection
+    if (settings.unlockRightClick) {
+      ['contextmenu', 'selectstart', 'copy', 'mousedown', 'mouseup'].forEach(evt => {
+        document.addEventListener(evt, (e) => e.stopPropagation(), true);
+      });
+      document.oncontextmenu = null;
+      document.onselectstart = null;
+      document.body && (document.body.style.userSelect = 'auto');
+    }
+
+    // 4. Anti-Autoplay Video Shield
+    if (settings.blockAutoplay) {
+      document.querySelectorAll('video[autoplay]').forEach(v => {
+        if (!v.paused && !v.ended) {
+          v.pause();
+          v.autoplay = false;
+        }
+      });
+    }
+  }
+
+  /* ==========================================================================
+     4. TELEMETRY EVENT LISTENER
      ========================================================================== */
   window.addEventListener('pureshield-event', (e) => {
     if (!e.detail || isWhitelisted) return;
 
     const { type, url } = e.detail;
 
-    // Send telemetry to background service worker
     chrome.runtime.sendMessage({
       action: 'recordBlockedEvent',
       data: {
@@ -91,7 +143,9 @@
     }
   });
 
-  // DOM Tracking Elements Detection (Tracking Pixels, Telemetry Scripts)
+  /* ==========================================================================
+     5. MEMORY-OPTIMIZED DOM SCANNER (requestIdleCallback + Debounce)
+     ========================================================================== */
   const TRACKER_DOM_PATTERNS = [
     'google-analytics',
     'gtm.js',
@@ -108,37 +162,111 @@
     'mc.yandex'
   ];
 
+  const COOKIE_BANNER_SELECTORS = [
+    '#onetrust-consent-sdk',
+    '#CookiebotWidget',
+    '#didomi-host',
+    '.qc-cmp2-container',
+    '.cmplz-cookiebanner',
+    '#CybotCookiebotDialog',
+    '#usercentrics-root',
+    '.evidon-banner',
+    '#cookie-notice',
+    '.cc-window',
+    '#klaro',
+    '.cookie-consent',
+    '#truste-consent-track'
+  ];
+
   const processedNodes = new WeakSet();
+  let domScanTimeout = null;
 
-  function scanDomForTrackers() {
-    if (isWhitelisted || !settings.blockTrackers) return;
+  function performOptimizedScan(targetRoot = document) {
+    if (isWhitelisted) return;
 
-    const elements = document.querySelectorAll('script[src], img[src], iframe[src]');
-    elements.forEach(el => {
-      if (processedNodes.has(el)) return;
-      processedNodes.add(el);
+    // 1. Scan for Tracker elements
+    if (settings.blockTrackers) {
+      const elements = targetRoot.querySelectorAll ? targetRoot.querySelectorAll('script[src], img[src], iframe[src]') : [];
+      elements.forEach(el => {
+        if (processedNodes.has(el)) return;
+        processedNodes.add(el);
 
-      const src = el.src || '';
-      if (!src) return;
+        const src = el.src || '';
+        if (!src) return;
 
-      const isMatch = TRACKER_DOM_PATTERNS.some(pat => src.toLowerCase().includes(pat));
-      if (isMatch) {
-        console.log('[PureShield] Detected and suppressed tracking element:', src);
-        chrome.runtime.sendMessage({
-          action: 'recordBlockedEvent',
-          data: {
-            type: 'tracker',
-            url: src,
-            domain: hostname,
-            timestamp: Date.now()
+        const isMatch = TRACKER_DOM_PATTERNS.some(pat => src.toLowerCase().includes(pat));
+        if (isMatch) {
+          console.log('[PureShield] Suppressed DOM tracker:', src);
+          chrome.runtime.sendMessage({
+            action: 'recordBlockedEvent',
+            data: { type: 'tracker', url: src, domain: hostname, timestamp: Date.now() }
+          });
+        }
+      });
+    }
+
+    // 2. Auto-dismiss Cookie Banners
+    if (settings.dismissCookieBanners) {
+      COOKIE_BANNER_SELECTORS.forEach(selector => {
+        const banners = document.querySelectorAll(selector);
+        banners.forEach(banner => {
+          if (banner.style.display !== 'none') {
+            banner.style.setProperty('display', 'none', 'important');
+            banner.setAttribute('aria-hidden', 'true');
+            chrome.runtime.sendMessage({
+              action: 'recordBlockedEvent',
+              data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
+            });
           }
         });
+      });
+    }
+
+    // 3. Body Scroll Lock Recovery
+    if (settings.removeOverlays && document.body) {
+      const bodyStyle = window.getComputedStyle(document.body);
+      if (bodyStyle.overflow === 'hidden') {
+        document.body.style.setProperty('overflow', 'auto', 'important');
+        document.documentElement.style.setProperty('overflow', 'auto', 'important');
       }
-    });
+    }
+
+    // 4. Advanced Features applied to new nodes
+    applyAdvancedFeatures();
   }
 
+  // Schedule scan with requestIdleCallback and 150ms debounce
+  function scheduleScan(root) {
+    if (domScanTimeout) clearTimeout(domScanTimeout);
+    domScanTimeout = setTimeout(() => {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(() => performOptimizedScan(root), { timeout: 300 });
+      } else {
+        performOptimizedScan(root);
+      }
+    }, 150);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => scheduleScan(document));
+  } else {
+    scheduleScan(document);
+  }
+
+  // MutationObserver with differential node processing
+  const observer = new MutationObserver((mutations) => {
+    if (isWhitelisted) return;
+    for (const m of mutations) {
+      if (m.addedNodes && m.addedNodes.length > 0) {
+        scheduleScan(document);
+        break;
+      }
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
   /* ==========================================================================
-     4. DISCREET TOAST NOTIFICATION
+     6. DISCREET TOAST NOTIFICATION
      ========================================================================== */
   let toastContainer = null;
 
@@ -204,7 +332,6 @@
     }
 
     container.appendChild(toast);
-
     const timer = setTimeout(() => dismissToast(toast), 4500);
     toast.addEventListener('mouseenter', () => clearTimeout(timer));
   }
@@ -218,83 +345,7 @@
   }
 
   /* ==========================================================================
-     5. OVERLAY, MODAL & COOKIE BANNER HUNTER
-     ========================================================================== */
-  const COOKIE_BANNER_SELECTORS = [
-    '#onetrust-consent-sdk',
-    '#CookiebotWidget',
-    '#didomi-host',
-    '.qc-cmp2-container',
-    '.cmplz-cookiebanner',
-    '#CybotCookiebotDialog',
-    '#usercentrics-root',
-    '.evidon-banner',
-    '#cookie-notice',
-    '.cc-window',
-    '#klaro',
-    '.cookie-consent',
-    '#truste-consent-track'
-  ];
-
-  function huntOverlaysAndBanners() {
-    if (isWhitelisted) return;
-
-    // Scan for trackers in DOM
-    scanDomForTrackers();
-
-    // Auto-dismiss or hide known cookie banners
-    if (settings.dismissCookieBanners) {
-      COOKIE_BANNER_SELECTORS.forEach(selector => {
-        const banners = document.querySelectorAll(selector);
-        banners.forEach(banner => {
-          if (banner.style.display !== 'none') {
-            banner.style.setProperty('display', 'none', 'important');
-            banner.setAttribute('aria-hidden', 'true');
-            console.log('[PureShield] Auto-dismissed cookie wall:', selector);
-            chrome.runtime.sendMessage({
-              action: 'recordBlockedEvent',
-              data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
-            });
-          }
-        });
-      });
-    }
-
-    // Body scroll lock restoration (anti-adblock / paywall overlays)
-    if (settings.removeOverlays) {
-      const bodyStyle = window.getComputedStyle(document.body);
-      const htmlStyle = window.getComputedStyle(document.documentElement);
-
-      if (bodyStyle.overflow === 'hidden' || htmlStyle.overflow === 'hidden') {
-        const blockingOverlays = document.querySelectorAll('div[style*="z-index"][style*="fixed"], div[style*="z-index"][style*="absolute"]');
-        blockingOverlays.forEach(el => {
-          const style = window.getComputedStyle(el);
-          const zIndex = parseInt(style.zIndex, 10);
-          if (zIndex > 9999 && (style.position === 'fixed' || style.position === 'absolute') && el.offsetWidth >= window.innerWidth * 0.9 && el.offsetHeight >= window.innerHeight * 0.9) {
-            el.style.setProperty('display', 'none', 'important');
-            console.log('[PureShield] Suppressed fullscreen overlay modal');
-          }
-        });
-
-        document.body.style.setProperty('overflow', 'auto', 'important');
-        document.documentElement.style.setProperty('overflow', 'auto', 'important');
-      }
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', huntOverlaysAndBanners);
-  } else {
-    huntOverlaysAndBanners();
-  }
-
-  const observer = new MutationObserver(() => {
-    huntOverlaysAndBanners();
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
-  /* ==========================================================================
-     6. CUSTOM COSMETIC RULES ENGINE
+     7. CUSTOM COSMETIC RULES ENGINE
      ========================================================================== */
   let cosmeticStyleTag = null;
 
@@ -316,7 +367,7 @@
   }
 
   /* ==========================================================================
-     7. INTERACTIVE ELEMENT ZAPPER / PICKER TOOL
+     8. INTERACTIVE ELEMENT ZAPPER
      ========================================================================== */
   let pickerActive = false;
   let hoveredElement = null;
@@ -436,7 +487,7 @@
   }
 
   /* ==========================================================================
-     8. MESSAGE HANDLER FROM POPUP & BACKGROUND
+     9. MESSAGE HANDLERS
      ========================================================================== */
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'startElementPicker') {
