@@ -232,5 +232,86 @@
       "urlFilter": "||adtng.com^",
       "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
     }
+  },
+  {
+    "id": 2027,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||magsrv.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2028,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||whitetrafsa.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2029,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||cdn-fc.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "image", "other"]
+    }
+  },
+  {
+    "id": 2030,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||whitetraf.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2031,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||ero-advertising.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2032,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||tubecorporate.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2033,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||juicyads.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2034,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||adxad.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2035,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||syndication.exoclick.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
   }
 ]

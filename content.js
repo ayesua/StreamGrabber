@@ -286,6 +286,7 @@
       '[class*="skip-button"]',
       '[class*="skip"][class*="ad"]',
       '[class*="ad-skip"]',
+      '[class*="kt-player-advertising"] [class*="skip"]',
       'button[aria-label*="skip" i]',
       'button[aria-label*="saltar" i]'
     ];
@@ -293,7 +294,7 @@
     function checkVideoAds() {
       if (isWhitelisted) return;
 
-      // 1. Auto-click visible Skip button
+      // 1. Auto-click visible Skip button by selector
       for (const sel of SKIP_BUTTON_SELECTORS) {
         const btn = document.querySelector(sel);
         if (btn && btn.offsetParent !== null && typeof btn.click === 'function') {
@@ -302,11 +303,32 @@
         }
       }
 
-      // 2. Fast-forward video commercial if detected
+      // 2. Auto-click Skip buttons by text content (e.g. KVS / custom tube player buttons)
+      const candidates = document.querySelectorAll('div, span, button, a, p');
+      for (const el of candidates) {
+        if (el.children.length === 0 && el.offsetParent !== null) {
+          const txt = (el.textContent || '').trim().toUpperCase();
+          if (txt === 'SKIP AD' || txt === 'SKIP' || txt === 'SALTAR' || txt === 'SALTAR ANUNCIO' || (txt.startsWith('SKIP IN') && txt.includes('0'))) {
+            el.click();
+            break;
+          }
+        }
+      }
+
+      // 3. Fast-forward video commercial if detected
       const videos = document.querySelectorAll('video');
       for (const video of videos) {
-        const isAdContainer = video.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing');
-        const isAdSource = (video.src || '').includes('/ad/') || (video.src || '').includes('vast') || (video.src || '').includes('preroll') || (video.src || '').includes('delivery');
+        const src = (video.src || video.currentSrc || '').toLowerCase();
+        const isAdContainer = video.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising"]');
+        const isAdSource = src.includes('/ad/') ||
+                           src.includes('vast') ||
+                           src.includes('preroll') ||
+                           src.includes('delivery') ||
+                           src.includes('trafficjunky') ||
+                           src.includes('magsrv') ||
+                           src.includes('whitetraf') ||
+                           src.includes('tsyndicate') ||
+                           src.includes('exosrv');
 
         if (isAdContainer || isAdSource) {
           try {
@@ -320,7 +342,7 @@
       }
     }
 
-    setInterval(checkVideoAds, 400);
+    setInterval(checkVideoAds, 300);
   }
 
   // Schedule scan with requestIdleCallback and 150ms debounce

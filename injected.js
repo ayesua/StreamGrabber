@@ -237,6 +237,72 @@
   };
 
   /* ==========================================================================
+     3B. KVS & TUBE PLAYER PRE-ROLL VAST DEFUSER
+     ========================================================================== */
+  try {
+    function sanitizeFlashvars(vars) {
+      if (!vars || typeof vars !== 'object') return vars;
+      for (const k of Object.keys(vars)) {
+        if (
+          k.startsWith('adv_') ||
+          k.startsWith('vast_') ||
+          k.includes('preroll') ||
+          k.includes('postroll') ||
+          k.includes('popunder')
+        ) {
+          try {
+            delete vars[k];
+          } catch (_) {
+            vars[k] = '';
+          }
+        }
+      }
+      return vars;
+    }
+
+    let _ktPlayer = window.kt_player;
+    Object.defineProperty(window, 'kt_player', {
+      get: () => function (container, swf, width, height, flashvars) {
+        sanitizeFlashvars(flashvars);
+        const player = _ktPlayer ? _ktPlayer.apply(this, arguments) : null;
+        if (player && typeof player.skip_preroll === 'function') {
+          setTimeout(() => {
+            try { player.skip_preroll(); } catch (_) {}
+          }, 20);
+        }
+        return player;
+      },
+      set: (fn) => { _ktPlayer = fn; },
+      configurable: true
+    });
+
+    let _flashvars = window.flashvars;
+    if (_flashvars) sanitizeFlashvars(_flashvars);
+    Object.defineProperty(window, 'flashvars', {
+      get: () => _flashvars,
+      set: (val) => {
+        _flashvars = sanitizeFlashvars(val);
+      },
+      configurable: true
+    });
+
+    // Continually auto-skip any active KVS preroll / postroll if player was already initialized
+    setInterval(() => {
+      try {
+        if (window.kvsplayer && typeof window.kvsplayer === 'object') {
+          for (const id in window.kvsplayer) {
+            const p = window.kvsplayer[id];
+            if (p) {
+              if (typeof p.skip_preroll === 'function') p.skip_preroll();
+              if (typeof p.skip_postroll === 'function') p.skip_postroll();
+            }
+          }
+        }
+      } catch (_) {}
+    }, 300);
+  } catch (_) {}
+
+  /* ==========================================================================
      4. TELEMETRY & BEACON DEFUSER
      ========================================================================== */
   if (navigator.sendBeacon) {
