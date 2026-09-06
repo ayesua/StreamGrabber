@@ -659,6 +659,81 @@
   } catch (_) {}
 
   /* ==========================================================================
+     3D. XVIDEOS & XNXX HTML5 PLAYER PRE-ROLL DEFUSER
+     ========================================================================== */
+  try {
+    function patchPlayerInstance(inst) {
+      if (!inst || typeof inst !== 'object' || inst.__pureshield_inst_patched__) return inst;
+      inst.__pureshield_inst_patched__ = true;
+      try {
+        inst.disableVideoAds = true;
+        inst.enableVideoPreRollAds = () => false;
+        inst.enableVideoPostRollAds = () => false;
+        inst.loadVideoPreRollAds = () => false;
+        inst.loadVideoPostRollAds = () => false;
+        inst.callForVideoAds = (type, res, rej) => {
+          if (typeof rej === 'function') rej();
+          return false;
+        };
+        inst._checkVideoAdsCommon = () => false;
+        if (typeof inst.setSponsors === 'function') {
+          inst.setSponsors(false);
+        }
+      } catch (_) {}
+      return inst;
+    }
+
+    let _HTML5Player = window.HTML5Player;
+    function wrapHTML5Player(Orig) {
+      if (!Orig || Orig.__pureshield_wrapped__) return Orig;
+
+      const Wrapped = function () {
+        const inst = new Orig(...arguments);
+        return patchPlayerInstance(inst);
+      };
+
+      Wrapped.prototype = Orig.prototype;
+      Wrapped.__pureshield_wrapped__ = true;
+
+      if (Orig.prototype) {
+        try {
+          Orig.prototype.disableVideoAds = true;
+          Orig.prototype.enableVideoPreRollAds = function () { return false; };
+          Orig.prototype.enableVideoPostRollAds = function () { return false; };
+          Orig.prototype.loadVideoPreRollAds = function () { return false; };
+          Orig.prototype.loadVideoPostRollAds = function () { return false; };
+          Orig.prototype.callForVideoAds = function (t, r, rej) {
+            if (typeof rej === 'function') rej();
+            return false;
+          };
+          Orig.prototype._checkVideoAdsCommon = function () { return false; };
+        } catch (_) {}
+      }
+
+      return Wrapped;
+    }
+
+    if (window.HTML5Player) window.HTML5Player = wrapHTML5Player(window.HTML5Player);
+    Object.defineProperty(window, 'HTML5Player', {
+      get: () => _HTML5Player,
+      set: (val) => {
+        _HTML5Player = wrapHTML5Player(val);
+      },
+      configurable: true
+    });
+
+    let _html5player = window.html5player;
+    if (_html5player) patchPlayerInstance(_html5player);
+    Object.defineProperty(window, 'html5player', {
+      get: () => _html5player,
+      set: (inst) => {
+        _html5player = patchPlayerInstance(inst);
+      },
+      configurable: true
+    });
+  } catch (_) {}
+
+  /* ==========================================================================
      4. TELEMETRY & BEACON DEFUSER
      ========================================================================== */
   if (navigator.sendBeacon) {

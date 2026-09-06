@@ -440,6 +440,11 @@
       '[class*="skip"][class*="ad"]',
       '[class*="ad-skip"]',
       '[class*="kt-player-advertising"] [class*="skip"]',
+      '#anc-tst-skip_ad-btn',
+      '[id*="skip_ad"]',
+      '.video-overlay-skip-txt',
+      '.video-overlay-skip',
+      '[class*="video-overlay-skip"]',
       'button[aria-label*="skip" i]',
       'button[aria-label*="saltar" i]'
     ];
@@ -472,7 +477,7 @@
       const videos = document.querySelectorAll('video');
       for (const video of videos) {
         const src = (video.src || video.currentSrc || '').toLowerCase();
-        const isAdContainer = video.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising"]');
+        const isAdContainer = video.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising"], [class*="video-overlay"], [id*="videoads"]');
         const isAdSource = src.includes('/ad/') ||
                            src.includes('vast') ||
                            src.includes('preroll') ||
@@ -481,7 +486,9 @@
                            src.includes('magsrv') ||
                            src.includes('whitetraf') ||
                            src.includes('tsyndicate') ||
-                           src.includes('exosrv');
+                           src.includes('exosrv') ||
+                           src.includes('exoclick') ||
+                           src.includes('trafficstars');
 
         if (isAdContainer || isAdSource) {
           try {
