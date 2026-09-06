@@ -17,14 +17,11 @@
       </div>
     </div>
 
-    <!-- Top Donation Block: Donations label above PayPal button -->
+    <!-- Top Donation Block: Support & Donate button -->
     <div class="top-donation-block">
-      <span class="top-donation-tag">Donations</span>
-      <button id="btnPayPal" class="btn-paypal-top" title="Donate via PayPal (paypal.me/yesarts)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
-        </svg>
-        <span>PayPal</span>
+      <button id="btnHeaderDonate" class="btn-donate-top" title="Support StreamGrabber (Ko-fi, PayPal, Crypto)">
+        <span>💖</span>
+        <span>Donate</span>
       </button>
     </div>
 
@@ -88,7 +85,10 @@
   <footer class="vdh-footer">
     <div class="footer-actions">
       <button id="btnFeedback" class="btn-feedback" title="Send suggestions or report an issue">
-        <span>💬</span> <span>Feedback &amp; Suggestions</span>
+        <span>💬</span> <span>Feedback</span>
+      </button>
+      <button id="btnFooterDonate" class="btn-feedback" title="Support StreamGrabber" style="color: #e11d48; font-weight: 700;">
+        <span>💖</span> <span>Donate</span>
       </button>
     </div>
 
@@ -182,6 +182,63 @@
       </div>
       <div class="modal-actions">
         <button id="modalFeedbackBtnClose" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Support & Donations Modal -->
+  <div id="modalDonations" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 360px;">
+      <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <div class="modal-title" style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">💖 Support StreamGrabber</div>
+        <button id="modalDonationsBtnClose" class="btn-close-modal" title="Close" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #64748b;">✕</button>
+      </div>
+      <div class="modal-desc" style="font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 14px;">
+        StreamGrabber is 100% free with no limits and no ads. Your tips keep updates active and servers running!
+      </div>
+      
+      <!-- Direct Payment Links -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+        <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" style="text-decoration: none;">
+          <div style="background: #72a4f2; color: #ffffff; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 13px; box-shadow: 0 2px 8px rgba(114, 164, 242, 0.35); transition: transform 0.15s;">
+            <span style="display: flex; align-items: center; gap: 8px;">
+              ☕ Support me on Ko-fi
+            </span>
+            <span>&rarr;</span>
+          </div>
+        </a>
+
+        <a href="https://paypal.me/yesarts" target="_blank" style="text-decoration: none;">
+          <div style="background: #0070ba; color: #ffffff; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 13px; box-shadow: 0 2px 8px rgba(0, 112, 186, 0.35); transition: transform 0.15s;">
+            <span style="display: flex; align-items: center; gap: 8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
+              </svg>
+              Donate via PayPal
+            </span>
+            <span>&rarr;</span>
+          </div>
+        </a>
+      </div>
+
+      <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 6px; letter-spacing: 0.3px;">CRYPTO TIPS (INSTANT &amp; ANONYMOUS)</div>
+      
+      <!-- Crypto Box: BTC -->
+      <div class="sg-crypto-box" style="margin-bottom: 6px;">
+        <span style="font-weight: 700; font-size: 11px; color: #f59e0b; flex-shrink: 0;">BTC</span>
+        <span class="sg-crypto-addr" id="addrBtc">bc1qc92qpkma6k5yvypa9xs6dy8g8ah34ceu83nger</span>
+        <button class="btn-copy-crypto" data-target="addrBtc">Copy</button>
+      </div>
+
+      <!-- Crypto Box: BNB / USDT -->
+      <div class="sg-crypto-box">
+        <span style="font-weight: 700; font-size: 11px; color: #06b6d4; flex-shrink: 0;">BNB/USDT</span>
+        <span class="sg-crypto-addr" id="addrEth">0x1466a8eD548A9e39829e142431fff185b0C15dF4</span>
+        <button class="btn-copy-crypto" data-target="addrEth">Copy</button>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 14px;">
+        <button id="modalDonationsBtnDone" class="btn-secondary" style="width: 100%;">Close</button>
       </div>
     </div>
   </div>

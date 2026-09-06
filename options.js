@@ -54,4 +54,25 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 2500);
     });
   });
+
+  // 1-Click Copy for Crypto Addresses on Options page
+  const copyCryptoButtons = document.querySelectorAll('.btn-copy-crypto');
+  copyCryptoButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        const addrText = targetEl.textContent.trim();
+        navigator.clipboard.writeText(addrText).then(() => {
+          const originalText = btn.textContent;
+          btn.textContent = 'Copied! ✓';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('copied');
+          }, 2000);
+        }).catch(() => {});
+      }
+    });
+  });
 });

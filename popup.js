@@ -119,27 +119,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // PayPal Donation Button - Directly opens developer PayPal.me link (non-editable, fixed for end users)
-  const btnPayPal = document.getElementById('btnPayPal');
-  if (btnPayPal) {
-    btnPayPal.addEventListener('click', () => {
-      chrome.tabs.create({ url: 'https://paypal.me/yesarts' });
-    });
-  }
+  // Donation Modal Controls (Ko-fi, PayPal, Crypto)
+  const modalDonations = document.getElementById('modalDonations');
+  const btnHeaderDonate = document.getElementById('btnHeaderDonate');
+  const btnFooterDonate = document.getElementById('btnFooterDonate');
+  const modalDonationsBtnClose = document.getElementById('modalDonationsBtnClose');
+  const modalDonationsBtnDone = document.getElementById('modalDonationsBtnDone');
 
-  // Generic Donation Button Fallback
-  const btnDonate = document.getElementById('btnDonate');
-  if (btnDonate) {
-    btnDonate.addEventListener('click', () => {
-      chrome.storage.sync.get({ donationUrl: '' }, (res) => {
-        if (res.donationUrl && res.donationUrl.startsWith('http')) {
-          chrome.tabs.create({ url: res.donationUrl });
-        } else {
-          chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
-        }
-      });
+  const openDonationsModal = () => {
+    if (modalDonations) modalDonations.style.display = 'flex';
+  };
+  const closeDonationsModal = () => {
+    if (modalDonations) modalDonations.style.display = 'none';
+  };
+
+  if (btnHeaderDonate) btnHeaderDonate.addEventListener('click', openDonationsModal);
+  if (btnFooterDonate) btnFooterDonate.addEventListener('click', openDonationsModal);
+  if (modalDonationsBtnClose) modalDonationsBtnClose.addEventListener('click', closeDonationsModal);
+  if (modalDonationsBtnDone) modalDonationsBtnDone.addEventListener('click', closeDonationsModal);
+
+  // 1-Click Copy for Crypto Addresses inside modalDonations
+  const copyCryptoButtons = document.querySelectorAll('.btn-copy-crypto');
+  copyCryptoButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        const addrText = targetEl.textContent.trim();
+        navigator.clipboard.writeText(addrText).then(() => {
+          const originalText = btn.textContent;
+          btn.textContent = 'Copied! ✓';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('copied');
+          }, 2000);
+        }).catch(() => {});
+      }
     });
-  }
+  });
 
   // Feedback Controls (Only appears when user clicks Feedback)
   const btnFeedback = document.getElementById('btnFeedback');

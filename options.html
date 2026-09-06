@@ -206,6 +206,56 @@
     </form>
   </div>
 
+  <!-- Support & Donations Card -->
+  <div class="options-card" style="margin-top: 24px;">
+    <div class="options-title" style="border-bottom-color: #f43f5e;">
+      <span style="display: flex; align-items: center; gap: 8px;">💖 Support StreamGrabber</span>
+      <span style="font-size: 11px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 3px 8px; border-radius: 12px;">100% Free • Open Model</span>
+    </div>
+    <p style="font-size: 13px; color: var(--vdh-text-muted); line-height: 1.5; margin-bottom: 16px;">
+      StreamGrabber is completely free, zero-log, and has zero paywalls. Your donations support development, keep HLS sniffers updated, and ensure uninterrupted high-speed video downloads!
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; max-width: 480px;">
+      <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" style="text-decoration: none;">
+        <div style="background: #72a4f2; color: #ffffff; padding: 12px 18px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; box-shadow: 0 2px 10px rgba(114, 164, 242, 0.35); transition: transform 0.15s;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            ☕ Support me on Ko-fi
+          </span>
+          <span>&rarr;</span>
+        </div>
+      </a>
+
+      <a href="https://paypal.me/yesarts" target="_blank" style="text-decoration: none;">
+        <div style="background: #0070ba; color: #ffffff; padding: 12px 18px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; box-shadow: 0 2px 10px rgba(0, 112, 186, 0.35); transition: transform 0.15s;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
+            </svg>
+            Donate via PayPal (paypal.me/yesarts)
+          </span>
+          <span>&rarr;</span>
+        </div>
+      </a>
+    </div>
+
+    <div style="font-size: 11px; font-weight: 700; color: var(--vdh-text-muted); margin-bottom: 6px;">CRYPTO TIPS (INSTANT &amp; ANONYMOUS)</div>
+    
+    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 480px;">
+      <div class="sg-crypto-box">
+        <span style="font-weight: 700; font-size: 12px; color: #f59e0b; flex-shrink: 0;">Bitcoin (BTC)</span>
+        <span class="sg-crypto-addr" id="optAddrBtc">bc1qc92qpkma6k5yvypa9xs6dy8g8ah34ceu83nger</span>
+        <button type="button" class="btn-copy-crypto" data-target="optAddrBtc">Copy</button>
+      </div>
+
+      <div class="sg-crypto-box">
+        <span style="font-weight: 700; font-size: 12px; color: #06b6d4; flex-shrink: 0;">BNB / USDT (BEP20)</span>
+        <span class="sg-crypto-addr" id="optAddrBsc">0x1466a8eD548A9e39829e142431fff185b0C15dF4</span>
+        <button type="button" class="btn-copy-crypto" data-target="optAddrBsc">Copy</button>
+      </div>
+    </div>
+  </div>
+
   <script src="options.js"></script>
 </body>
 </html>
