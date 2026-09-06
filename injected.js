@@ -1,6 +1,6 @@
 /**
  * PureShield - Main World Injected Scriptlet
- * Provides aggressive popup interception, popunder neutralization,
+ * Provides aggressive popup interception, anti-redirect & tab-under defense,
  * telemetry beacon defusing, canvas & audio fingerprint spoofing, and anti-adblock defusing.
  */
 (() => {
@@ -13,13 +13,14 @@
   const config = {
     blockPopups: true,
     blockTrackers: true,
+    blockRedirects: true,
     blockFingerprinting: true,
     defuseAntiAdblock: true,
     stripParams: true,
     whitelisted: false
   };
 
-  // Known tracker signatures for client-side interception
+  // Known tracker and malicious redirect signatures
   const TRACKER_KEYWORDS = [
     'google-analytics.com',
     'googletagmanager.com/gtm.js',
@@ -53,10 +54,14 @@
     'adcash.com',
     'exoclick.com',
     'adsterra.com',
-    'admaven.com'
+    'admaven.com',
+    'zeroredirect.com',
+    'popunder.net',
+    'monetag.com',
+    'richpush.co'
   ];
 
-  function isTrackerUrl(url) {
+  function isTrackerOrRedirectUrl(url) {
     if (!url || typeof url !== 'string') return false;
     const lower = url.toLowerCase();
     return TRACKER_KEYWORDS.some(k => lower.includes(k));
@@ -77,12 +82,10 @@
   }
 
   /* ==========================================================================
-     1. AGGRESSIVE POPUP & POPUNDER DEFUSER
+     1. USER INTERACTION TRACKER
      ========================================================================== */
-  const originalOpen = window.open;
   let lastUserInteractionTime = 0;
 
-  // Track genuine user interactions
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventType => {
     window.addEventListener(eventType, (e) => {
       if (e.isTrusted) {
@@ -95,7 +98,11 @@
     return (Date.now() - lastUserInteractionTime) < 1200;
   }
 
-  // Intercept window.open
+  /* ==========================================================================
+     2. AGGRESSIVE POPUP & POPUNDER DEFUSER
+     ========================================================================== */
+  const originalOpen = window.open;
+
   try {
     window.open = function (url, target, features) {
       if (config.whitelisted || !config.blockPopups) {
@@ -105,7 +112,6 @@
       const urlStr = String(url || '');
       const isSuspicious = !isRecentUserAction() || (target && target.toString().toLowerCase() === '_blank' && !isRecentUserAction());
 
-      // If called without recent user gesture, or target is popunder/spam
       if (isSuspicious || (urlStr && (urlStr.startsWith('http') || urlStr.startsWith('//')) && !isRecentUserAction())) {
         console.warn('[PureShield] Intercepted unrequested popup/popunder:', urlStr || 'about:blank');
         notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
@@ -161,6 +167,37 @@
     };
   } catch (_) {}
 
+  /* ==========================================================================
+     3. ANTI-REDIRECT & TAB-UNDER HIJACK SHIELD
+     ========================================================================== */
+  try {
+    // Intercept location.replace
+    const origLocationReplace = Location.prototype.replace;
+    Location.prototype.replace = function (url) {
+      if (!config.whitelisted && config.blockRedirects) {
+        if (!isRecentUserAction() && isTrackerOrRedirectUrl(String(url))) {
+          console.warn('[PureShield] Intercepted suspicious location.replace redirect:', url);
+          notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
+          return;
+        }
+      }
+      return origLocationReplace.apply(this, arguments);
+    };
+
+    // Intercept location.assign
+    const origLocationAssign = Location.prototype.assign;
+    Location.prototype.assign = function (url) {
+      if (!config.whitelisted && config.blockRedirects) {
+        if (!isRecentUserAction() && isTrackerOrRedirectUrl(String(url))) {
+          console.warn('[PureShield] Intercepted suspicious location.assign redirect:', url);
+          notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
+          return;
+        }
+      }
+      return origLocationAssign.apply(this, arguments);
+    };
+  } catch (_) {}
+
   // Defuse infinite alert/confirm/prompt spam
   let lastPromptTime = 0;
   let promptSpamCount = 0;
@@ -195,13 +232,12 @@
   };
 
   /* ==========================================================================
-     2. TELEMETRY & BEACON DEFUSER
+     4. TELEMETRY & BEACON DEFUSER
      ========================================================================== */
   if (navigator.sendBeacon) {
     const origSendBeacon = navigator.sendBeacon;
     navigator.sendBeacon = function (url, data) {
-      if (!config.whitelisted && config.blockTrackers && isTrackerUrl(String(url))) {
-        console.log('[PureShield] Blocked telemetry beacon:', url);
+      if (!config.whitelisted && config.blockTrackers && isTrackerOrRedirectUrl(String(url))) {
         notifyBlocked('tracker', { url: String(url) });
         return true;
       }
@@ -210,7 +246,7 @@
   }
 
   /* ==========================================================================
-     3. CANVAS & AUDIO FINGERPRINTING SPOOFING
+     5. CANVAS & AUDIO FINGERPRINTING SPOOFING
      ========================================================================== */
   if (config.blockFingerprinting) {
     const sessionSalt = Math.floor(Math.random() * 255) + 1;
@@ -299,7 +335,7 @@
   }
 
   /* ==========================================================================
-     4. ANTI-ADBLOCK DEFUSERS & NO-OP STUBS
+     6. ANTI-ADBLOCK DEFUSERS & NO-OP STUBS
      ========================================================================== */
   if (config.defuseAntiAdblock) {
     try {

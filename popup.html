@@ -79,6 +79,22 @@
     </div>
   </section>
 
+  <!-- CORE ACTION: BIG & BRIGHT ELEMENT ZAPPER BUTTON -->
+  <section class="core-zap-section">
+    <button class="core-zap-btn" id="btn-core-zap" title="Zap and permanently remove any annoying element on this page">
+      <div class="zap-btn-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </div>
+      <div class="zap-btn-text">
+        <div class="zap-btn-title">⚡ Zap Element on Page</div>
+        <div class="zap-btn-desc">Point &amp; click to vaporize any annoying banner</div>
+      </div>
+      <span class="zap-hotkey-badge">Alt+Shift+Z</span>
+    </button>
+  </section>
+
   <!-- Live Stats -->
   <section class="stats-grid">
     <div class="stat-card">
@@ -106,9 +122,12 @@
   <!-- Quick Tools -->
   <section class="tools-section">
     <div class="section-title">Quick Protections</div>
-    <div class="tools-grid">
+    <div class="tools-grid" style="grid-template-columns: 1fr 1fr 1fr;">
       <button class="tool-btn active" id="btn-toggle-popups">
         <span>🚫</span> Anti-Popups
+      </button>
+      <button class="tool-btn active" id="btn-toggle-redirect">
+        <span>🔀</span> Anti-Redirect
       </button>
       <button class="tool-btn active" id="btn-toggle-cookies">
         <span>🍪</span> Cookie Walls
@@ -117,7 +136,10 @@
         <span>🛡️</span> Defuse Anti-Ad
       </button>
       <button class="tool-btn active" id="btn-toggle-fingerprint">
-        <span>🕵️</span> Anti-Fingerprint
+        <span>🕵️</span> Fingerprint
+      </button>
+      <button class="tool-btn" id="btn-toggle-pause">
+        <span>⏸️</span> Pause 15m
       </button>
     </div>
   </section>

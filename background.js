@@ -6,6 +6,7 @@
 
 const DEFAULT_SETTINGS = {
   blockPopups: true,
+  blockRedirects: true,
   blockTrackers: true,
   blockFingerprinting: true,
   defuseAntiAdblock: true,

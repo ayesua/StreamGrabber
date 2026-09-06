@@ -28,10 +28,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statSaved = document.getElementById('stat-saved');
   const statTimeSaved = document.getElementById('stat-time-saved');
 
+  const btnCoreZap = document.getElementById('btn-core-zap');
   const btnTogglePopups = document.getElementById('btn-toggle-popups');
+  const btnToggleRedirect = document.getElementById('btn-toggle-redirect');
   const btnToggleCookies = document.getElementById('btn-toggle-cookies');
   const btnToggleAdblock = document.getElementById('btn-toggle-adblock-defuse');
   const btnToggleFingerprint = document.getElementById('btn-toggle-fingerprint');
+  const btnTogglePause = document.getElementById('btn-toggle-pause');
 
   const accordionToggle = document.getElementById('accordion-toggle');
   const accordionBody = document.getElementById('accordion-body');
@@ -96,6 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Update Quick Toggles
     updateToolBtn(btnTogglePopups, settings.blockPopups !== false);
+    if (btnToggleRedirect) updateToolBtn(btnToggleRedirect, settings.blockRedirects !== false);
     updateToolBtn(btnToggleCookies, settings.dismissCookieBanners !== false);
     updateToolBtn(btnToggleAdblock, settings.defuseAntiAdblock !== false);
     updateToolBtn(btnToggleFingerprint, settings.blockFingerprinting !== false);
@@ -232,7 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 4. Quick Tool Toggles
+  // 5. Quick Tool Toggles
   async function toggleSetting(key, btn) {
     const current = settings[key] !== false;
     settings[key] = !current;
@@ -240,25 +244,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.storage.local.set({ settings });
   }
 
-  btnTogglePopups.addEventListener('click', () => toggleSetting('blockPopups', btnTogglePopups));
-  btnToggleCookies.addEventListener('click', () => toggleSetting('dismissCookieBanners', btnToggleCookies));
-  btnToggleAdblock.addEventListener('click', () => toggleSetting('defuseAntiAdblock', btnToggleAdblock));
-  btnToggleFingerprint.addEventListener('click', () => toggleSetting('blockFingerprinting', btnToggleFingerprint));
+  btnTogglePopups?.addEventListener('click', () => toggleSetting('blockPopups', btnTogglePopups));
+  btnToggleRedirect?.addEventListener('click', () => toggleSetting('blockRedirects', btnToggleRedirect));
+  btnToggleCookies?.addEventListener('click', () => toggleSetting('dismissCookieBanners', btnToggleCookies));
+  btnToggleAdblock?.addEventListener('click', () => toggleSetting('defuseAntiAdblock', btnToggleAdblock));
+  btnToggleFingerprint?.addEventListener('click', () => toggleSetting('blockFingerprinting', btnToggleFingerprint));
 
-  // 5. Accordion Toggle
-  accordionToggle.addEventListener('click', () => {
-    accordionBody.classList.toggle('open');
+  btnTogglePause?.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({ action: 'pauseProtection', minutes: 15 });
+    updateShieldUI();
+    if (currentTab && currentTab.id) chrome.tabs.reload(currentTab.id);
+    window.close();
   });
 
-  // 6. Header Action Buttons
-  btnQuickZap.addEventListener('click', () => {
+  // 6. Core Zap Button & Header Zap Action
+  const triggerElementPicker = () => {
     if (currentTab && currentTab.id) {
       chrome.tabs.sendMessage(currentTab.id, { action: 'startElementPicker' });
       window.close();
     }
+  };
+
+  btnCoreZap?.addEventListener('click', triggerElementPicker);
+  btnQuickZap?.addEventListener('click', triggerElementPicker);
+
+  // 7. Accordion Toggle
+  accordionToggle?.addEventListener('click', () => {
+    accordionBody.classList.toggle('open');
   });
 
-  btnOpenOptions.addEventListener('click', () => {
+  btnOpenOptions?.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
   });
 

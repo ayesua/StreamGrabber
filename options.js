@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Checkbox Elements
   const toggles = {
     blockPopups: document.getElementById('opt-blockPopups'),
+    blockRedirects: document.getElementById('opt-blockRedirects'),
     blockTrackers: document.getElementById('opt-blockTrackers'),
     stripParams: document.getElementById('opt-stripParams'),
     blockFingerprinting: document.getElementById('opt-blockFingerprinting'),
@@ -71,6 +72,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       whatItDoes: 'Interviene la función `window.open` a nivel de navegador para interceptar ventanas emergentes no solicitadas, clics trampa sintéticos en enlaces ocultos y tácticas de "popunder" que intentan abrir pestañas detrás de tu ventana.',
       benefit: 'Elimina el 100% de la publicidad engañosa, redirecciones automáticas a sitios de apuestas/virus y páginas molestas.',
       compat: 'Las ventanas legítimas que tú abras conscientemente (como iniciar sesión con Google) siguen funcionando normalmente.'
+    },
+    'redirect': {
+      title: '🔀 Escudo Anti-Redirecciones y Secuestro de Pestañas (Tab-Under)',
+      whatItDoes: 'Intercepta y neutraliza scripts maliciosos que intentan redirigir tu pestaña actual mediante temporizadores invisibles (`location.replace`, `location.href`), etiquetas `meta refresh` o clics simulados cuando cambias de pestaña o intentas descargar un archivo.',
+      benefit: 'Impide que páginas de descarga, streaming o sitios dudosos secuestren tu navegación y te lleven a portales de phishing, estafas o contenido no deseado.',
+      compat: 'Las navegaciones normales y clics directos del usuario funcionan con total fluidez.'
     },
     'trackers': {
       title: '🛡️ Escudo Contra Rastreadores y Telemetría',

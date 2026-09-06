@@ -10,6 +10,7 @@
   let isWhitelisted = false;
   let settings = {
     blockPopups: true,
+    blockRedirects: true,
     blockTrackers: true,
     blockFingerprinting: true,
     defuseAntiAdblock: true,
@@ -53,6 +54,7 @@
       window.dispatchEvent(new CustomEvent('pureshield-config-sync', {
         detail: {
           blockPopups: settings.blockPopups,
+          blockRedirects: settings.blockRedirects,
           blockTrackers: settings.blockTrackers,
           blockFingerprinting: settings.blockFingerprinting,
           defuseAntiAdblock: settings.defuseAntiAdblock,
