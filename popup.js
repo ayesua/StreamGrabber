@@ -570,7 +570,7 @@ function createMediaCardHTML(item) {
     <div class="media-card" id="card_${item.id}">
       
       <!-- Static Video Screenshot Photo with Play Overlay -->
-      <div class="media-thumbnail-frame btn-trigger-preview" title="Click to preview video">
+      <div class="media-thumbnail-frame btn-trigger-preview" title="Click to preview / rotate video">
         ${posterImgHTML}
         ${placeholderHTML}
         <div class="thumb-play-overlay">
@@ -579,6 +579,7 @@ function createMediaCardHTML(item) {
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           </div>
+          <span class="thumb-preview-label">Preview / Rotate</span>
         </div>
         <span class="thumbnail-badge-type tag ${typeClass}">${item.type}</span>
         <span class="thumbnail-badge-res">★ ${qualityText}</span>
@@ -622,8 +623,11 @@ function createMediaCardHTML(item) {
             Download
           </button>
 
-          <button class="btn-secondary btn-preview" title="Preview video before downloading">
-            ▶ Preview
+          <button class="btn-secondary btn-preview" title="Preview and rotate video orientation before downloading">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Preview / Rotate</span>
           </button>
 
           <button class="btn-secondary btn-audio" title="Download as MP3 audio">
