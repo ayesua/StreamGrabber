@@ -1,4 +1,4 @@
-﻿# StreamGrabber - Chrome Web Store Production Packaging Script
+# StreamGrabber - Chrome Web Store Production Packaging Script
 $ErrorActionPreference = "Stop"
 
 $workspace = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -18,6 +18,7 @@ $runtimeFiles = @(
     "manifest.json",
     "background.js",
     "content.js",
+    "pageHook.js",
     "hls.light.min.js",
     "hlsEngine.js",
     "offscreen.html",

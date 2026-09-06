@@ -262,6 +262,23 @@
     return 'MP4';
   }
 
+  // Listen for direct authentic stream broadcasts from MAIN world pageHook.js
+  document.addEventListener('__STREAMGRABBER_MEDIA_EVENT__', (e) => {
+    try {
+      if (!e.detail) return;
+      const data = typeof e.detail === 'string' ? JSON.parse(e.detail) : e.detail;
+      if (data && data.url && !isExcludedUrl(data.url) && !isAdOrAnnounceUrl(data.url)) {
+        reportMedia({
+          url: data.url,
+          quality: data.quality || 'Auto HD',
+          type: data.type || detectTypeFromUrl(data.url),
+          poster: data.poster || findVideoPoster(),
+          title: data.title || getPageTitle()
+        });
+      }
+    } catch (err) {}
+  });
+
   function scanMediaElements() {
     const poster = findVideoPoster();
 
@@ -795,8 +812,20 @@
     return null;
   }
 
+  function isAdVideoElement(v) {
+    if (!v) return true;
+    const closestAd = v.closest(
+      '[class*="ad-"], [class*="ads-"], [id*="ad-"], [id*="ads-"], [class*="preroll"], [class*="sponsor"], [class*="banner"], [id*="vast"], [class*="exo_"]'
+    );
+    if (closestAd) return true;
+    const src = (v.currentSrc || v.src || '').toLowerCase();
+    if (isAdOrAnnounceUrl(src)) return true;
+    return false;
+  }
+
   function findMostVisibleVideo() {
-    const videos = Array.from(document.querySelectorAll('video'));
+    const rawVideos = Array.from(document.querySelectorAll('video'));
+    const videos = rawVideos.filter(v => !isAdVideoElement(v));
     if (videos.length === 0) return null;
 
     const playing = videos.find(v => !v.paused && v.readyState >= 1);

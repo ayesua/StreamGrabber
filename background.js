@@ -861,7 +861,7 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
       }
     }
 
-    if (!itemToDownload && message.videoSrc && !message.videoSrc.startsWith('blob:')) {
+    if (!itemToDownload && message.videoSrc && !message.videoSrc.startsWith('blob:') && !isAdOrAnnounceUrl(message.videoSrc)) {
       itemToDownload = {
         id: 'direct_' + Date.now(),
         url: message.videoSrc,

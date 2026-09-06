@@ -26,9 +26,20 @@
         "<all_urls>"
       ],
       "js": [
+        "pageHook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
         "content.js"
       ],
-      "run_at": "document_idle",
+      "run_at": "document_start",
       "all_frames": true
     }
   ],
@@ -55,7 +66,8 @@
         "icon128.png",
         "styles.css",
         "premium.html",
-        "hls.light.min.js"
+        "hls.light.min.js",
+        "pageHook.js"
       ],
       "matches": [
         "<all_urls>"
