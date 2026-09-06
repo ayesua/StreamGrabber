@@ -49,13 +49,14 @@ function handleDownloadItemComplete(downloadItemId, downloadId, item) {
   if (state) {
     state.progress = 100;
     state.status = 'complete';
+    state.completedAt = Date.now();
     if (item.fileSize) state.downloadedBytes = item.fileSize;
     activeDownloadsMap.set(downloadId, state);
     chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
       if (chrome.runtime.lastError) {}
     });
     notifyDownloadComplete(state.title || baseName, baseName);
-    setTimeout(() => activeDownloadsMap.delete(downloadId), 5000);
+    setTimeout(() => activeDownloadsMap.delete(downloadId), 3000);
   } else {
     notifyDownloadComplete(baseName, baseName);
   }
@@ -556,6 +557,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     }
 
+    function getSanitizedActiveDownloads() {
+      const now = Date.now();
+      const list = [];
+      for (const [id, dl] of activeDownloadsMap.entries()) {
+        if (dl.status === 'complete' && dl.completedAt && (now - dl.completedAt > 3000)) {
+          activeDownloadsMap.delete(id);
+          continue;
+        }
+        list.push(dl);
+      }
+      return list;
+    }
+
     if (message.tabId) {
       // 1. Check if we already have an authentic video poster
       const existingPoster = tabPosters.get(message.tabId) || mediaList.find(m => m.poster)?.poster;
@@ -564,7 +578,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         mediaList.forEach(m => {
           if (!m.poster) m.poster = existingPoster;
         });
-        sendResponse({ mediaList, activeDownloads: Array.from(activeDownloadsMap.values()) });
+        sendResponse({ mediaList, activeDownloads: getSanitizedActiveDownloads() });
         return true;
       }
 
@@ -572,7 +586,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.sendMessage(message.tabId, { action: 'GET_VIDEO_CROP_RECT' }, (rectRes) => {
         if (chrome.runtime.lastError) {
           // Tab does not have content script (or is protected) -> return mediaList cleanly
-          sendResponse({ mediaList, activeDownloads: Array.from(activeDownloadsMap.values()) });
+          sendResponse({ mediaList, activeDownloads: getSanitizedActiveDownloads() });
           return;
         }
 
@@ -587,16 +601,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
               }
             }
-            sendResponse({ mediaList, activeDownloads: Array.from(activeDownloadsMap.values()) });
+            sendResponse({ mediaList, activeDownloads: getSanitizedActiveDownloads() });
           });
         } else {
-          sendResponse({ mediaList, activeDownloads: Array.from(activeDownloadsMap.values()) });
+          sendResponse({ mediaList, activeDownloads: getSanitizedActiveDownloads() });
         }
       });
       return true;
     }
 
-    sendResponse({ mediaList, activeDownloads: Array.from(activeDownloadsMap.values()) });
+    sendResponse({ mediaList, activeDownloads: getSanitizedActiveDownloads() });
     return true;
   }
 
@@ -646,11 +660,12 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
           });
         },
         onStatusChange: (state) => {
-          activeDownloadsMap.set(downloadId, state);
           if (state.status === 'complete') {
+            state.completedAt = Date.now();
             notifyDownloadComplete(item.title, `${sanitizedTitle}.${chosenFormat}`);
-            setTimeout(() => activeDownloadsMap.delete(downloadId), 5000);
+            setTimeout(() => activeDownloadsMap.delete(downloadId), 3000);
           }
+          activeDownloadsMap.set(downloadId, state);
           chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
             if (chrome.runtime.lastError) {}
           });
@@ -1000,6 +1015,7 @@ async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs,
         if (state) {
           state.progress = 100;
           state.status = 'complete';
+          state.completedAt = Date.now();
           state.downloadedBytes = blob.size;
           state.downloadItemId = downloadItemId;
           activeDownloadsMap.set(downloadId, state);
@@ -1007,7 +1023,7 @@ async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs,
             if (chrome.runtime.lastError) {}
           });
           notifyDownloadComplete(state.title || itemTitle, filename);
-          setTimeout(() => activeDownloadsMap.delete(downloadId), 5000);
+          setTimeout(() => activeDownloadsMap.delete(downloadId), 3000);
         }
         setTimeout(() => {
           chrome.runtime.sendMessage({ action: 'REVOKE_BLOB_URL', blobUrl }, () => {

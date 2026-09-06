@@ -670,28 +670,58 @@ function executeDownload(item, title, format) {
 function renderActiveDownloads(downloads) {
   const container = document.getElementById('activeDownloadsContainer');
   const list = document.getElementById('activeDownloadsList');
+  if (!container || !list) return;
 
-  if (!downloads || downloads.length === 0) {
+  const now = Date.now();
+  // Filter out downloads that completed more than 2.5s ago
+  const activeOnly = (downloads || []).filter(dl => {
+    if (dl.status === 'complete' && dl.completedAt && (now - dl.completedAt > 2500)) {
+      return false;
+    }
+    return true;
+  });
+
+  if (activeOnly.length === 0) {
     container.style.display = 'none';
+    list.innerHTML = '';
     return;
   }
 
   container.style.display = 'block';
-  list.innerHTML = downloads.map(dl => `
-    <div class="download-item" id="dl_${dl.id}">
-      <div class="download-item-header">
-        <div class="download-title">${escapeHtml(dl.title || 'Downloading full video...')}</div>
-        <button class="btn-cancel-dl" data-id="${dl.id}" title="Cancel download">✕ Cancel</button>
+  list.innerHTML = activeOnly.map(dl => {
+    const isComplete = dl.status === 'complete' || (dl.progress >= 100 && dl.status !== 'downloading');
+    return `
+      <div class="download-item" id="dl_${dl.id}">
+        <div class="download-item-header">
+          <div class="download-title">${escapeHtml(dl.title || 'Downloading video...')}</div>
+          ${isComplete
+            ? '<span style="color: var(--vdh-green); font-size: 11px; font-weight: 700;">✓ Saved</span>'
+            : `<button class="btn-cancel-dl" data-id="${dl.id}" title="Cancel download">✕ Cancel</button>`
+          }
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: ${dl.progress || 0}%; ${isComplete ? 'background: var(--vdh-green);' : ''}"></div>
+        </div>
+        <div class="download-meta">
+          ${isComplete
+            ? `<span style="color: var(--vdh-green); font-weight: 700;">Download complete! (100% • ${formatBytes(dl.downloadedBytes)})</span>`
+            : `<span>${dl.progress || 0}% (${formatBytes(dl.downloadedBytes)})</span><span>⚡ ${formatSpeed(dl.speedBps)}</span>`
+          }
+        </div>
       </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width: ${dl.progress || 0}%"></div>
-      </div>
-      <div class="download-meta">
-        <span>${dl.progress || 0}% (${formatBytes(dl.downloadedBytes)})</span>
-        <span>⚡ ${formatSpeed(dl.speedBps)}</span>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
+  // Auto-remove completed items after 2.5 seconds
+  activeOnly.forEach(dl => {
+    if (dl.status === 'complete' || (dl.progress >= 100 && dl.status !== 'downloading')) {
+      setTimeout(() => {
+        const itemEl = document.getElementById(`dl_${dl.id}`);
+        if (itemEl) itemEl.remove();
+        if (list.children.length === 0) container.style.display = 'none';
+      }, 2500);
+    }
+  });
 
   // Attach cancel download listeners
   list.querySelectorAll('.btn-cancel-dl').forEach(btn => {
@@ -701,6 +731,7 @@ function renderActiveDownloads(downloads) {
         if (chrome.runtime.lastError) return;
         const itemEl = document.getElementById(`dl_${dlId}`);
         if (itemEl) itemEl.remove();
+        if (list.children.length === 0) container.style.display = 'none';
         loadTabMedia();
       });
     });
@@ -755,13 +786,18 @@ function updateActiveDownloadUI(state) {
   if (fill) fill.style.width = `${state.progress || 0}%`;
   if (meta) {
     if (state.status === 'complete') {
-      if (fill) fill.style.width = '100%';
-      meta.innerHTML = `<span style="color: var(--vdh-green); font-weight: bold;">Download complete! (100%)</span>`;
+      if (fill) {
+        fill.style.width = '100%';
+        fill.style.background = 'var(--vdh-green)';
+      }
+      const cancelBtn = el.querySelector('.btn-cancel-dl');
+      if (cancelBtn) cancelBtn.outerHTML = '<span style="color: var(--vdh-green); font-size: 11px; font-weight: 700;">✓ Saved</span>';
+      meta.innerHTML = `<span style="color: var(--vdh-green); font-weight: bold;">Download complete! (100% • ${formatBytes(state.downloadedBytes)})</span>`;
       setTimeout(() => {
         el.remove();
         if (list.children.length === 0) container.style.display = 'none';
         loadTabMedia();
-      }, 4000);
+      }, 2500);
     } else if (state.status === 'cancelled') {
       meta.innerHTML = `<span style="color: var(--vdh-text-muted);">Download cancelled</span>`;
       setTimeout(() => {
@@ -778,6 +814,13 @@ function updateActiveDownloadUI(state) {
     }
   }
 }
+
+// Live listener for download progress and completion events
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.action === 'DOWNLOAD_PROGRESS' || message.action === 'DOWNLOAD_STATUS') {
+    updateActiveDownloadUI(message.state);
+  }
+});
 
 function escapeHtml(str) {
   if (!str) return '';
