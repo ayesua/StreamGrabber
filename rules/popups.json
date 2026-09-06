@@ -394,5 +394,68 @@
       "urlFilter": "||trafficstars.com^",
       "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
     }
+  },
+  {
+    "id": 2045,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||twinrdsrv.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "image", "other"]
+    }
+  },
+  {
+    "id": 2046,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||twinred.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "image", "other"]
+    }
+  },
+  {
+    "id": 2047,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||twinredsrv.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "image", "other"]
+    }
+  },
+  {
+    "id": 2048,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||ctjdwm.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "image", "other"]
+    }
+  },
+  {
+    "id": 2049,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||bbangads.b-cdn.net^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "image", "other"]
+    }
+  },
+  {
+    "id": 2050,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||buddhabangxxx.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "other"]
+    }
+  },
+  {
+    "id": 2051,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*infinity.js*",
+      "resourceTypes": ["script", "xmlhttprequest", "other"]
+    }
   }
 ]

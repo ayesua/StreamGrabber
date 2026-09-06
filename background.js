@@ -275,7 +275,14 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'ext_click_id=',
   'subsource=',
   'prelanding=',
-  'landing=77'
+  'landing=77',
+  'twinrdsrv.com',
+  'twinred.com',
+  'twinredsrv.com',
+  'ctjdwm.com',
+  'bbangads.b-cdn.net',
+  'buddhabangxxx.com',
+  'infinity.js'
 ];
 
 function isMaliciousAdUrl(url) {

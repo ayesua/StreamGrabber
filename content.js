@@ -184,7 +184,13 @@
     'whitetrafsa.com',
     'whitetraf.com',
     'magsrv.com',
-    'tsyndicate.com'
+    'tsyndicate.com',
+    'twinrdsrv.com',
+    'twinred.com',
+    'twinredsrv.com',
+    'ctjdwm.com',
+    'bbangads.b-cdn.net',
+    'buddhabangxxx.com'
   ];
 
   window.addEventListener('click', (e) => {
@@ -317,7 +323,15 @@
     'iframe[src*="ero-advertising"]',
     'iframe[src*="adxad.com"]',
     'iframe[src*="juicyads.com"]',
-    'iframe[src*="tubecorporate.com"]'
+    'iframe[src*="tubecorporate.com"]',
+    'iframe[src*="twinred"]',
+    'iframe[src*="twinrdsrv"]',
+    'iframe[src*="ctjdwm"]',
+    '#infinity',
+    'script[src*="twinrdsrv"]',
+    'script[src*="infinity.js"]',
+    'a[href*="ctjdwm.com"]',
+    'a[href*="buddhabangxxx.com"]'
   ];
 
   const processedNodes = new WeakSet();

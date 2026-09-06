@@ -76,7 +76,14 @@
     'whitetraf.com',
     'whitetrafsa.com',
     'magsrv.com',
-    'tsyndicate.com'
+    'tsyndicate.com',
+    'twinrdsrv.com',
+    'twinred.com',
+    'twinredsrv.com',
+    'ctjdwm.com',
+    'bbangads.b-cdn.net',
+    'buddhabangxxx.com',
+    'infinity.js'
   ];
 
   const SUSPICIOUS_QUERY_PATTERNS = [
@@ -168,6 +175,9 @@
      1. USER INTERACTION TRACKER
      ========================================================================== */
   let lastUserInteractionTime = 0;
+  let lastClickedLinkHref = '';
+  let lastClickedLinkTarget = '';
+  let lastClickTime = 0;
 
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventType => {
     window.addEventListener(eventType, (e) => {
@@ -176,6 +186,22 @@
       }
     }, { capture: true, passive: true });
   });
+
+  // Track anchor link clicks to defuse tab-under hijacks
+  window.addEventListener('click', (e) => {
+    if (!e.isTrusted) return;
+    lastUserInteractionTime = Date.now();
+    let el = e.target;
+    while (el && el !== document) {
+      if (el.tagName === 'A' || el.tagName === 'AREA') {
+        lastClickedLinkHref = el.href || el.getAttribute('href') || '';
+        lastClickedLinkTarget = el.getAttribute('target') || el.target || '';
+        lastClickTime = Date.now();
+        break;
+      }
+      el = el.parentNode;
+    }
+  }, { capture: true, passive: true });
 
   function isRecentUserAction() {
     return (Date.now() - lastUserInteractionTime) < 800;
@@ -209,8 +235,8 @@
         return createDummyWindow(urlStr);
       }
 
-      // 3. Tab-Under Protection: Block window.open cloning the exact current page
-      // Tube ad scripts clone the current URL into a new tab, then redirect the original tab to an ad.
+      // 3. Tab-Under Protection:
+      // A. Block window.open cloning the exact current page
       const isCurrentPageUrl = Boolean(
         urlStr && (
           urlStr === window.location.href ||
@@ -223,6 +249,27 @@
         console.warn('[ExtremeShield] Blocked tab-under clone window.open:', urlStr);
         notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
         return createDummyWindow(urlStr);
+      }
+
+      // B. Block tab-under clone of clicked links:
+      // When clicking a link that does not have target="_blank", the browser natively navigates the current tab.
+      // Ad networks (like TwinRed infinity.js) intercept the click and call window.open(clickedLink)
+      // to open it in a new tab while hijacking or duplicating the current tab.
+      if (lastClickTime && (Date.now() - lastClickTime < 750) && lastClickedLinkHref) {
+        let isSameAsClicked = false;
+        try {
+          const clickedUrl = new URL(lastClickedLinkHref, window.location.href).href;
+          const targetUrlObj = new URL(urlStr, window.location.href).href;
+          isSameAsClicked = (clickedUrl === targetUrlObj);
+        } catch (_) {
+          isSameAsClicked = (urlStr === lastClickedLinkHref);
+        }
+
+        if (isSameAsClicked && lastClickedLinkTarget !== '_blank') {
+          console.warn('[ExtremeShield] Blocked tab-under duplicate window.open of clicked link:', urlStr);
+          notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
+          return createDummyWindow(urlStr);
+        }
       }
 
       // 4. Popups triggered during clicks: Block if cross-domain unless OAuth whitelist
@@ -334,6 +381,27 @@
     window.focus = function () {
       return originalFocus.apply(this, arguments);
     };
+  } catch (_) {}
+
+  // Defuse dynamic ad script injection (e.g. TwinRed infinity.js)
+  try {
+    const scriptSrcDesc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+    if (scriptSrcDesc && scriptSrcDesc.set) {
+      const origScriptSrcSet = scriptSrcDesc.set;
+      Object.defineProperty(HTMLScriptElement.prototype, 'src', {
+        set: function (url) {
+          const urlStr = String(url || '').toLowerCase();
+          if (config.blockPopups && !config.whitelisted && (urlStr.includes('twinrdsrv') || urlStr.includes('infinity.js') || isTrackerOrRedirectUrl(urlStr))) {
+            console.warn('[ExtremeShield] Blocked ad script injection:', url);
+            this.setAttribute('data-blocked-src', url);
+            return;
+          }
+          return origScriptSrcSet.call(this, url);
+        },
+        get: scriptSrcDesc.get,
+        configurable: true
+      });
+    }
   } catch (_) {}
 
   /* ==========================================================================
