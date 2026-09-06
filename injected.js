@@ -63,13 +63,91 @@
     'zeroredirect.com',
     'popunder.net',
     'monetag.com',
-    'richpush.co'
+    'richpush.co',
+    'tarklot.com',
+    'goodstatorone.com',
+    'auhubsm.com',
+    'kadam.net',
+    'kadam.ru',
+    'kadampn.com',
+    'clickadu.com',
+    'hilltopads.com',
+    'trafficstars.com',
+    'whitetraf.com',
+    'whitetrafsa.com',
+    'magsrv.com',
+    'tsyndicate.com'
+  ];
+
+  const SUSPICIOUS_QUERY_PATTERNS = [
+    'rotator=',
+    'click.php',
+    '/news/prl/',
+    'ext_click_id=',
+    'subsource=',
+    'prelanding=',
+    'landing=',
+    'subid_',
+    'track='
   ];
 
   function isTrackerOrRedirectUrl(url) {
     if (!url || typeof url !== 'string') return false;
     const lower = url.toLowerCase();
-    return TRACKER_KEYWORDS.some(k => lower.includes(k));
+    return TRACKER_KEYWORDS.some(k => lower.includes(k)) || SUSPICIOUS_QUERY_PATTERNS.some(p => lower.includes(p));
+  }
+
+  function isSameDomainOrSubdomain(targetUrl) {
+    try {
+      if (!targetUrl || targetUrl === 'about:blank' || targetUrl.startsWith('/') || targetUrl.startsWith('#') || targetUrl.startsWith('javascript:')) return true;
+      const u = new URL(targetUrl, window.location.href);
+      const currentHost = window.location.hostname;
+      return u.hostname === currentHost || u.hostname.endsWith('.' + currentHost) || currentHost.endsWith('.' + u.hostname);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  const ALLOWED_POPUP_HOSTS = [
+    'accounts.google.com',
+    'facebook.com',
+    'appleid.apple.com',
+    'github.com',
+    'twitter.com',
+    'x.com',
+    'paypal.com',
+    'stripe.com'
+  ];
+
+  function isAllowedPopupDomain(targetUrl) {
+    try {
+      if (!targetUrl) return false;
+      const u = new URL(targetUrl, window.location.href);
+      return ALLOWED_POPUP_HOSTS.some(h => u.hostname === h || u.hostname.endsWith('.' + h));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function createDummyWindow(urlStr) {
+    return {
+      closed: true,
+      focus: () => {},
+      blur: () => {},
+      close: () => {},
+      postMessage: () => {},
+      location: {
+        href: urlStr || 'about:blank',
+        replace: () => {},
+        assign: () => {}
+      },
+      document: {
+        write: () => {},
+        writeln: () => {},
+        open: () => {},
+        close: () => {}
+      }
+    };
   }
 
   // Listen for config sync from content.js
@@ -100,7 +178,7 @@
   });
 
   function isRecentUserAction() {
-    return (Date.now() - lastUserInteractionTime) < 1200;
+    return (Date.now() - lastUserInteractionTime) < 800;
   }
 
   /* ==========================================================================
@@ -114,27 +192,77 @@
         return originalOpen.apply(this, arguments);
       }
 
-      const urlStr = String(url || '');
-      const isSuspicious = !isRecentUserAction() || (target && target.toString().toLowerCase() === '_blank' && !isRecentUserAction());
+      const urlStr = String(url || '').trim();
+      const hasRecentAction = isRecentUserAction();
 
-      if (isSuspicious || (urlStr && (urlStr.startsWith('http') || urlStr.startsWith('//')) && !isRecentUserAction())) {
-        console.warn('[PureShield] Intercepted unrequested popup/popunder:', urlStr || 'about:blank');
+      // 1. Direct Tracker / Ad-network / Redirect pattern detection
+      if (isTrackerOrRedirectUrl(urlStr)) {
+        console.warn('[ExtremeShield] Blocked ad/redirect window.open:', urlStr);
         notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
-        
-        return {
-          closed: true,
-          focus: () => {},
-          blur: () => {},
-          close: () => {},
-          postMessage: () => {},
-          location: { href: urlStr }
-        };
+        return createDummyWindow(urlStr);
       }
 
-      return originalOpen.apply(this, arguments);
+      // 2. Unsolicited / Timer / Video-ended popups without recent user interaction: Strictly block
+      if (!hasRecentAction) {
+        console.warn('[ExtremeShield] Blocked background/unsolicited window.open:', urlStr || 'about:blank');
+        notifyBlocked('popup', { url: urlStr || 'about:blank', target: String(target || '_blank') });
+        return createDummyWindow(urlStr);
+      }
+
+      // 3. Tab-Under Protection: Block window.open cloning the exact current page
+      // Tube ad scripts clone the current URL into a new tab, then redirect the original tab to an ad.
+      const isCurrentPageUrl = Boolean(
+        urlStr && (
+          urlStr === window.location.href ||
+          urlStr === window.location.pathname ||
+          urlStr === (window.location.origin + window.location.pathname) ||
+          urlStr === (window.location.origin + window.location.pathname + window.location.search)
+        )
+      );
+      if (isCurrentPageUrl) {
+        console.warn('[ExtremeShield] Blocked tab-under clone window.open:', urlStr);
+        notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
+        return createDummyWindow(urlStr);
+      }
+
+      // 4. Popups triggered during clicks: Block if cross-domain unless OAuth whitelist
+      const isSameHost = isSameDomainOrSubdomain(urlStr);
+      const isOAuth = isAllowedPopupDomain(urlStr);
+
+      if (!isSameHost && !isOAuth && (urlStr.startsWith('http') || urlStr.startsWith('//'))) {
+        console.warn('[ExtremeShield] Blocked cross-domain popup on click:', urlStr);
+        notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
+        return createDummyWindow(urlStr);
+      }
+
+      // 5. Blank window handler: prevent delayed ad redirect on opened window
+      const openedWin = originalOpen.apply(this, arguments);
+      if (openedWin && (!urlStr || urlStr === 'about:blank')) {
+        try {
+          const timer = setInterval(() => {
+            try {
+              if (openedWin.closed) {
+                clearInterval(timer);
+                return;
+              }
+              const childUrl = openedWin.location.href;
+              if (isTrackerOrRedirectUrl(childUrl)) {
+                console.warn('[ExtremeShield] Closed child window navigated to ad:', childUrl);
+                openedWin.close();
+                clearInterval(timer);
+              }
+            } catch (_) {
+              clearInterval(timer);
+            }
+          }, 50);
+          setTimeout(() => clearInterval(timer), 3000);
+        } catch (_) {}
+      }
+
+      return openedWin;
     };
   } catch (err) {
-    console.error('[PureShield] Error wrapping window.open:', err);
+    console.error('[ExtremeShield] Error wrapping window.open:', err);
   }
 
   // Intercept synthetic click exploits on dynamically generated links
@@ -144,9 +272,11 @@
       if (this.tagName === 'A' && config.blockPopups && !config.whitelisted) {
         const target = this.getAttribute('target');
         const href = this.getAttribute('href') || '';
-        
-        if (!isRecentUserAction() && (target === '_blank' || href.startsWith('http') || href.startsWith('//'))) {
-          console.warn('[PureShield] Intercepted synthetic anchor click exploit:', href);
+        const isCrossDomain = !isSameDomainOrSubdomain(href);
+        const isOAuth = isAllowedPopupDomain(href);
+
+        if (!isRecentUserAction() || isTrackerOrRedirectUrl(href) || (isCrossDomain && !isOAuth)) {
+          console.warn('[ExtremeShield] Intercepted synthetic/unsolicited anchor click exploit:', href);
           notifyBlocked('popup', { url: href, target: target || '_self' });
           return;
         }
@@ -154,8 +284,42 @@
       return originalClick.apply(this, arguments);
     };
   } catch (err) {
-    console.error('[PureShield] Error wrapping HTMLElement.click:', err);
+    console.error('[ExtremeShield] Error wrapping HTMLElement.click:', err);
   }
+
+  // Intercept synthetic dispatchEvent click exploits
+  try {
+    const originalDispatch = EventTarget.prototype.dispatchEvent;
+    EventTarget.prototype.dispatchEvent = function (event) {
+      if (config.blockPopups && !config.whitelisted && event && event.type === 'click' && this instanceof HTMLElement) {
+        if (this.tagName === 'A') {
+          const href = this.getAttribute('href') || '';
+          if (isTrackerOrRedirectUrl(href) || (!isSameDomainOrSubdomain(href) && !isAllowedPopupDomain(href) && !isRecentUserAction())) {
+            console.warn('[ExtremeShield] Intercepted dispatchEvent click exploit:', href);
+            notifyBlocked('popup', { url: href });
+            return false;
+          }
+        }
+      }
+      return originalDispatch.apply(this, arguments);
+    };
+  } catch (_) {}
+
+  // Intercept hidden form submit exploits
+  try {
+    const originalSubmit = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function () {
+      if (config.blockPopups && !config.whitelisted) {
+        const action = this.getAttribute('action') || '';
+        if (isTrackerOrRedirectUrl(action) || (!isSameDomainOrSubdomain(action) && !isAllowedPopupDomain(action) && !isRecentUserAction())) {
+          console.warn('[ExtremeShield] Intercepted unrequested form.submit popunder:', action);
+          notifyBlocked('popup', { url: action });
+          return;
+        }
+      }
+      return originalSubmit.apply(this, arguments);
+    };
+  } catch (_) {}
 
   // Neutralize popunder focus/blur manipulation
   try {
@@ -176,13 +340,35 @@
      3. ANTI-REDIRECT & TAB-UNDER HIJACK SHIELD
      ========================================================================== */
   try {
+    // Intercept Location.prototype.href setter (Blocks window.location = 'ad_url' & location.href = 'ad_url')
+    const hrefDesc = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+    if (hrefDesc && hrefDesc.set) {
+      const origHrefSet = hrefDesc.set;
+      Object.defineProperty(Location.prototype, 'href', {
+        set: function (url) {
+          const urlStr = String(url || '').trim();
+          if (!config.whitelisted && config.blockRedirects) {
+            if (isTrackerOrRedirectUrl(urlStr) || (!isSameDomainOrSubdomain(urlStr) && !isAllowedPopupDomain(urlStr) && !isRecentUserAction())) {
+              console.warn('[ExtremeShield] Intercepted suspicious location.href redirect:', urlStr);
+              notifyBlocked('popup', { url: urlStr, detail: 'Tab-under/redirect hijack blocked' });
+              return;
+            }
+          }
+          return origHrefSet.call(this, url);
+        },
+        get: hrefDesc.get,
+        configurable: true
+      });
+    }
+
     // Intercept location.replace
     const origLocationReplace = Location.prototype.replace;
     Location.prototype.replace = function (url) {
       if (!config.whitelisted && config.blockRedirects) {
-        if (!isRecentUserAction() && isTrackerOrRedirectUrl(String(url))) {
-          console.warn('[PureShield] Intercepted suspicious location.replace redirect:', url);
-          notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
+        const urlStr = String(url || '').trim();
+        if (isTrackerOrRedirectUrl(urlStr) || (!isSameDomainOrSubdomain(urlStr) && !isAllowedPopupDomain(urlStr) && !isRecentUserAction())) {
+          console.warn('[ExtremeShield] Intercepted suspicious location.replace redirect:', urlStr);
+          notifyBlocked('popup', { url: urlStr, detail: 'Auto-redirect hijack blocked' });
           return;
         }
       }
@@ -193,9 +379,10 @@
     const origLocationAssign = Location.prototype.assign;
     Location.prototype.assign = function (url) {
       if (!config.whitelisted && config.blockRedirects) {
-        if (!isRecentUserAction() && isTrackerOrRedirectUrl(String(url))) {
-          console.warn('[PureShield] Intercepted suspicious location.assign redirect:', url);
-          notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
+        const urlStr = String(url || '').trim();
+        if (isTrackerOrRedirectUrl(urlStr) || (!isSameDomainOrSubdomain(urlStr) && !isAllowedPopupDomain(urlStr) && !isRecentUserAction())) {
+          console.warn('[ExtremeShield] Intercepted suspicious location.assign redirect:', urlStr);
+          notifyBlocked('popup', { url: urlStr, detail: 'Auto-redirect hijack blocked' });
           return;
         }
       }
@@ -300,6 +487,107 @@
         }
       } catch (_) {}
     }, 300);
+  } catch (_) {}
+
+  /* ==========================================================================
+     3C. TUBE & SPACES CLICKUNDER DEFUSER (Neutralizes ama1k3r & ads/clickunder)
+     ========================================================================== */
+  try {
+    function sanitizeTubeModules(arr) {
+      if (!arr || !Array.isArray(arr) || arr.__pureshield_hooked__) return;
+      arr.__pureshield_hooked__ = true;
+      const origPush = arr.push;
+      arr.push = function (...items) {
+        for (const item of items) {
+          if (Array.isArray(item) && typeof item[0] === 'string') {
+            const name = item[0].toLowerCase();
+            if (name.includes('clickunder') || name.includes('popunder') || name.includes('ama1k3r') || name.includes('ad-provider')) {
+              console.warn('[ExtremeShield] Neutralized tube clickunder registration:', item[0]);
+              if (typeof item[1] === 'function') {
+                const origCb = item[1];
+                item[1] = function (m) {
+                  if (m && typeof m === 'object') {
+                    m.initOnPlay = () => {};
+                    m.init = () => {};
+                  }
+                  try { origCb.apply(this, arguments); } catch (_) {}
+                  if (m && typeof m === 'object') {
+                    m.initOnPlay = () => {};
+                    m.init = () => {};
+                  }
+                };
+              }
+              if (typeof item[2] === 'function') {
+                const origFactory = item[2];
+                item[2] = function (deps, exports) {
+                  if (exports && typeof exports === 'object') {
+                    exports.initOnPlay = () => {};
+                    exports.init = () => {};
+                  }
+                  try { origFactory.apply(this, arguments); } catch (_) {}
+                  if (exports && typeof exports === 'object') {
+                    exports.initOnPlay = () => {};
+                    exports.init = () => {};
+                  }
+                };
+              }
+            }
+          }
+        }
+        return origPush.apply(this, items);
+      };
+    }
+
+    if (window.__require) sanitizeTubeModules(window.__require);
+    if (window.__define) sanitizeTubeModules(window.__define);
+
+    let _requireArr = window.__require;
+    Object.defineProperty(window, '__require', {
+      get: () => _requireArr,
+      set: (v) => {
+        _requireArr = v;
+        sanitizeTubeModules(_requireArr);
+      },
+      configurable: true
+    });
+
+    let _defineArr = window.__define;
+    Object.defineProperty(window, '__define', {
+      get: () => _defineArr,
+      set: (v) => {
+        _defineArr = v;
+        sanitizeTubeModules(_defineArr);
+      },
+      configurable: true
+    });
+
+    // Neutralize Spaces.api clickunder endpoints if Spaces framework is used
+    function wrapSpaces(sp) {
+      if (!sp || typeof sp !== 'object' || sp.__pureshield_wrapped__) return sp;
+      sp.__pureshield_wrapped__ = true;
+      const origApi = sp.api;
+      if (typeof origApi === 'function') {
+        sp.api = function (endpoint, params, callback, options) {
+          if (typeof endpoint === 'string' && (endpoint.includes('ama1k3r') || endpoint.includes('Cl1ckCU') || endpoint.includes('Need2Go'))) {
+            console.warn('[ExtremeShield] Blocked Spaces clickunder API call:', endpoint);
+            if (typeof callback === 'function') callback({ code: -1, error: 'blocked' });
+            return;
+          }
+          return origApi.apply(this, arguments);
+        };
+      }
+      return sp;
+    }
+
+    if (window.Spaces) wrapSpaces(window.Spaces);
+    let _spacesObj = window.Spaces;
+    Object.defineProperty(window, 'Spaces', {
+      get: () => _spacesObj,
+      set: (v) => {
+        _spacesObj = wrapSpaces(v);
+      },
+      configurable: true
+    });
   } catch (_) {}
 
   /* ==========================================================================

@@ -143,6 +143,17 @@ if (chrome.declarativeNetRequest && chrome.declarativeNetRequest.onRuleMatchedDe
       domain: domain || 'Network Request',
       timestamp: Date.now()
     });
+
+    // Auto-close blocked popup tabs so user is not stranded on ERR_BLOCKED_BY_CLIENT
+    if (tabId && tabId > 0 && rulesetId === 'ruleset_popups' && info?.request?.type === 'main_frame') {
+      chrome.tabs.get(tabId, (targetTab) => {
+        if (chrome.runtime.lastError || !targetTab) return;
+        if (targetTab.openerTabId) {
+          console.warn('[ExtremeShield] Auto-closing DNR blocked popup tab:', url);
+          try { chrome.tabs.remove(tabId); } catch (_) {}
+        }
+      });
+    }
   });
 }
 
@@ -229,8 +240,84 @@ function updateTabBadge(tabId) {
   }
 }
 
-// Reset tab stats on new navigation
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+/* ==========================================================================
+   7B. AD POPUP & POPUNDER TAB WATCHDOG (Instantly terminates ad tabs)
+   ========================================================================== */
+const KNOWN_AD_POPUP_PATTERNS = [
+  'tarklot.com',
+  'goodstatorone.com',
+  'auhubsm.com',
+  'kadam.net',
+  'kadam.ru',
+  'kadampn.com',
+  'clickadu.com',
+  'hilltopads.com',
+  'hilltopads.net',
+  'trafficstars.com',
+  'whitetrafsa.com',
+  'whitetraf.com',
+  'magsrv.com',
+  'tsyndicate.com',
+  'exoclick.com',
+  'popads.net',
+  'popcash.net',
+  'propellerads.com',
+  'onclickads.net',
+  'adcash.com',
+  'adsterra.com',
+  'monetag.com',
+  'richpush.co',
+  'zeroredirect.com',
+  'popunder.net',
+  'rotator=',
+  'click.php',
+  '/news/prl/',
+  'ext_click_id=',
+  'subsource=',
+  'prelanding=',
+  'landing=77'
+];
+
+function isMaliciousAdUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const lower = url.toLowerCase();
+  return KNOWN_AD_POPUP_PATTERNS.some(p => lower.includes(p));
+}
+
+// 1. Watchdog for new tabs created (instant termination of ad popups/popunders)
+chrome.tabs.onCreated.addListener((tab) => {
+  const url = tab.pendingUrl || tab.url || '';
+  if (isMaliciousAdUrl(url)) {
+    console.warn('[ExtremeShield] Terminating malicious ad popup tab on creation:', url);
+    try {
+      chrome.tabs.remove(tab.id);
+    } catch (_) {}
+    recordBlockedItem(tab.openerTabId || null, {
+      type: 'popup',
+      url,
+      domain: 'Ad Popup Shield',
+      timestamp: Date.now()
+    });
+  }
+});
+
+// 2. Watchdog for tab navigations and updates (catches about:blank navigations to ad networks)
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  const url = changeInfo.url || tab?.url || '';
+  if (isMaliciousAdUrl(url)) {
+    console.warn('[ExtremeShield] Terminating malicious ad popup tab on navigation:', url);
+    try {
+      chrome.tabs.remove(tabId);
+    } catch (_) {}
+    recordBlockedItem(tab?.openerTabId || null, {
+      type: 'popup',
+      url,
+      domain: 'Ad Popup Shield',
+      timestamp: Date.now()
+    });
+    return;
+  }
+
   if (changeInfo.status === 'loading') {
     tabStats.set(tabId, { popups: 0, trackers: 0, annoyances: 0, items: [], lastUpdated: Date.now() });
     updateTabBadge(tabId);

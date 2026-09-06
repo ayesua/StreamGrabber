@@ -160,6 +160,60 @@
   }
 
   /* ==========================================================================
+     3B. CLICK-JACKING & MALICIOUS LINK DEFUSER (Isolated World)
+     ========================================================================== */
+  const SUSPICIOUS_AD_HREFS = [
+    'tarklot.com',
+    'goodstatorone.com',
+    'auhubsm.com',
+    'rotator=',
+    'click.php',
+    '/news/prl/',
+    'popads.net',
+    'popcash.net',
+    'propellerads.com',
+    'onclickads.net',
+    'exoclick.com',
+    'adcash.com',
+    'adsterra.com',
+    'monetag.com',
+    'kadam.net',
+    'kadam.ru',
+    'clickadu.com',
+    'trafficstars.com',
+    'whitetrafsa.com',
+    'whitetraf.com',
+    'magsrv.com',
+    'tsyndicate.com'
+  ];
+
+  window.addEventListener('click', (e) => {
+    if (isWhitelisted) return;
+    let target = e.target;
+    while (target && target !== document) {
+      if (target.tagName === 'A' || target.tagName === 'AREA') {
+        const href = target.getAttribute('href') || target.href || '';
+        const hrefLower = String(href).toLowerCase();
+        if (SUSPICIOUS_AD_HREFS.some(p => hrefLower.includes(p))) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          console.warn('[ExtremeShield] Intercepted malicious ad link click:', href);
+          safeSendMessage({
+            action: 'recordBlockedEvent',
+            data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
+          });
+          if (settings.showToastNotifications) {
+            showBlockedPopupToast(href);
+          }
+          return;
+        }
+      }
+      target = target.parentNode;
+    }
+  }, true);
+
+  /* ==========================================================================
      4. TELEMETRY EVENT LISTENER
      ========================================================================== */
   window.addEventListener('pureshield-event', (e) => {

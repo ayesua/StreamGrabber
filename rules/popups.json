@@ -313,5 +313,86 @@
       "urlFilter": "||syndication.exoclick.com^",
       "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
     }
+  },
+  {
+    "id": 2036,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||tarklot.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2037,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||goodstatorone.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2038,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||auhubsm.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2039,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||kadam.net^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2040,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||kadam.ru^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2041,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||kadampn.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2042,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||clickadu.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2043,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||hilltopads.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2044,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||trafficstars.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
   }
 ]
