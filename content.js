@@ -190,7 +190,18 @@
     'twinredsrv.com',
     'ctjdwm.com',
     'bbangads.b-cdn.net',
-    'buddhabangxxx.com'
+    'buddhabangxxx.com',
+    'stripchat.com',
+    'stripcash.com',
+    'chaturbate.com',
+    'camsoda.com',
+    'bongacams.com',
+    'livejasmin.com',
+    'cam4.com',
+    'orbsrv.com',
+    'pjs.js',
+    'rtb-6.xgroovy.com',
+    'rtb-4.xgroovy.com'
   ];
 
   window.addEventListener('click', (e) => {
@@ -331,7 +342,17 @@
     'script[src*="twinrdsrv"]',
     'script[src*="infinity.js"]',
     'a[href*="ctjdwm.com"]',
-    'a[href*="buddhabangxxx.com"]'
+    'a[href*="buddhabangxxx.com"]',
+    'script[src*="pjs.js"]',
+    'script[src*="orbsrv.com"]',
+    'iframe[src*="rtb-6.xgroovy.com"]',
+    'iframe[src*="rtb-4.xgroovy.com"]',
+    '.show_sb',
+    '.sb-AB',
+    '.sb-A',
+    '.sb-B',
+    '.sb-title',
+    '.sb-close-play'
   ];
 
   const processedNodes = new WeakSet();
@@ -339,6 +360,14 @@
 
   function performOptimizedScan(targetRoot = document) {
     if (isWhitelisted) return;
+
+    // 0. Strip popunder trigger classes like .popito
+    if (settings.blockPopups && targetRoot.querySelectorAll) {
+      const popitos = targetRoot.querySelectorAll('.popito');
+      for (let i = 0; i < popitos.length; i++) {
+        popitos[i].classList.remove('popito');
+      }
+    }
 
     // 1. Scan for Tracker elements
     if (settings.blockTrackers) {

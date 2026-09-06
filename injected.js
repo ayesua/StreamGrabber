@@ -83,7 +83,18 @@
     'ctjdwm.com',
     'bbangads.b-cdn.net',
     'buddhabangxxx.com',
-    'infinity.js'
+    'infinity.js',
+    'stripchat.com',
+    'stripcash.com',
+    'chaturbate.com',
+    'camsoda.com',
+    'bongacams.com',
+    'livejasmin.com',
+    'cam4.com',
+    'orbsrv.com',
+    'pjs.js',
+    'rtb-6.xgroovy.com',
+    'rtb-4.xgroovy.com'
   ];
 
   const SUSPICIOUS_QUERY_PATTERNS = [
@@ -95,7 +106,11 @@
     'prelanding=',
     'landing=',
     'subid_',
-    'track='
+    'track=',
+    'smartpopbucketid=',
+    'gototheroom',
+    'modelname=',
+    'modelid='
   ];
 
   function isTrackerOrRedirectUrl(url) {
@@ -286,23 +301,34 @@
       const openedWin = originalOpen.apply(this, arguments);
       if (openedWin && (!urlStr || urlStr === 'about:blank')) {
         try {
+          let checkCount = 0;
           const timer = setInterval(() => {
+            checkCount++;
             try {
               if (openedWin.closed) {
                 clearInterval(timer);
                 return;
               }
               const childUrl = openedWin.location.href;
-              if (isTrackerOrRedirectUrl(childUrl)) {
-                console.warn('[ExtremeShield] Closed child window navigated to ad:', childUrl);
-                openedWin.close();
-                clearInterval(timer);
+              if (childUrl && childUrl !== 'about:blank') {
+                if (isTrackerOrRedirectUrl(childUrl) || (!isSameDomainOrSubdomain(childUrl) && !isAllowedPopupDomain(childUrl))) {
+                  console.warn('[ExtremeShield] Closed child window navigated to ad/cross-origin:', childUrl);
+                  notifyBlocked('popup', { url: childUrl, detail: 'Closed blank popup navigated to cross-origin' });
+                  try { openedWin.close(); } catch (_) {}
+                  clearInterval(timer);
+                }
               }
             } catch (_) {
+              // DOMException thrown: blank window was navigated cross-origin to a 3rd-party domain (classic popunder)
+              console.warn('[ExtremeShield] Closed child window that navigated cross-origin to ad');
+              notifyBlocked('popup', { url: 'cross-origin popunder', detail: 'Blank window navigated to external domain' });
+              try { openedWin.close(); } catch (_) {}
+              clearInterval(timer);
+            }
+            if (checkCount > 60) {
               clearInterval(timer);
             }
           }, 50);
-          setTimeout(() => clearInterval(timer), 3000);
         } catch (_) {}
       }
 
@@ -341,7 +367,7 @@
       if (config.blockPopups && !config.whitelisted && event && event.type === 'click' && this instanceof HTMLElement) {
         if (this.tagName === 'A') {
           const href = this.getAttribute('href') || '';
-          if (isTrackerOrRedirectUrl(href) || (!isSameDomainOrSubdomain(href) && !isAllowedPopupDomain(href) && !isRecentUserAction())) {
+          if (isTrackerOrRedirectUrl(href) || (!isSameDomainOrSubdomain(href) && !isAllowedPopupDomain(href))) {
             console.warn('[ExtremeShield] Intercepted dispatchEvent click exploit:', href);
             notifyBlocked('popup', { url: href });
             return false;
@@ -402,6 +428,38 @@
         configurable: true
       });
     }
+  } catch (_) {}
+
+  // Defuse ExoClick / Popunder 'rg' engine
+  try {
+    const dummyRg = {
+      config: function () { return dummyRg; },
+      add: function () { return dummyRg; },
+      bindTo: function () { return dummyRg; },
+      ignoreTo: function () { return dummyRg; },
+      getStack: function () { return []; },
+      fire: function () { return false; },
+      remove: function () { return dummyRg; }
+    };
+    let _rg = dummyRg;
+    Object.defineProperty(window, 'rg', {
+      get: () => _rg,
+      set: (val) => {
+        console.warn('[ExtremeShield] Neutralized popunder engine (rg) assignment');
+      },
+      configurable: true
+    });
+  } catch (_) {}
+
+  // Strip popunder triggers like .popito from element classes
+  try {
+    const origClassAdd = DOMTokenList.prototype.add;
+    DOMTokenList.prototype.add = function (...tokens) {
+      const filtered = tokens.filter(t => t !== 'popito');
+      if (filtered.length > 0) {
+        return origClassAdd.apply(this, filtered);
+      }
+    };
   } catch (_) {}
 
   /* ==========================================================================

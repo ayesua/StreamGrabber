@@ -282,7 +282,20 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'ctjdwm.com',
   'bbangads.b-cdn.net',
   'buddhabangxxx.com',
-  'infinity.js'
+  'infinity.js',
+  'stripchat.com',
+  'stripcash.com',
+  'chaturbate.com',
+  'camsoda.com',
+  'bongacams.com',
+  'livejasmin.com',
+  'cam4.com',
+  'orbsrv.com',
+  'pjs.js',
+  'smartpopbucketid=',
+  'gototheroom',
+  'rtb-6.xgroovy.com',
+  'rtb-4.xgroovy.com'
 ];
 
 function isMaliciousAdUrl(url) {
