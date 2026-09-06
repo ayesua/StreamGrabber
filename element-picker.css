@@ -174,3 +174,55 @@
     opacity: 0;
   }
 }
+
+/* ==========================================================================
+   BUILT-IN INTRUSIVE AD OVERLAY & OUTSTREAM BANNER DEFUSER
+   ========================================================================== */
+html:not([data-extremeshield-whitelisted="true"]) .ex-over-front,
+html:not([data-extremeshield-whitelisted="true"]) .ex-over-front-iframe,
+html:not([data-extremeshield-whitelisted="true"]) .ex-over-inner-container,
+html:not([data-extremeshield-whitelisted="true"]) .ex-over-close,
+html:not([data-extremeshield-whitelisted="true"]) .ex-over-background,
+html:not([data-extremeshield-whitelisted="true"]) [class*="ex-over"],
+html:not([data-extremeshield-whitelisted="true"]) [id*="ex-over"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="exo-overlay"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="exo-sticky"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="exo-float"],
+html:not([data-extremeshield-whitelisted="true"]) [id*="exo-"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="video-overlay-ad"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="floating-ad"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="floating_ad"],
+html:not([data-extremeshield-whitelisted="true"]) [id*="floating-ad"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="ad-floating"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="ad-sticky"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="sticky-ad"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="ad-overlay"],
+html:not([data-extremeshield-whitelisted="true"]) [id*="ad-overlay"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="trafficjunky-floating"],
+html:not([data-extremeshield-whitelisted="true"]) [id*="trafficjunky"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="tsyndicate"],
+html:not([data-extremeshield-whitelisted="true"]) [id*="tsyndicate"],
+html:not([data-extremeshield-whitelisted="true"]) [class*="outstream-ad"],
+html:not([data-extremeshield-whitelisted="true"]) [id*="outstream"],
+html:not([data-extremeshield-whitelisted="true"]) .ad-container-floating,
+html:not([data-extremeshield-whitelisted="true"]) .floating-banner-container,
+html:not([data-extremeshield-whitelisted="true"]) .before-player-desktop--source-block,
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="exosrv.com"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="exoclick.com"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="syndication.exoclick.com"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="trafficjunky"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="tsyndicate"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="whitetrafsa"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="whitetraf.com"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="magsrv"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="ero-advertising"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="adxad.com"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="juicyads.com"],
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="tubecorporate.com"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
+}

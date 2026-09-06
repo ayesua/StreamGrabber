@@ -81,6 +81,12 @@
       const whitelist = data.whitelistedDomains || [];
       isWhitelisted = isProtectedDomain || whitelist.some(domain => hostname === domain || hostname.endsWith('.' + domain));
 
+      if (isWhitelisted) {
+        document.documentElement.setAttribute('data-extremeshield-whitelisted', 'true');
+      } else {
+        document.documentElement.removeAttribute('data-extremeshield-whitelisted');
+      }
+
       // Broadcast config to injected.js
       window.dispatchEvent(new CustomEvent('pureshield-config-sync', {
         detail: {
@@ -211,6 +217,55 @@
     '#truste-consent-track'
   ];
 
+  const BUILTIN_COSMETIC_SELECTORS = [
+    // ExoClick Overlays, In-Video Banners & Floating Frames
+    '.ex-over-front',
+    '.ex-over-front-iframe',
+    '.ex-over-inner-container',
+    '.ex-over-close',
+    '.ex-over-background',
+    '[class*="ex-over"]',
+    '[id*="ex-over"]',
+    '[class*="exo-overlay"]',
+    '[class*="exo-sticky"]',
+    '[class*="exo-float"]',
+    '[id*="exo-"]',
+
+    // Floating & Outstream Ad Overlays
+    '[class*="floating-ad"]',
+    '[class*="floating_ad"]',
+    '[id*="floating-ad"]',
+    '[class*="ad-floating"]',
+    '[class*="ad-sticky"]',
+    '[class*="sticky-ad"]',
+    '[class*="video-overlay-ad"]',
+    '[class*="ad-overlay"]',
+    '[id*="ad-overlay"]',
+    '[class*="trafficjunky-floating"]',
+    '[id*="trafficjunky"]',
+    '[class*="tsyndicate"]',
+    '[id*="tsyndicate"]',
+    '[class*="outstream-ad"]',
+    '[id*="outstream"]',
+    '.ad-container-floating',
+    '.floating-banner-container',
+    '.before-player-desktop--source-block',
+
+    // Ad Network Embed IFrames
+    'iframe[src*="exosrv.com"]',
+    'iframe[src*="exoclick.com"]',
+    'iframe[src*="syndication.exoclick.com"]',
+    'iframe[src*="trafficjunky"]',
+    'iframe[src*="tsyndicate"]',
+    'iframe[src*="whitetrafsa"]',
+    'iframe[src*="whitetraf.com"]',
+    'iframe[src*="magsrv"]',
+    'iframe[src*="ero-advertising"]',
+    'iframe[src*="adxad.com"]',
+    'iframe[src*="juicyads.com"]',
+    'iframe[src*="tubecorporate.com"]'
+  ];
+
   const processedNodes = new WeakSet();
   let domScanTimeout = null;
 
@@ -255,7 +310,37 @@
       });
     }
 
-    // 3. Body Scroll Lock Recovery
+    // 3. Intrusive Overlays & Floating Ad Frames Cleaner
+    if (settings.blockPopups || settings.removeOverlays) {
+      BUILTIN_COSMETIC_SELECTORS.forEach(selector => {
+        try {
+          const elements = targetRoot.querySelectorAll ? targetRoot.querySelectorAll(selector) : [];
+          elements.forEach(el => {
+            if (processedNodes.has(el)) return;
+            processedNodes.add(el);
+
+            // Neutralize any iframe within to stop CPU and video execution
+            const iframes = el.tagName === 'IFRAME' ? [el] : el.querySelectorAll('iframe');
+            iframes.forEach(f => {
+              try { f.src = 'about:blank'; } catch (_) {}
+            });
+
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+            el.style.setProperty('pointer-events', 'none', 'important');
+
+            try { el.remove(); } catch (_) {}
+
+            safeSendMessage({
+              action: 'recordBlockedEvent',
+              data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
+            });
+          });
+        } catch (_) {}
+      });
+    }
+
+    // 4. Body Scroll Lock Recovery
     if (settings.removeOverlays && document.body) {
       const bodyStyle = window.getComputedStyle(document.body);
       if (bodyStyle.overflow === 'hidden') {
@@ -264,7 +349,7 @@
       }
     }
 
-    // 4. Advanced Features applied to new nodes
+    // 5. Advanced Features applied to new nodes
     applyAdvancedFeatures();
   }
 
@@ -459,26 +544,33 @@
   }
 
   /* ==========================================================================
-     7. CUSTOM COSMETIC RULES ENGINE
+     7. COSMETIC FILTERING ENGINE (Built-in & Custom Rules)
      ========================================================================== */
   let cosmeticStyleTag = null;
 
-  function applyCustomCosmeticRules(customRules) {
-    const rules = customRules[hostname] || [];
+  function ensureCosmeticStyles() {
     if (!cosmeticStyleTag) {
       cosmeticStyleTag = document.createElement('style');
       cosmeticStyleTag.id = 'pureshield-cosmetic-styles';
       (document.head || document.documentElement).appendChild(cosmeticStyleTag);
     }
+  }
 
-    if (rules.length === 0 || isWhitelisted) {
+  function applyCustomCosmeticRules(customRules) {
+    ensureCosmeticStyles();
+
+    if (isWhitelisted) {
       cosmeticStyleTag.textContent = '';
       return;
     }
 
-    const css = rules.map(selector => `${selector} { display: none !important; }`).join('\n');
+    const userRules = (customRules && customRules[hostname]) || [];
+    const allRules = [...BUILTIN_COSMETIC_SELECTORS, ...userRules];
+
+    const css = allRules.map(selector => `${selector} { display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }`).join('\n');
     cosmeticStyleTag.textContent = css;
   }
+  applyCustomCosmeticRules({});
 
   /* ==========================================================================
      8. INTERACTIVE ELEMENT ZAPPER

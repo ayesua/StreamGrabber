@@ -59,7 +59,7 @@
     "action": { "type": "block" },
     "condition": {
       "urlFilter": "||exoclick.com^",
-      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame"]
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "media", "image", "other"]
     }
   },
   {
@@ -68,7 +68,7 @@
     "action": { "type": "block" },
     "condition": {
       "urlFilter": "||juicyads.com^",
-      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame"]
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "media", "image", "other"]
     }
   },
   {
@@ -77,7 +77,7 @@
     "action": { "type": "block" },
     "condition": {
       "urlFilter": "||adsterra.com^",
-      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame"]
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "media", "image", "other"]
     }
   },
   {
