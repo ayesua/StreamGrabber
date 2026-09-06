@@ -9,6 +9,11 @@
   if (window.__pureshield_injected__) return;
   window.__pureshield_injected__ = true;
 
+  const hostname = window.location.hostname;
+  if (['mail.google.com', 'accounts.google.com', 'docs.google.com', 'drive.google.com'].some(d => hostname === d || hostname.endsWith('.' + d))) {
+    return; // Never inject into critical Google Workspace apps
+  }
+
   // Active configuration received from content script
   const config = {
     blockPopups: true,
@@ -342,18 +347,8 @@
       window.canRunAds = true;
       window.isAdBlockActive = false;
       window.adblock = false;
-      window.google_ad_client = true;
-
-      if (!window.ga) {
-        window.ga = function () {};
-        window.ga.q = [];
-        window.ga.loaded = true;
-      }
-      if (!window.gtag) {
-        window.gtag = function () {};
-      }
     } catch (_) {}
   }
 
-  console.log('[PureShield] Protection engine active.');
+  console.log('[ExtremeShield] Protection engine active.');
 })();

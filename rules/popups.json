@@ -95,7 +95,7 @@
     "action": { "type": "block" },
     "condition": {
       "urlFilter": "||trafficjunky.com^",
-      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame"]
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "main_frame", "media", "other"]
     }
   },
   {
@@ -177,6 +177,60 @@
     "condition": {
       "urlFilter": "||richpush.co^",
       "resourceTypes": ["script", "sub_frame", "main_frame"]
+    }
+  },
+  {
+    "id": 2021,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||trafficjunky.net^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2022,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||tsyndicate.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2023,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||ptgnvd.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2024,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||exosrv.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2025,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||realsrv.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 2026,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||adtng.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "media", "other"]
     }
   }
 ]

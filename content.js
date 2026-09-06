@@ -7,7 +7,19 @@
   'use strict';
 
   const hostname = window.location.hostname;
-  let isWhitelisted = false;
+
+  // Protect critical web applications (Google Workspace, accounts) from invasive scriptlet alterations
+  const PROTECTED_SYSTEM_DOMAINS = [
+    'mail.google.com',
+    'accounts.google.com',
+    'docs.google.com',
+    'drive.google.com',
+    'calendar.google.com',
+    'meet.google.com'
+  ];
+  const isProtectedDomain = PROTECTED_SYSTEM_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d));
+
+  let isWhitelisted = isProtectedDomain;
   let settings = {
     blockPopups: true,
     blockRedirects: true,
@@ -28,16 +40,35 @@
      1. INJECT MAIN WORLD SCRIPTLET
      ========================================================================== */
   function injectScriptlet() {
+    if (isProtectedDomain) return; // Never inject scriptlet overrides into protected apps like Gmail
     try {
       const script = document.createElement('script');
       script.src = chrome.runtime.getURL('injected.js');
       script.onload = () => script.remove();
-      (document.head || document.documentElement).appendChild(script);
+      (document.head || document.documentElement)?.appendChild(script);
     } catch (err) {
-      console.warn('[PureShield] Scriptlet injection failed:', err);
+      console.warn('[ExtremeShield] Scriptlet injection bypassed:', err);
     }
   }
   injectScriptlet();
+
+  /* ==========================================================================
+     HELPER: SAFE RUNTIME MESSAGING (Prevents unhandled connection errors)
+     ========================================================================== */
+  function safeSendMessage(message, callback) {
+    try {
+      if (!chrome.runtime?.id) return;
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          // Suppress harmless port closure/background idle errors
+          return;
+        }
+        if (callback && typeof callback === 'function') {
+          callback(response);
+        }
+      });
+    } catch (_) {}
+  }
 
   /* ==========================================================================
      2. SYNC SETTINGS & WHITELIST STATUS
@@ -48,7 +79,7 @@
         settings = { ...settings, ...data.settings };
       }
       const whitelist = data.whitelistedDomains || [];
-      isWhitelisted = whitelist.some(domain => hostname === domain || hostname.endsWith('.' + domain));
+      isWhitelisted = isProtectedDomain || whitelist.some(domain => hostname === domain || hostname.endsWith('.' + domain));
 
       // Broadcast config to injected.js
       window.dispatchEvent(new CustomEvent('pureshield-config-sync', {
@@ -96,19 +127,19 @@
       if (!metaRef) {
         metaRef = document.createElement('meta');
         metaRef.name = 'referrer';
-        (document.head || document.documentElement).appendChild(metaRef);
+        (document.head || document.documentElement)?.appendChild(metaRef);
       }
       metaRef.content = 'strict-origin-when-cross-origin';
     }
 
-    // 3. Unlock Right Click & Text Selection
+    // 3. Unlock Right Click & Text Selection (SAFE: Never intercept mousedown/mouseup!)
     if (settings.unlockRightClick) {
-      ['contextmenu', 'selectstart', 'copy', 'mousedown', 'mouseup'].forEach(evt => {
+      ['contextmenu', 'copy'].forEach(evt => {
         document.addEventListener(evt, (e) => e.stopPropagation(), true);
       });
       document.oncontextmenu = null;
       document.onselectstart = null;
-      document.body && (document.body.style.userSelect = 'auto');
+      if (document.body) document.body.style.userSelect = 'auto';
     }
 
     // 4. Anti-Autoplay Video Shield
@@ -130,7 +161,7 @@
 
     const { type, url } = e.detail;
 
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       action: 'recordBlockedEvent',
       data: {
         type: type || 'tracker',
@@ -198,8 +229,8 @@
 
         const isMatch = TRACKER_DOM_PATTERNS.some(pat => src.toLowerCase().includes(pat));
         if (isMatch) {
-          console.log('[PureShield] Suppressed DOM tracker:', src);
-          chrome.runtime.sendMessage({
+          console.log('[ExtremeShield] Suppressed DOM tracker:', src);
+          safeSendMessage({
             action: 'recordBlockedEvent',
             data: { type: 'tracker', url: src, domain: hostname, timestamp: Date.now() }
           });
@@ -215,7 +246,7 @@
           if (banner.style.display !== 'none') {
             banner.style.setProperty('display', 'none', 'important');
             banner.setAttribute('aria-hidden', 'true');
-            chrome.runtime.sendMessage({
+            safeSendMessage({
               action: 'recordBlockedEvent',
               data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
             });
@@ -237,6 +268,61 @@
     applyAdvancedFeatures();
   }
 
+  /* ==========================================================================
+     IN-STREAM VIDEO AD DEFUSER & AUTO-SKIPPER
+     ========================================================================== */
+  function setupVideoAdSkipper() {
+    if (isWhitelisted) return;
+
+    const SKIP_BUTTON_SELECTORS = [
+      '.skip-button',
+      '.video-ad-skip',
+      '.video-ad-skip-button',
+      '.ad-skip-button',
+      '.ad-skip',
+      '.skip-ad',
+      '.ytp-ad-skip-button',
+      '.ytp-ad-skip-button-modern',
+      '[class*="skip-button"]',
+      '[class*="skip"][class*="ad"]',
+      '[class*="ad-skip"]',
+      'button[aria-label*="skip" i]',
+      'button[aria-label*="saltar" i]'
+    ];
+
+    function checkVideoAds() {
+      if (isWhitelisted) return;
+
+      // 1. Auto-click visible Skip button
+      for (const sel of SKIP_BUTTON_SELECTORS) {
+        const btn = document.querySelector(sel);
+        if (btn && btn.offsetParent !== null && typeof btn.click === 'function') {
+          btn.click();
+          break;
+        }
+      }
+
+      // 2. Fast-forward video commercial if detected
+      const videos = document.querySelectorAll('video');
+      for (const video of videos) {
+        const isAdContainer = video.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing');
+        const isAdSource = (video.src || '').includes('/ad/') || (video.src || '').includes('vast') || (video.src || '').includes('preroll') || (video.src || '').includes('delivery');
+
+        if (isAdContainer || isAdSource) {
+          try {
+            if (video.duration && !isNaN(video.duration) && video.duration > 0 && video.currentTime < video.duration) {
+              video.muted = true;
+              video.playbackRate = 16.0;
+              video.currentTime = video.duration - 0.1;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    setInterval(checkVideoAds, 400);
+  }
+
   // Schedule scan with requestIdleCallback and 150ms debounce
   function scheduleScan(root) {
     if (domScanTimeout) clearTimeout(domScanTimeout);
@@ -250,9 +336,13 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => scheduleScan(document));
+    document.addEventListener('DOMContentLoaded', () => {
+      scheduleScan(document);
+      setupVideoAdSkipper();
+    });
   } else {
     scheduleScan(document);
+    setupVideoAdSkipper();
   }
 
   // MutationObserver with differential node processing
@@ -322,7 +412,7 @@
 
     if (whitelistBtn) {
       whitelistBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'whitelistCurrentDomain', domain: hostname }, () => {
+        safeSendMessage({ action: 'whitelistCurrentDomain', domain: hostname }, () => {
           syncSettings();
           dismissToast(toast);
         });
@@ -499,6 +589,6 @@
       syncSettings();
       sendResponse({ status: 'synced' });
     }
-    return true;
+    return false; // Responses sent synchronously
   });
 })();

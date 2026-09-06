@@ -1,6 +1,6 @@
 {
   "name": "extremeshield",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ExtremeShield - Ultimate Tracker & Popup Blocker Chrome Extension (Manifest V3)",
   "scripts": {
     "package": "powershell -ExecutionPolicy Bypass -File ./package.ps1"
