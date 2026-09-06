@@ -910,6 +910,80 @@ body {
   line-height: 1.4;
 }
 
+/* Video Orientation Bar */
+.preview-rotate-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid var(--vdh-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 8px;
+}
+
+.rotate-controls-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.rotate-badge {
+  font-size: 10px;
+  font-weight: 800;
+  background: #0087cd;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.rotate-buttons-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-rotate {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-rotate:hover {
+  background: #0087cd;
+  color: #ffffff;
+  border-color: #0087cd;
+}
+
+.btn-rotate-reset {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.btn-rotate-reset:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+#previewPlayer {
+  width: 100%;
+  max-height: 220px;
+  display: block;
+  outline: none;
+  background: #000;
+  transition: transform 0.25s ease;
+}
+
 .preview-actions-bar {
   display: flex;
   align-items: center;

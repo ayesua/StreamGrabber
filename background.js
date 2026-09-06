@@ -3,7 +3,7 @@
  * Smart Media Sniffer, Chunk/Range Filter, Anti-404 Intact Downloader, and In-Page Bridge
  */
 
-import { hlsEngine, saveBlobToDB, ensureOffscreenDocument } from './hlsEngine.js';
+import { hlsEngine, saveBlobToDB, ensureOffscreenDocument, applyMp4Rotation } from './hlsEngine.js';
 
 // Media storage by tab ID: tabId -> Map(url -> mediaItem)
 const tabMediaStore = new Map();
@@ -653,6 +653,7 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
         referer: referer || item.pageUrl || '',
         format: chosenFormat,
         saveAs: askFilename,
+        rotation: item.rotation || 0,
         onProgress: (state) => {
           activeDownloadsMap.set(downloadId, state);
           chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state }, () => {
@@ -701,9 +702,79 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
         if (chrome.runtime.lastError) {}
       });
 
-      startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.size);
+      if (item.rotation && item.rotation !== 0 && ext === '.mp4') {
+        startRotatedDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.rotation, downloadTabId);
+      } else {
+        startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.size);
+      }
     }
   });
+}
+
+async function startRotatedDirectDownload(url, filename, referer, downloadId, saveAs, callback, title, rotation, tabId) {
+  try {
+    const updateState = (patch) => {
+      const cur = activeDownloadsMap.get(downloadId);
+      if (cur) {
+        Object.assign(cur, patch);
+        activeDownloadsMap.set(downloadId, cur);
+        chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: cur }, () => {
+          if (chrome.runtime.lastError) {}
+        });
+      }
+    };
+
+    updateState({ status: 'downloading', progress: 15 });
+    let arrayBuffer = await hlsEngine.fetchSegmentBuffer(url, tabId, referer);
+    updateState({ progress: 80 });
+
+    if (rotation && rotation !== 0) {
+      arrayBuffer = applyMp4Rotation(arrayBuffer, rotation);
+    }
+    updateState({ progress: 95 });
+
+    const rotatedBlob = new Blob([arrayBuffer], { type: 'video/mp4' });
+    const blobKey = 'rot_' + Date.now();
+    await saveBlobToDB(blobKey, rotatedBlob);
+    await ensureOffscreenDocument();
+
+    const createRes = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'CREATE_BLOB_URL', key: blobKey }, (res) => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else if (res && res.success && res.blobUrl) resolve(res);
+        else reject(new Error(res?.error || 'Blob URL failed'));
+      });
+    });
+
+    const blobUrl = createRes.blobUrl;
+    chrome.downloads.download({
+      url: blobUrl,
+      filename: filename,
+      saveAs: Boolean(saveAs)
+    }, (downloadItemId) => {
+      if (chrome.runtime.lastError) {
+        handleDownloadItemError(null, downloadId, chrome.runtime.lastError.message);
+      } else {
+        const state = activeDownloadsMap.get(downloadId);
+        if (state) {
+          state.status = 'complete';
+          state.progress = 100;
+          state.completedAt = Date.now();
+          activeDownloadsMap.set(downloadId, state);
+          chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+          notifyDownloadComplete(title || filename, filename);
+          setTimeout(() => activeDownloadsMap.delete(downloadId), 3000);
+        }
+      }
+    });
+
+    if (callback) callback({ success: true, downloadId });
+  } catch (err) {
+    handleDownloadItemError(null, downloadId, err.message);
+    if (callback) callback({ success: false, error: err.message });
+  }
 }
 
   if (message.action === 'START_DOWNLOAD') {

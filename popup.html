@@ -108,6 +108,18 @@
         <video id="previewPlayer" controls autoplay playsinline></video>
         <div id="previewStatusMsg" class="preview-status-msg" style="display: none;"></div>
       </div>
+      <div class="preview-rotate-bar">
+        <div class="rotate-controls-label">
+          <span>🔄 Orientation:</span>
+          <span id="previewRotateBadge" class="rotate-badge">0° (Original)</span>
+        </div>
+        <div class="rotate-buttons-group">
+          <button id="btnRotateLeft" class="btn-rotate" title="Rotate 90° Left (270°)">↺ -90°</button>
+          <button id="btnRotateRight" class="btn-rotate" title="Rotate 90° Right (90°)">↻ +90°</button>
+          <button id="btnRotate180" class="btn-rotate" title="Rotate 180°">🔃 180°</button>
+          <button id="btnRotateReset" class="btn-rotate btn-rotate-reset" title="Reset Rotation">0°</button>
+        </div>
+      </div>
       <div class="preview-actions-bar">
         <div class="preview-info-row">
           <span id="previewQualityBadge" class="thumbnail-badge-res">Auto HD</span>

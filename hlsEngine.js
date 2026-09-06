@@ -48,6 +48,135 @@ export async function ensureOffscreenDocument() {
   }
 }
 
+/**
+ * Lossless MP4 Matrix Rotation Utility
+ * Modifies the 3x3 transformation matrix in the video track's tkhd box without re-encoding.
+ */
+export function applyMp4Rotation(arrayBuffer, rotationDegrees) {
+  const validAngles = [0, 90, 180, 270];
+  const angle = validAngles.includes(rotationDegrees) ? rotationDegrees : 0;
+  if (angle === 0 || !arrayBuffer) return arrayBuffer;
+
+  const uint8 = new Uint8Array(arrayBuffer);
+  const dataView = new DataView(arrayBuffer);
+
+  function getBoxType(offset) {
+    return String.fromCharCode(
+      uint8[offset],
+      uint8[offset + 1],
+      uint8[offset + 2],
+      uint8[offset + 3]
+    );
+  }
+
+  let offset = 0;
+  let moovOffset = -1;
+  let moovSize = 0;
+
+  // 1. Find 'moov' box
+  while (offset + 8 <= uint8.length) {
+    let size = dataView.getUint32(offset);
+    const type = getBoxType(offset + 4);
+
+    if (size === 1) {
+      size = Number(dataView.getBigUint64(offset + 8));
+    } else if (size === 0) {
+      size = uint8.length - offset;
+    }
+
+    if (type === 'moov') {
+      moovOffset = offset;
+      moovSize = size;
+      break;
+    }
+    offset += size;
+  }
+
+  if (moovOffset === -1) {
+    return arrayBuffer;
+  }
+
+  // 2. Scan inside 'moov' for 'trak' boxes
+  let moovEnd = moovOffset + moovSize;
+  let trakOffset = moovOffset + 8;
+
+  while (trakOffset + 8 <= moovEnd) {
+    let trakSize = dataView.getUint32(trakOffset);
+    const trakType = getBoxType(trakOffset + 4);
+
+    if (trakSize === 1) {
+      trakSize = Number(dataView.getBigUint64(trakOffset + 8));
+    } else if (trakSize === 0) {
+      trakSize = moovEnd - trakOffset;
+    }
+
+    if (trakType === 'trak') {
+      const trakEnd = trakOffset + trakSize;
+      let innerOffset = trakOffset + 8;
+      let tkhdOffset = -1;
+
+      while (innerOffset + 8 <= trakEnd) {
+        let childSize = dataView.getUint32(innerOffset);
+        const childType = getBoxType(innerOffset + 4);
+        if (childSize === 1) childSize = Number(dataView.getBigUint64(innerOffset + 8));
+        else if (childSize === 0) childSize = trakEnd - innerOffset;
+
+        if (childType === 'tkhd') {
+          tkhdOffset = innerOffset;
+          break;
+        }
+        innerOffset += childSize;
+      }
+
+      if (tkhdOffset !== -1) {
+        const version = uint8[tkhdOffset + 8];
+        const matrixOffset = tkhdOffset + (version === 1 ? 56 : 44);
+        const widthOffset = matrixOffset + 36;
+        const width16 = dataView.getUint32(widthOffset);
+        const height16 = dataView.getUint32(widthOffset + 4);
+
+        const width = width16 >> 16;
+        const height = height16 >> 16;
+
+        const u = 0x00010000;
+        const nu = 0xFFFF0000;
+        const w = 0x40000000;
+
+        let a = u, b = 0, c = 0, d = u, tx = 0, ty = 0;
+
+        if (angle === 90) {
+          a = 0; b = u;
+          c = nu; d = 0;
+          tx = (height << 16); ty = 0;
+        } else if (angle === 180) {
+          a = nu; b = 0;
+          c = 0; d = nu;
+          tx = (width << 16); ty = (height << 16);
+        } else if (angle === 270) {
+          a = 0; b = nu;
+          c = u; d = 0;
+          tx = 0; ty = (width << 16);
+        }
+
+        dataView.setUint32(matrixOffset, a);
+        dataView.setUint32(matrixOffset + 4, b);
+        dataView.setUint32(matrixOffset + 8, 0);
+
+        dataView.setUint32(matrixOffset + 12, c);
+        dataView.setUint32(matrixOffset + 16, d);
+        dataView.setUint32(matrixOffset + 20, 0);
+
+        dataView.setUint32(matrixOffset + 24, tx);
+        dataView.setUint32(matrixOffset + 28, ty);
+        dataView.setUint32(matrixOffset + 32, w);
+      }
+    }
+    trakOffset += trakSize;
+  }
+
+  return arrayBuffer;
+}
+
 export class HLSEngine {
   constructor(options = {}) {
     this.maxParallel = options.maxParallel || 6;
@@ -479,7 +608,21 @@ export class HLSEngine {
       if (targetFormat === 'mkv') mimeType = 'video/x-matroska';
       else if (targetFormat === 'ts') mimeType = 'video/mp2t';
 
-      const concatenatedBlob = new Blob(validBuffers, { type: mimeType });
+      let finalBlobData = validBuffers;
+      if (rotation && rotation !== 0 && targetFormat === 'mp4') {
+        let totalLen = 0;
+        for (const b of validBuffers) totalLen += b.byteLength;
+        const merged = new Uint8Array(totalLen);
+        let off = 0;
+        for (const b of validBuffers) {
+          merged.set(new Uint8Array(b), off);
+          off += b.byteLength;
+        }
+        const rotatedBuffer = applyMp4Rotation(merged.buffer, rotation);
+        finalBlobData = [rotatedBuffer];
+      }
+
+      const concatenatedBlob = new Blob(finalBlobData, { type: mimeType });
       const sanitizedTitle = (downloadState.title || 'full_video')
         .replace(/[/\\?%*:|"<>]/g, '_')
         .replace(/\s+/g, ' ')

@@ -174,6 +174,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Video Orientation / Rotation Listeners
+  const btnRotateLeft = document.getElementById('btnRotateLeft');
+  const btnRotateRight = document.getElementById('btnRotateRight');
+  const btnRotate180 = document.getElementById('btnRotate180');
+  const btnRotateReset = document.getElementById('btnRotateReset');
+
+  if (btnRotateLeft) {
+    btnRotateLeft.addEventListener('click', () => {
+      previewRotationAngle = (previewRotationAngle + 270) % 360;
+      updatePreviewRotationUI();
+    });
+  }
+  if (btnRotateRight) {
+    btnRotateRight.addEventListener('click', () => {
+      previewRotationAngle = (previewRotationAngle + 90) % 360;
+      updatePreviewRotationUI();
+    });
+  }
+  if (btnRotate180) {
+    btnRotate180.addEventListener('click', () => {
+      previewRotationAngle = (previewRotationAngle + 180) % 360;
+      updatePreviewRotationUI();
+    });
+  }
+  if (btnRotateReset) {
+    btnRotateReset.addEventListener('click', () => {
+      previewRotationAngle = 0;
+      updatePreviewRotationUI();
+    });
+  }
+
   // Preview Modal Listeners
   const modalPreview = document.getElementById('modalPreview');
   const modalPreviewBtnClose = document.getElementById('modalPreviewBtnClose');
@@ -187,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     previewBtnDownload.addEventListener('click', () => {
       if (!activePreviewItem) return;
       const format = document.getElementById('previewFormatSelect')?.value || 'mp4';
-      const itemToDownload = { ...activePreviewItem };
+      const itemToDownload = { ...activePreviewItem, rotation: previewRotationAngle };
       closePreview();
       triggerDownload(itemToDownload, format, itemToDownload.selectedVariantUrl);
     });
@@ -204,9 +235,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 let currentHlsInstance = null;
 let activePreviewItem = null;
+let previewRotationAngle = 0;
+
+function updatePreviewRotationUI() {
+  const player = document.getElementById('previewPlayer');
+  const badge = document.getElementById('previewRotateBadge');
+  if (player) {
+    if (previewRotationAngle === 90 || previewRotationAngle === 270) {
+      player.style.transform = `rotate(${previewRotationAngle}deg) scale(0.75)`;
+    } else {
+      player.style.transform = `rotate(${previewRotationAngle}deg) scale(1)`;
+    }
+  }
+  if (badge) {
+    badge.textContent = previewRotationAngle === 0 ? '0° (Original)' : `${previewRotationAngle}°`;
+  }
+}
 
 function openPreview(item) {
   activePreviewItem = item;
+  previewRotationAngle = item.rotation || 0;
+  updatePreviewRotationUI();
   const modal = document.getElementById('modalPreview');
   const player = document.getElementById('previewPlayer');
   const titleEl = document.getElementById('previewTitle');
