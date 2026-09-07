@@ -626,12 +626,24 @@
   };
 
   /* ==========================================================================
-     3B. KVS & TUBE PLAYER PRE-ROLL AUTO-SKIPPER
+     3B. KVS & TUBE PLAYER PRE-ROLL VAST DEFUSER
      ========================================================================== */
   try {
+    function sanitizeFlashvars(vars) {
+      if (!vars || typeof vars !== 'object') return vars;
+      for (const k of Object.keys(vars)) {
+        if (typeof vars[k] === 'string' && (k.startsWith('adv_') || k.startsWith('vast') || k.includes('preroll') || k.includes('popunder'))) {
+          // Empty out ad server endpoints to bypass ad loading immediately
+          vars[k] = '';
+        }
+      }
+      return vars;
+    }
+
     let _ktPlayer = window.kt_player;
     Object.defineProperty(window, 'kt_player', {
       get: () => function (container, swf, width, height, flashvars) {
+        if (flashvars) sanitizeFlashvars(flashvars);
         const player = _ktPlayer ? _ktPlayer.apply(this, arguments) : null;
         if (player && typeof player.skip_preroll === 'function') {
           setTimeout(() => {
@@ -644,7 +656,17 @@
       configurable: true
     });
 
-    // Continually auto-skip any active KVS preroll / postroll without breaking player state
+    let _flashvars = window.flashvars;
+    if (_flashvars) sanitizeFlashvars(_flashvars);
+    Object.defineProperty(window, 'flashvars', {
+      get: () => _flashvars,
+      set: (val) => {
+        _flashvars = sanitizeFlashvars(val);
+      },
+      configurable: true
+    });
+
+    // Continually auto-skip any active KVS preroll / postroll
     setInterval(() => {
       try {
         if (window.kvsplayer && typeof window.kvsplayer === 'object') {
