@@ -632,6 +632,8 @@
     function sanitizeFlashvars(vars) {
       if (!vars || typeof vars !== 'object') return vars;
       for (const k of Object.keys(vars)) {
+        // Protect core media player configs (license_key, video_url, etc.)
+        if (k.includes('license') || k.includes('key') || k === 'video_url' || k === 'hls_url') continue;
         if (
           k.startsWith('adv_') ||
           k.startsWith('vast_') ||
