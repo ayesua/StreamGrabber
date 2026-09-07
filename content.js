@@ -201,7 +201,11 @@
     'orbsrv.com',
     'pjs.js',
     'rtb-6.xgroovy.com',
-    'rtb-4.xgroovy.com'
+    'rtb-4.xgroovy.com',
+    'lazyload.io',
+    'st.pussyspace.com',
+    'strpchat.com',
+    'xhamsterlive.com'
   ];
 
   window.addEventListener('click', (e) => {
@@ -352,7 +356,14 @@
     '.sb-A',
     '.sb-B',
     '.sb-title',
-    '.sb-close-play'
+    '.sb-close-play',
+    'iframe[src*="lazyload.io"]',
+    'script[src*="st.pussyspace.com"]',
+    '.datasetbox',
+    '.exo__loader',
+    '.q5425983VxbmVpSh',
+    '.f443382VxbmVpSh',
+    '.n84183VxbmVpSh'
   ];
 
   const processedNodes = new WeakSet();

@@ -565,5 +565,41 @@
       "urlFilter": "||rtb-*.xgroovy.com^",
       "resourceTypes": ["sub_frame", "script", "xmlhttprequest", "other"]
     }
+  },
+  {
+    "id": 2064,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*lazyload.io*",
+      "resourceTypes": ["sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2065,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||st.pussyspace.com^",
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2066,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||strpchat.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2067,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||xhamsterlive.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
   }
 ]

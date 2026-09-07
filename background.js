@@ -295,7 +295,11 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'smartpopbucketid=',
   'gototheroom',
   'rtb-6.xgroovy.com',
-  'rtb-4.xgroovy.com'
+  'rtb-4.xgroovy.com',
+  'lazyload.io',
+  'st.pussyspace.com',
+  'strpchat.com',
+  'xhamsterlive.com'
 ];
 
 function isMaliciousAdUrl(url) {

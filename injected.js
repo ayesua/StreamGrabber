@@ -94,7 +94,11 @@
     'orbsrv.com',
     'pjs.js',
     'rtb-6.xgroovy.com',
-    'rtb-4.xgroovy.com'
+    'rtb-4.xgroovy.com',
+    'lazyload.io',
+    'st.pussyspace.com',
+    'strpchat.com',
+    'xhamsterlive.com'
   ];
 
   const SUSPICIOUS_QUERY_PATTERNS = [
@@ -194,16 +198,7 @@
   let lastClickedLinkTarget = '';
   let lastClickTime = 0;
 
-  ['pointerdown', 'keydown', 'touchstart'].forEach(eventType => {
-    window.addEventListener(eventType, (e) => {
-      if (e.isTrusted) {
-        lastUserInteractionTime = Date.now();
-      }
-    }, { capture: true, passive: true });
-  });
-
-  // Track anchor link clicks to defuse tab-under hijacks
-  window.addEventListener('click', (e) => {
+  function recordClickedAnchor(e) {
     if (!e.isTrusted) return;
     lastUserInteractionTime = Date.now();
     let el = e.target;
@@ -216,6 +211,14 @@
       }
       el = el.parentNode;
     }
+  }
+
+  ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(eventType => {
+    window.addEventListener(eventType, recordClickedAnchor, { capture: true, passive: true });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.isTrusted) lastUserInteractionTime = Date.now();
   }, { capture: true, passive: true });
 
   function isRecentUserAction() {
@@ -267,10 +270,9 @@
       }
 
       // B. Block tab-under clone of clicked links:
-      // When clicking a link that does not have target="_blank", the browser natively navigates the current tab.
-      // Ad networks (like TwinRed infinity.js) intercept the click and call window.open(clickedLink)
-      // to open it in a new tab while hijacking or duplicating the current tab.
-      if (lastClickTime && (Date.now() - lastClickTime < 750) && lastClickedLinkHref) {
+      // When clicking a link that the user intended to follow, ad networks call window.open(clickedLink)
+      // to open it in a new tab while hijacking the current tab with an ad.
+      if (lastClickTime && (Date.now() - lastClickTime < 1200) && lastClickedLinkHref) {
         let isSameAsClicked = false;
         try {
           const clickedUrl = new URL(lastClickedLinkHref, window.location.href).href;
@@ -280,7 +282,7 @@
           isSameAsClicked = (urlStr === lastClickedLinkHref);
         }
 
-        if (isSameAsClicked && lastClickedLinkTarget !== '_blank') {
+        if (isSameAsClicked) {
           console.warn('[ExtremeShield] Blocked tab-under duplicate window.open of clicked link:', urlStr);
           notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
           return createDummyWindow(urlStr);
@@ -384,7 +386,7 @@
     HTMLFormElement.prototype.submit = function () {
       if (config.blockPopups && !config.whitelisted) {
         const action = this.getAttribute('action') || '';
-        if (isTrackerOrRedirectUrl(action) || (!isSameDomainOrSubdomain(action) && !isAllowedPopupDomain(action) && !isRecentUserAction())) {
+        if (isTrackerOrRedirectUrl(action) || (!isSameDomainOrSubdomain(action) && !isAllowedPopupDomain(action))) {
           console.warn('[ExtremeShield] Intercepted unrequested form.submit popunder:', action);
           notifyBlocked('popup', { url: action });
           return;
@@ -451,6 +453,30 @@
     });
   } catch (_) {}
 
+  // Defuse PussySpace anti-adblock / ExoClick KLCsvkdwF engine
+  try {
+    const dummyKLC = {
+      rollexzone: function () { return dummyKLC; },
+      serve: function () { return dummyKLC; },
+      getDetector: function () {
+        return {
+          dtCensorship: function (cb) { if (typeof cb === 'function') cb(false); }
+        };
+      },
+      openLink: function () { return false; },
+      setCookie: function () {},
+      getCookie: function () { return null; }
+    };
+    let _klc = dummyKLC;
+    Object.defineProperty(window, 'KLCsvkdwF', {
+      get: () => _klc,
+      set: (val) => {
+        console.warn('[ExtremeShield] Neutralized KLCsvkdwF popunder engine assignment');
+      },
+      configurable: true
+    });
+  } catch (_) {}
+
   // Strip popunder triggers like .popito from element classes
   try {
     const origClassAdd = DOMTokenList.prototype.add;
@@ -465,6 +491,49 @@
   /* ==========================================================================
      3. ANTI-REDIRECT & TAB-UNDER HIJACK SHIELD
      ========================================================================== */
+  function isAllowedLocationChange(url) {
+    const urlStr = String(url || '').trim();
+    if (!urlStr || urlStr === 'about:blank' || urlStr.startsWith('javascript:') || urlStr.startsWith('#')) {
+      return true;
+    }
+
+    // 1. Same-domain navigation is always allowed
+    if (isSameDomainOrSubdomain(urlStr)) {
+      return true;
+    }
+
+    // 2. Direct tracker or ad network URLs are NEVER allowed
+    if (isTrackerOrRedirectUrl(urlStr)) {
+      return false;
+    }
+
+    // 3. Known OAuth login providers are allowed
+    if (isAllowedPopupDomain(urlStr)) {
+      return true;
+    }
+
+    // 4. Tab-Under Protection:
+    // If the user clicked a link on the current domain (e.g. video link on pussyspace.com),
+    // a script attempting to navigate the current tab to a DIFFERENT domain is 100% a tab-under attack!
+    if (lastClickTime && (Date.now() - lastClickTime < 1500) && lastClickedLinkHref) {
+      try {
+        const clickedOrigin = new URL(lastClickedLinkHref, window.location.href).origin;
+        const targetOrigin = new URL(urlStr, window.location.href).origin;
+        if (clickedOrigin === window.location.origin && targetOrigin !== window.location.origin) {
+          console.warn('[ExtremeShield] Blocked tab-under cross-domain redirect attempt:', urlStr);
+          return false;
+        }
+        // If the user explicitly clicked an external link with the same destination origin
+        if (clickedOrigin === targetOrigin) {
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    // 5. Block unsolicited cross-domain programmatic redirects
+    return false;
+  }
+
   try {
     // Intercept Location.prototype.href setter (Blocks window.location = 'ad_url' & location.href = 'ad_url')
     const hrefDesc = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
@@ -472,11 +541,10 @@
       const origHrefSet = hrefDesc.set;
       Object.defineProperty(Location.prototype, 'href', {
         set: function (url) {
-          const urlStr = String(url || '').trim();
           if (!config.whitelisted && config.blockRedirects) {
-            if (isTrackerOrRedirectUrl(urlStr) || (!isSameDomainOrSubdomain(urlStr) && !isAllowedPopupDomain(urlStr) && !isRecentUserAction())) {
-              console.warn('[ExtremeShield] Intercepted suspicious location.href redirect:', urlStr);
-              notifyBlocked('popup', { url: urlStr, detail: 'Tab-under/redirect hijack blocked' });
+            if (!isAllowedLocationChange(url)) {
+              console.warn('[ExtremeShield] Intercepted suspicious location.href redirect:', url);
+              notifyBlocked('popup', { url: String(url), detail: 'Tab-under/redirect hijack blocked' });
               return;
             }
           }
@@ -491,10 +559,9 @@
     const origLocationReplace = Location.prototype.replace;
     Location.prototype.replace = function (url) {
       if (!config.whitelisted && config.blockRedirects) {
-        const urlStr = String(url || '').trim();
-        if (isTrackerOrRedirectUrl(urlStr) || (!isSameDomainOrSubdomain(urlStr) && !isAllowedPopupDomain(urlStr) && !isRecentUserAction())) {
-          console.warn('[ExtremeShield] Intercepted suspicious location.replace redirect:', urlStr);
-          notifyBlocked('popup', { url: urlStr, detail: 'Auto-redirect hijack blocked' });
+        if (!isAllowedLocationChange(url)) {
+          console.warn('[ExtremeShield] Intercepted suspicious location.replace redirect:', url);
+          notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
           return;
         }
       }
@@ -505,10 +572,9 @@
     const origLocationAssign = Location.prototype.assign;
     Location.prototype.assign = function (url) {
       if (!config.whitelisted && config.blockRedirects) {
-        const urlStr = String(url || '').trim();
-        if (isTrackerOrRedirectUrl(urlStr) || (!isSameDomainOrSubdomain(urlStr) && !isAllowedPopupDomain(urlStr) && !isRecentUserAction())) {
-          console.warn('[ExtremeShield] Intercepted suspicious location.assign redirect:', urlStr);
-          notifyBlocked('popup', { url: urlStr, detail: 'Auto-redirect hijack blocked' });
+        if (!isAllowedLocationChange(url)) {
+          console.warn('[ExtremeShield] Intercepted suspicious location.assign redirect:', url);
+          notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
           return;
         }
       }
