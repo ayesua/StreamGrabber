@@ -299,7 +299,15 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'lazyload.io',
   'st.pussyspace.com',
   'strpchat.com',
-  'xhamsterlive.com'
+  'xhamsterlive.com',
+  'stripchat',
+  'stripcash',
+  'strpchat',
+  'chaturbate',
+  'bongacams',
+  'livejasmin',
+  'camsoda',
+  'cam4.com'
 ];
 
 function isMaliciousAdUrl(url) {
@@ -325,9 +333,9 @@ chrome.tabs.onCreated.addListener((tab) => {
   }
 });
 
-// 2. Watchdog for tab navigations and updates (catches about:blank navigations to ad networks)
+// 2. Watchdog for tab navigations and updates (catches delayed about:blank navigations to ad networks)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  const url = changeInfo.url || tab?.url || '';
+  const url = changeInfo.url || tab?.url || tab?.pendingUrl || '';
   if (isMaliciousAdUrl(url)) {
     console.warn('[ExtremeShield] Terminating malicious ad popup tab on navigation:', url);
     try {
