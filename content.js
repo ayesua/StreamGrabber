@@ -38,7 +38,7 @@
 
   const AD_URL_PATTERNS = [
     '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
-    'vast', 'vpaid', 'popunder', 'ad_banner', 'preview.mp4',
+    'vast', 'vpaid', 'popunder', 'ad_banner',
     'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
     'interstitial', '/ads/video/', '/sponsor/'
   ];
@@ -442,6 +442,31 @@
             }
           } catch (e) {}
         }
+      }
+
+      // 4. React Router / Remix Context / FileBoom & Embedded video JSON payloads
+      const fboomMatch = fullHtml.match(/["'](https?:\/\/(?:www\.)?fboom\.me\/file\/[a-zA-Z0-9]+)["']/i) ||
+                         fullHtml.match(/["']file["']\s*:\s*["'](https?:\/\/[^"']+)["']/i);
+      if (fboomMatch && fboomMatch[1] && !isExcludedUrl(fboomMatch[1])) {
+        reportMedia({
+          url: fboomMatch[1],
+          quality: 'External Link (FileBoom)',
+          type: 'File Link',
+          poster: poster
+        });
+      }
+
+      const previewVidMatch = fullHtml.match(/["']videoPreview["']\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
+      if (previewVidMatch && previewVidMatch[1] && !isExcludedUrl(previewVidMatch[1])) {
+        let u = previewVidMatch[1].replace(/\\/g, '');
+        if (u.startsWith('//')) u = location.protocol + u;
+        else if (u.startsWith('/')) u = location.origin + u;
+        reportMedia({
+          url: u,
+          quality: detectQualityFromUrl(u, 'Video Preview (MP4)'),
+          type: 'MP4',
+          poster: poster
+        });
       }
     } catch (e) {}
   }

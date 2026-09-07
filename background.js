@@ -199,7 +199,7 @@ const KNOWN_AD_DOMAINS = [
 
 const AD_URL_PATTERNS = [
   '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
-  'vast', 'vpaid', 'popunder', 'ad_banner', 'preview.mp4',
+  'vast', 'vpaid', 'popunder', 'ad_banner',
   'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
   'interstitial', '/ads/video/', '/sponsor/'
 ];
