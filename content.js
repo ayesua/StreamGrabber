@@ -205,7 +205,17 @@
     'lazyload.io',
     'st.pussyspace.com',
     'strpchat.com',
-    'xhamsterlive.com'
+    'xhamsterlive.com',
+    'pornbaker.com/tag',
+    'pornbaker.com/category',
+    'stripchat.com',
+    'stripcash.com',
+    'strpchat.com',
+    'stripchat.org',
+    'cam4.com',
+    'bongacams.com',
+    'chaturbate.com',
+    'livejasmin.com'
   ];
 
   window.addEventListener('click', (e) => {
