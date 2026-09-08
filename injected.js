@@ -626,7 +626,7 @@
   };
 
   /* ==========================================================================
-     3B. KVS & TUBE PLAYER PRE-ROLL VAST DEFUSER
+     3B. KVS & TUBE PLAYER PRE-ROLL VAST DEFUSER & VAST STUBBER
      ========================================================================== */
   try {
     function sanitizeFlashvars(vars) {
@@ -680,6 +680,49 @@
         }
       } catch (_) {}
     }, 300);
+
+    // Defuse fetch & XHR VAST ad calls by returning empty VAST XML (<VAST version="4.0"/>)
+    // This tricks video players into thinking the ad campaign has no ads, cleanly proceeding to main video!
+    const EMPTY_VAST_XML = '<?xml version="1.0" encoding="UTF-8"?><VAST version="4.0"/>';
+
+    const origFetch = window.fetch;
+    if (typeof origFetch === 'function') {
+      window.fetch = function (resource, options) {
+        const urlStr = String(typeof resource === 'string' ? resource : (resource?.url || '')).toLowerCase();
+        if (urlStr.includes('vast') || urlStr.includes('preroll') || urlStr.includes('ad_server') || urlStr.includes('vpaid')) {
+          console.warn('[ExtremeShield] Returning empty VAST response for ad request:', urlStr);
+          return Promise.resolve(new Response(EMPTY_VAST_XML, {
+            status: 200,
+            headers: { 'Content-Type': 'application/xml' }
+          }));
+        }
+        return origFetch.apply(this, arguments);
+      };
+    }
+
+    const origXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url) {
+      this._extremeshield_url = String(url || '').toLowerCase();
+      return origXHROpen.apply(this, arguments);
+    };
+
+    const origXHRSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function () {
+      const urlStr = this._extremeshield_url || '';
+      if (urlStr.includes('vast') || urlStr.includes('preroll') || urlStr.includes('ad_server') || urlStr.includes('vpaid')) {
+        console.warn('[ExtremeShield] Intercepted XHR VAST ad request:', urlStr);
+        Object.defineProperty(this, 'responseText', { value: EMPTY_VAST_XML, writable: true });
+        Object.defineProperty(this, 'responseXML', { value: new DOMParser().parseFromString(EMPTY_VAST_XML, 'text/xml'), writable: true });
+        Object.defineProperty(this, 'status', { value: 200, writable: true });
+        Object.defineProperty(this, 'readyState', { value: 4, writable: true });
+        setTimeout(() => {
+          if (typeof this.onreadystatechange === 'function') this.onreadystatechange();
+          if (typeof this.onload === 'function') this.onload();
+        }, 10);
+        return;
+      }
+      return origXHRSend.apply(this, arguments);
+    };
   } catch (_) {}
 
   /* ==========================================================================

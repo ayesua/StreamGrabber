@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ExtremeShield: Ultimate Tracker & Popup Blocker",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Extreme high-speed defense against trackers, popups, fingerprinting, and redirects. 100% free with zero paywalls.",
   "permissions": [
     "storage",
