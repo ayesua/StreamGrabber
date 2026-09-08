@@ -840,9 +840,11 @@
   function isAdVideoElement(v) {
     if (!v) return true;
     const closestAd = v.closest(
-      '[class*="ad-"], [class*="ads-"], [id*="ad-"], [id*="ads-"], [class*="preroll"], [class*="sponsor"], [class*="banner"], [id*="vast"], [class*="exo_"]'
+      '[class*="ad-"], [class*="ads-"], [id*="ad-"], [id*="ads-"], [class*="preroll"], [class*="sponsor"], [class*="banner"], [id*="vast"], [class*="exo_"], [class*="outstream"]'
     );
     if (closestAd) return true;
+    // Pre-roll ads are usually short (< 30 seconds)
+    if (v.duration && v.duration > 0 && v.duration < 30) return true;
     const src = (v.currentSrc || v.src || '').toLowerCase();
     if (isAdOrAnnounceUrl(src)) return true;
     return false;
@@ -850,10 +852,11 @@
 
   function findMostVisibleVideo() {
     const rawVideos = Array.from(document.querySelectorAll('video'));
-    const videos = rawVideos.filter(v => !isAdVideoElement(v));
+    let videos = rawVideos.filter(v => !isAdVideoElement(v));
+    if (videos.length === 0) videos = rawVideos;
     if (videos.length === 0) return null;
 
-    const playing = videos.find(v => !v.paused && v.readyState >= 1);
+    const playing = videos.find(v => !v.paused && v.readyState >= 1 && (!v.duration || v.duration >= 30));
     if (playing) {
       const r = playing.getBoundingClientRect();
       if (r.width >= 140 && r.height >= 90 && r.bottom > 40 && r.top < window.innerHeight - 40) {
