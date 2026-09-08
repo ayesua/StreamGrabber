@@ -311,7 +311,11 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'svradv.com',
   'go.svradv.com',
   'svradv',
-  'amateurok.net'
+  'amateurok.net',
+  'cherrytale',
+  'ero-labs',
+  'mybid',
+  'ero-labs.art'
 ];
 
 function isMaliciousAdUrl(url) {

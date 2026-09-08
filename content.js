@@ -219,7 +219,11 @@
     'svradv.com',
     'go.svradv.com',
     'svradv',
-    'amateurok.net'
+    'amateurok.net',
+    'cherrytale',
+    'ero-labs',
+    'mybid',
+    'ero-labs.art'
   ];
 
   window.addEventListener('click', (e) => {
