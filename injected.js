@@ -108,7 +108,11 @@
     'cam4.com',
     'bongacams.com',
     'chaturbate.com',
-    'livejasmin.com'
+    'livejasmin.com',
+    'svradv.com',
+    'go.svradv.com',
+    'svradv',
+    'amateurok.net'
   ];
 
   const SUSPICIOUS_QUERY_PATTERNS = [

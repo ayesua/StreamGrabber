@@ -215,7 +215,11 @@
     'cam4.com',
     'bongacams.com',
     'chaturbate.com',
-    'livejasmin.com'
+    'livejasmin.com',
+    'svradv.com',
+    'go.svradv.com',
+    'svradv',
+    'amateurok.net'
   ];
 
   window.addEventListener('click', (e) => {

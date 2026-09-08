@@ -307,7 +307,11 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'bongacams',
   'livejasmin',
   'camsoda',
-  'cam4.com'
+  'cam4.com',
+  'svradv.com',
+  'go.svradv.com',
+  'svradv',
+  'amateurok.net'
 ];
 
 function isMaliciousAdUrl(url) {
@@ -322,7 +326,7 @@ chrome.tabs.onCreated.addListener((tab) => {
   if (isMaliciousAdUrl(url)) {
     console.warn('[ExtremeShield] Terminating malicious ad popup tab on creation:', url);
     try {
-      chrome.tabs.remove(tab.id);
+      chrome.tabs.remove(tab.id, () => { if (chrome.runtime.lastError) {} });
     } catch (_) {}
     recordBlockedItem(tab.openerTabId || null, {
       type: 'popup',
@@ -339,7 +343,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (isMaliciousAdUrl(url)) {
     console.warn('[ExtremeShield] Terminating malicious ad popup tab on navigation:', url);
     try {
-      chrome.tabs.remove(tabId);
+      chrome.tabs.remove(tabId, () => { if (chrome.runtime.lastError) {} });
     } catch (_) {}
     recordBlockedItem(tab?.openerTabId || null, {
       type: 'popup',
