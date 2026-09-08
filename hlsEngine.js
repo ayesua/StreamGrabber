@@ -255,9 +255,31 @@ export class HLSEngine {
   }
 
   /**
-   * Resilient Segment Buffer Fetcher
+   * Resilient Segment Buffer Fetcher (CDNs with tokenized URLs / Pornhub phncdn protection)
    */
   async fetchSegmentBuffer(segUrl, tabId, referer) {
+    // 1. Primary: Try In-Page Fetch via Content Script (100% immune to CDN cookie/token/IP checks)
+    if (tabId) {
+      try {
+        const response = await new Promise((resolve) => {
+          chrome.tabs.sendMessage(tabId, { action: 'PAGE_FETCH_BUFFER', url: segUrl }, (res) => {
+            if (chrome.runtime.lastError || !res) resolve(null);
+            else resolve(res);
+          });
+        });
+
+        if (response && response.success && response.base64) {
+          const binary = atob(response.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          return bytes.buffer;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Secondary: Background fetch with referer header
     const headers = {
       'Accept': '*/*'
     };
@@ -273,25 +295,6 @@ export class HLSEngine {
         return await resp.arrayBuffer();
       }
     } catch (e) {}
-
-    // Fallback: in-page fetch
-    if (tabId) {
-      const response = await new Promise((resolve) => {
-        chrome.tabs.sendMessage(tabId, { action: 'PAGE_FETCH_BUFFER', url: segUrl }, (res) => {
-          if (chrome.runtime.lastError || !res) resolve(null);
-          else resolve(res);
-        });
-      });
-
-      if (response && response.success && response.base64) {
-        const binary = atob(response.base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-          bytes[i] = binary.charCodeAt(i);
-        }
-        return bytes.buffer;
-      }
-    }
 
     throw new Error(`Could not download video segment: ${segUrl}`);
   }
@@ -512,7 +515,7 @@ export class HLSEngine {
         if (downloadState.cancelRequested) return;
 
         const seg = segments[index];
-        let retries = 3;
+        let retries = 5;
 
         while (retries > 0) {
           try {
@@ -545,7 +548,7 @@ export class HLSEngine {
           } catch (err) {
             retries--;
             if (retries === 0) throw new Error(`Error en fragmento ${index + 1}/${segments.length}: ${err.message}`);
-            await new Promise(r => setTimeout(r, 600));
+            await new Promise(r => setTimeout(r, (6 - retries) * 500));
           }
         }
       };
