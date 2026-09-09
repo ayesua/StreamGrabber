@@ -276,7 +276,7 @@
   });
 
   /* ==========================================================================
-     5. MEMORY-OPTIMIZED DOM SCANNER (requestIdleCallback + Debounce)
+     5. MEMORY-OPTIMIZED DOM SCANNER (Lightweight & Debounced)
      ========================================================================== */
   const TRACKER_DOM_PATTERNS = [
     'google-analytics',
@@ -310,87 +310,13 @@
     '#truste-consent-track'
   ];
 
-  const BUILTIN_COSMETIC_SELECTORS = [
-    // ExoClick Overlays, In-Video Banners & Floating Frames
-    '.ex-over-front',
-    '.ex-over-front-iframe',
-    '.ex-over-inner-container',
-    '.ex-over-close',
-    '.ex-over-background',
-    '[class*="ex-over"]',
-    '[id*="ex-over"]',
-    '[class*="exo-overlay"]',
-    '[class*="exo-sticky"]',
-    '[class*="exo-float"]',
-    '[id*="exo-"]',
-
-    // Floating & Outstream Ad Overlays
-    '[class*="floating-ad"]',
-    '[class*="floating_ad"]',
-    '[id*="floating-ad"]',
-    '[class*="ad-floating"]',
-    '[class*="ad-sticky"]',
-    '[class*="sticky-ad"]',
-    '[class*="video-overlay-ad"]',
-    '[class*="ad-overlay"]',
-    '[id*="ad-overlay"]',
-    '[class*="trafficjunky-floating"]',
-    '[id*="trafficjunky"]',
-    '[class*="tsyndicate"]',
-    '[id*="tsyndicate"]',
-    '[class*="outstream-ad"]',
-    '[id*="outstream"]',
-    '.ad-container-floating',
-    '.floating-banner-container',
-    '.before-player-desktop--source-block',
-
-    // Ad Network Embed IFrames
-    'iframe[src*="exosrv.com"]',
-    'iframe[src*="exoclick.com"]',
-    'iframe[src*="syndication.exoclick.com"]',
-    'iframe[src*="trafficjunky"]',
-    'iframe[src*="tsyndicate"]',
-    'iframe[src*="whitetrafsa"]',
-    'iframe[src*="whitetraf.com"]',
-    'iframe[src*="magsrv"]',
-    'iframe[src*="ero-advertising"]',
-    'iframe[src*="adxad.com"]',
-    'iframe[src*="juicyads.com"]',
-    'iframe[src*="tubecorporate.com"]',
-    'iframe[src*="twinred"]',
-    'iframe[src*="twinrdsrv"]',
-    'iframe[src*="ctjdwm"]',
-    '#infinity',
-    'script[src*="twinrdsrv"]',
-    'script[src*="infinity.js"]',
-    'a[href*="ctjdwm.com"]',
-    'a[href*="buddhabangxxx.com"]',
-    'script[src*="pjs.js"]',
-    'script[src*="orbsrv.com"]',
-    'iframe[src*="rtb-6.xgroovy.com"]',
-    'iframe[src*="rtb-4.xgroovy.com"]',
-    '.show_sb',
-    '.sb-AB',
-    '.sb-A',
-    '.sb-B',
-    '.sb-title',
-    '.sb-close-play',
-    'iframe[src*="lazyload.io"]',
-    'script[src*="st.pussyspace.com"]',
-    '.datasetbox',
-    '.exo__loader',
-    '.q5425983VxbmVpSh',
-    '.f443382VxbmVpSh',
-    '.n84183VxbmVpSh'
-  ];
-
   const processedNodes = new WeakSet();
   let domScanTimeout = null;
 
   function performOptimizedScan(targetRoot = document) {
-    if (isWhitelisted) return;
+    if (isWhitelisted || !targetRoot) return;
 
-    // 0. Strip popunder trigger classes like .popito
+    // 1. Strip popunder trigger classes like .popito
     if (settings.blockPopups && targetRoot.querySelectorAll) {
       const popitos = targetRoot.querySelectorAll('.popito');
       for (let i = 0; i < popitos.length; i++) {
@@ -398,89 +324,55 @@
       }
     }
 
-    // 1. Scan for Tracker elements
-    if (settings.blockTrackers) {
-      const elements = targetRoot.querySelectorAll ? targetRoot.querySelectorAll('script[src], img[src], iframe[src]') : [];
-      elements.forEach(el => {
-        if (processedNodes.has(el)) return;
+    // 2. Scan for Tracker elements (Only inspect direct script/img/iframe nodes)
+    if (settings.blockTrackers && targetRoot.querySelectorAll) {
+      const elements = targetRoot.querySelectorAll('script[src], img[src], iframe[src]');
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
+        if (processedNodes.has(el)) continue;
         processedNodes.add(el);
 
         const src = el.src || '';
-        if (!src) return;
+        if (!src) continue;
 
-        const isMatch = TRACKER_DOM_PATTERNS.some(pat => src.toLowerCase().includes(pat));
-        if (isMatch) {
-          console.log('[ExtremeShield] Suppressed DOM tracker:', src);
+        const srcLower = src.toLowerCase();
+        if (TRACKER_DOM_PATTERNS.some(pat => srcLower.includes(pat))) {
           safeSendMessage({
             action: 'recordBlockedEvent',
             data: { type: 'tracker', url: src, domain: hostname, timestamp: Date.now() }
           });
         }
-      });
-    }
-
-    // 2. Auto-dismiss Cookie Banners
-    if (settings.dismissCookieBanners) {
-      COOKIE_BANNER_SELECTORS.forEach(selector => {
-        const banners = document.querySelectorAll(selector);
-        banners.forEach(banner => {
-          if (banner.style.display !== 'none') {
-            banner.style.setProperty('display', 'none', 'important');
-            banner.setAttribute('aria-hidden', 'true');
-            safeSendMessage({
-              action: 'recordBlockedEvent',
-              data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
-            });
-          }
-        });
-      });
-    }
-
-    // 3. Intrusive Overlays & Floating Ad Frames Cleaner
-    if (settings.blockPopups || settings.removeOverlays) {
-      BUILTIN_COSMETIC_SELECTORS.forEach(selector => {
-        try {
-          const elements = targetRoot.querySelectorAll ? targetRoot.querySelectorAll(selector) : [];
-          elements.forEach(el => {
-            if (processedNodes.has(el)) return;
-            processedNodes.add(el);
-
-            // Neutralize any iframe within to stop CPU and video execution
-            const iframes = el.tagName === 'IFRAME' ? [el] : el.querySelectorAll('iframe');
-            iframes.forEach(f => {
-              try { f.src = 'about:blank'; } catch (_) {}
-            });
-
-            el.style.setProperty('display', 'none', 'important');
-            el.style.setProperty('visibility', 'hidden', 'important');
-            el.style.setProperty('pointer-events', 'none', 'important');
-
-            try { el.remove(); } catch (_) {}
-
-            safeSendMessage({
-              action: 'recordBlockedEvent',
-              data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
-            });
-          });
-        } catch (_) {}
-      });
-    }
-
-    // 4. Body Scroll Lock Recovery
-    if (settings.removeOverlays && document.body) {
-      const bodyStyle = window.getComputedStyle(document.body);
-      if (bodyStyle.overflow === 'hidden') {
-        document.body.style.setProperty('overflow', 'auto', 'important');
-        document.documentElement.style.setProperty('overflow', 'auto', 'important');
       }
     }
 
-    // 5. Advanced Features applied to new nodes
+    // 3. Auto-dismiss Cookie Banners
+    if (settings.dismissCookieBanners && targetRoot.querySelector) {
+      for (const selector of COOKIE_BANNER_SELECTORS) {
+        const banner = targetRoot.querySelector(selector);
+        if (banner && banner.style.display !== 'none') {
+          banner.style.setProperty('display', 'none', 'important');
+          banner.setAttribute('aria-hidden', 'true');
+          safeSendMessage({
+            action: 'recordBlockedEvent',
+            data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
+          });
+        }
+      }
+    }
+
+    // 4. Body Scroll Lock Recovery (if modal blocked)
+    if (settings.removeOverlays && document.body) {
+      if (document.body.style.overflow === 'hidden') {
+        document.body.style.setProperty('overflow', 'auto', 'important');
+      }
+    }
+
+    // 5. Apply advanced features if enabled
     applyAdvancedFeatures();
   }
 
   /* ==========================================================================
-     IN-STREAM VIDEO AD DEFUSER & AUTO-SKIPPER
+     IN-STREAM VIDEO AD DEFUSER & AUTO-SKIPPER (High-Performance)
      ========================================================================== */
   function setupVideoAdSkipper() {
     if (isWhitelisted) return;
@@ -510,7 +402,11 @@
     function checkVideoAds() {
       if (isWhitelisted) return;
 
-      // 1. Auto-click visible Skip button by selector
+      // Only execute if a video element is present on the page (Zero CPU/memory overhead on text/article sites)
+      const video = document.querySelector('video');
+      if (!video) return;
+
+      // 1. Auto-click visible Skip button by specific class
       for (const sel of SKIP_BUTTON_SELECTORS) {
         const btn = document.querySelector(sel);
         if (btn && btn.offsetParent !== null && typeof btn.click === 'function') {
@@ -519,27 +415,15 @@
         }
       }
 
-      // 2. Auto-click Skip buttons by text content (e.g. KVS / custom tube player buttons)
-      const candidates = document.querySelectorAll('div, span, button, a, p');
-      for (const el of candidates) {
-        if (el.children.length === 0 && el.offsetParent !== null) {
-          const txt = (el.textContent || '').trim().toUpperCase();
-          if (txt === 'SKIP AD' || txt === 'SKIP' || txt === 'SALTAR' || txt === 'SALTAR ANUNCIO' || (txt.startsWith('SKIP IN') && txt.includes('0'))) {
-            el.click();
-            break;
-          }
-        }
-      }
-
-      // 3. Fast-forward video commercial if detected
+      // 2. Fast-forward video commercial if detected inside ad containers
       const videos = document.querySelectorAll('video');
-      for (const video of videos) {
-        const src = (video.src || video.currentSrc || '').toLowerCase();
-        const isAdContainer = video.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising"], [class*="video-overlay"], [id*="videoads"]');
+      for (let i = 0; i < videos.length; i++) {
+        const v = videos[i];
+        const src = (v.src || v.currentSrc || '').toLowerCase();
+        const isAdContainer = v.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising"], [class*="video-overlay"], [id*="videoads"]');
         const isAdSource = src.includes('/ad/') ||
                            src.includes('vast') ||
                            src.includes('preroll') ||
-                           src.includes('delivery') ||
                            src.includes('trafficjunky') ||
                            src.includes('magsrv') ||
                            src.includes('whitetraf') ||
@@ -550,29 +434,30 @@
 
         if (isAdContainer || isAdSource) {
           try {
-            if (video.duration && !isNaN(video.duration) && video.duration > 0 && video.currentTime < video.duration) {
-              video.muted = true;
-              video.playbackRate = 16.0;
-              video.currentTime = video.duration - 0.1;
+            if (v.duration && !isNaN(v.duration) && v.duration > 0 && v.currentTime < v.duration) {
+              v.muted = true;
+              v.playbackRate = 16.0;
+              v.currentTime = v.duration - 0.1;
             }
           } catch (_) {}
         }
       }
     }
 
-    setInterval(checkVideoAds, 300);
+    // Check once per second only when videos are active
+    setInterval(checkVideoAds, 1000);
   }
 
-  // Schedule scan with requestIdleCallback and 150ms debounce
+  // Schedule scan with requestIdleCallback and 300ms debounce
   function scheduleScan(root) {
     if (domScanTimeout) clearTimeout(domScanTimeout);
     domScanTimeout = setTimeout(() => {
       if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(() => performOptimizedScan(root), { timeout: 300 });
+        window.requestIdleCallback(() => performOptimizedScan(root), { timeout: 500 });
       } else {
         performOptimizedScan(root);
       }
-    }, 150);
+    }, 300);
   }
 
   if (document.readyState === 'loading') {
@@ -585,11 +470,11 @@
     setupVideoAdSkipper();
   }
 
-  // MutationObserver with differential node processing
+  // MutationObserver throttled with childList filter
   const observer = new MutationObserver((mutations) => {
     if (isWhitelisted) return;
-    for (const m of mutations) {
-      if (m.addedNodes && m.addedNodes.length > 0) {
+    for (let i = 0; i < mutations.length; i++) {
+      if (mutations[i].addedNodes && mutations[i].addedNodes.length > 0) {
         scheduleScan(document);
         break;
       }
@@ -767,6 +652,7 @@
   }
 
   function activateElementPicker() {
+    if (window !== window.top) return;
     if (pickerActive) return;
     pickerActive = true;
     isLocked = false;
@@ -832,19 +718,19 @@
       <div class="pureshield-toolbar-left">
         <div class="pureshield-toolbar-title-row">
           <span class="pureshield-toolbar-title">⚡ Element Zapper</span>
-          <span class="pureshield-status-pill live" id="pureshield-status-pill">Live Hover</span>
+          <span class="pureshield-status-pill live" id="pureshield-status-pill">Click Element</span>
         </div>
         <div class="pureshield-depth-badge" id="pureshield-depth-badge">Select an element</div>
       </div>
 
-      <div class="pureshield-toolbar-middle">
+      <div class="pureshield-toolbar-middle" id="pureshield-toolbar-middle">
         <div class="pureshield-lever-container">
-          <span class="pureshield-lever-label" title="Decrease depth / narrow to child">🎯 Element</span>
-          <input type="range" class="pureshield-lever" id="pureshield-picker-lever" min="0" max="0" step="1" value="0" title="Slide to expand selection to parent container">
-          <span class="pureshield-lever-label" title="Increase depth / expand to parent container">📦 Container</span>
+          <span class="pureshield-lever-label" title="Decrease depth / narrow to child">🎯 Narrow</span>
+          <input type="range" class="pureshield-lever" id="pureshield-picker-lever" min="0" max="0" step="1" value="0" title="Slide to adjust selection scope / container depth">
+          <span class="pureshield-lever-label" title="Increase depth / expand to parent container">📦 Expand</span>
         </div>
         <div class="pureshield-selector-row">
-          <code class="pureshield-selector-badge" id="pureshield-selector-badge" title="CSS Selector">Hover or click any element</code>
+          <code class="pureshield-selector-badge" id="pureshield-selector-badge" title="CSS Selector">Click any element on page</code>
         </div>
       </div>
 
@@ -853,12 +739,12 @@
           👁️ Preview
         </button>
         <button class="pureshield-btn-zap" id="pureshield-picker-zap" title="Permanently vaporize this element (Enter)">
-          ⚡ Vaporize
+          ⚡ Vaporize (Enter)
         </button>
         <button class="pureshield-btn-repick" id="pureshield-picker-repick" style="display:none;" title="Unlock and pick another element">
-          ↺ Unlock
+          ↺ Pick Other
         </button>
-        <button class="pureshield-btn-undo" id="pureshield-picker-undo" title="Undo last zapped element on this site">
+        <button class="pureshield-btn-undo" id="pureshield-picker-undo" title="Undo last zapped element on this site (Ctrl+Z)">
           ↩ Undo
         </button>
         <button class="pureshield-btn-cancel" id="pureshield-picker-cancel" title="Exit Element Zapper (Esc)">
@@ -915,7 +801,7 @@
     if (statusPill) {
       if (isLocked) {
         statusPill.className = 'pureshield-status-pill locked';
-        statusPill.textContent = '🔒 Locked';
+        statusPill.textContent = '🔒 Locked (Tuning)';
       } else {
         statusPill.className = 'pureshield-status-pill live';
         statusPill.textContent = '🎯 Live Hover';
@@ -945,8 +831,8 @@
         lever.value = selectedIndex;
       }
     } else {
-      if (depthBadge) depthBadge.textContent = 'Hover or click an element';
-      if (selectorBadge) selectorBadge.textContent = 'Hover or click an element';
+      if (depthBadge) depthBadge.textContent = 'Click an element to adjust';
+      if (selectorBadge) selectorBadge.textContent = 'Click any element to tune size';
       if (lever) {
         lever.max = 0;
         lever.value = 0;
@@ -1017,7 +903,7 @@
     e.stopPropagation();
     e.stopImmediatePropagation();
 
-    // Lock onto the clicked element
+    // Lock onto the clicked element and open adjustment controls
     if (hoveredElement) {
       hoveredElement.classList.remove('pureshield-picker-highlight');
       hoveredElement = null;
@@ -1037,7 +923,7 @@
     if (newIndex < 0 || newIndex >= ancestryChain.length) return;
     selectedIndex = newIndex;
     selectedElement = ancestryChain[selectedIndex];
-    isLocked = true; // Locking when user tunes with slider
+    isLocked = true; // Lock onto element so user can tune depth smoothly
 
     updateHighlightAndPreview();
     updateToolbarUI();
@@ -1165,6 +1051,7 @@
      ========================================================================== */
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'startElementPicker') {
+      if (window !== window.top) return false;
       activateElementPicker();
       sendResponse({ status: 'picker_started' });
     } else if (message.action === 'syncSettings') {

@@ -652,8 +652,9 @@
       configurable: true
     });
 
-    // Continually auto-skip any active KVS preroll / postroll without breaking player state
-    setInterval(() => {
+    // Auto-skip active KVS preroll / postroll when player is present
+    let kvsInterval = null;
+    function checkKVS() {
       try {
         if (window.kvsplayer && typeof window.kvsplayer === 'object') {
           for (const id in window.kvsplayer) {
@@ -665,7 +666,11 @@
           }
         }
       } catch (_) {}
-    }, 300);
+    }
+
+    if (window.kvsplayer || window.kt_player) {
+      kvsInterval = setInterval(checkKVS, 1200);
+    }
   } catch (_) {}
 
   /* ==========================================================================
