@@ -847,7 +847,8 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
     let itemToDownload = null;
 
     if (tabStore && tabStore.size > 0) {
-      if (message.videoSrc) {
+      // 1. Try matching exact videoSrc if provided and not an ad URL
+      if (message.videoSrc && !isAdOrAnnounceUrl(message.videoSrc)) {
         for (const item of tabStore.values()) {
           if (item.url === message.videoSrc) {
             itemToDownload = item;
@@ -855,9 +856,10 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
           }
         }
       }
+      // 2. Prioritize HLS (.m3u8) streams or largest non-ad MP4 video in the tab store
       if (!itemToDownload) {
-        const items = Array.from(tabStore.values());
-        itemToDownload = items.find(i => i.type === 'HLS') || items[0];
+        const items = Array.from(tabStore.values()).filter(i => !isAdOrAnnounceUrl(i.url));
+        itemToDownload = items.find(i => i.type === 'HLS') || items.sort((a, b) => (b.size || 0) - (a.size || 0))[0] || items[0];
       }
     }
 
