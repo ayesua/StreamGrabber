@@ -706,27 +706,78 @@
   applyCustomCosmeticRules({});
 
   /* ==========================================================================
-     8. INTERACTIVE ELEMENT ZAPPER
+     8. INTERACTIVE ELEMENT ZAPPER (Lever, Preview & Undo)
      ========================================================================== */
   let pickerActive = false;
+  let pickerState = 'picking'; // 'picking' | 'tuning'
   let hoveredElement = null;
+  let selectedElement = null;
+  let ancestryChain = [];
+  let selectedIndex = 0;
+  let previewActive = false;
   let pickerToolbar = null;
+  const sessionZapHistory = [];
+
+  function isExtensionElement(el) {
+    if (!el) return false;
+    return el.id?.startsWith('pureshield-') ||
+           el.classList?.contains('pureshield-toast') ||
+           el.closest?.('#pureshield-picker-toolbar, #pureshield-toast-container, #pureshield-cosmetic-styles');
+  }
+
+  function buildAncestryChain(el) {
+    const chain = [];
+    let curr = el;
+    while (curr && curr.nodeType === Node.ELEMENT_NODE && curr !== document.body && curr !== document.documentElement) {
+      if (isExtensionElement(curr)) break;
+      chain.push(curr);
+      curr = curr.parentElement;
+    }
+    if (chain.length === 0 && el && !isExtensionElement(el)) {
+      chain.push(el);
+    }
+    return chain;
+  }
+
+  function getUniqueSelector(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return '';
+    if (el.id && !el.id.startsWith('pureshield-')) {
+      return `#${CSS.escape(el.id)}`;
+    }
+
+    let path = [];
+    let curr = el;
+    while (curr && curr.nodeType === Node.ELEMENT_NODE && curr !== document.body && curr !== document.documentElement) {
+      if (curr.id && !curr.id.startsWith('pureshield-')) {
+        path.unshift(`#${CSS.escape(curr.id)}`);
+        break;
+      }
+      let selector = curr.nodeName.toLowerCase();
+      if (curr.className && typeof curr.className === 'string') {
+        const validClasses = curr.className.split(/\s+/).filter(c => c && !c.startsWith('pureshield-') && !c.includes(':') && !c.includes('['));
+        if (validClasses.length > 0) {
+          selector += '.' + validClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
+        }
+      }
+      path.unshift(selector);
+      if (path.length >= 4) break;
+      curr = curr.parentElement;
+    }
+    return path.length > 0 ? path.join(' > ') : (el.nodeName ? el.nodeName.toLowerCase() : '');
+  }
 
   function activateElementPicker() {
     if (pickerActive) return;
     pickerActive = true;
+    pickerState = 'picking';
 
-    pickerToolbar = document.createElement('div');
-    pickerToolbar.id = 'pureshield-picker-toolbar';
-    pickerToolbar.innerHTML = `
-      <div class="pureshield-toolbar-title">⚡ Element Zapper</div>
-      <div class="pureshield-toolbar-desc">Hover and click any element to permanently vaporize it.</div>
-      <button class="pureshield-btn-cancel" id="pureshield-picker-cancel">Exit (Esc)</button>
-    `;
-    document.body.appendChild(pickerToolbar);
+    if (!pickerToolbar) {
+      pickerToolbar = document.createElement('div');
+      pickerToolbar.id = 'pureshield-picker-toolbar';
+      document.body.appendChild(pickerToolbar);
+    }
 
-    const cancelBtn = pickerToolbar.querySelector('#pureshield-picker-cancel');
-    if (cancelBtn) cancelBtn.addEventListener('click', deactivateElementPicker);
+    renderPickerToolbar();
 
     document.addEventListener('mouseover', handlePickerMouseOver, true);
     document.addEventListener('mouseout', handlePickerMouseOut, true);
@@ -737,11 +788,9 @@
   function deactivateElementPicker() {
     if (!pickerActive) return;
     pickerActive = false;
+    pickerState = 'picking';
 
-    if (hoveredElement) {
-      hoveredElement.classList.remove('pureshield-picker-highlight');
-      hoveredElement = null;
-    }
+    clearHighlightsAndPreviews();
 
     if (pickerToolbar && pickerToolbar.parentNode) {
       pickerToolbar.parentNode.removeChild(pickerToolbar);
@@ -754,10 +803,127 @@
     document.removeEventListener('keydown', handlePickerKeyDown, true);
   }
 
+  function clearHighlightsAndPreviews() {
+    if (hoveredElement) {
+      hoveredElement.classList.remove('pureshield-picker-highlight');
+      hoveredElement = null;
+    }
+    if (ancestryChain.length > 0) {
+      ancestryChain.forEach(el => {
+        el.classList.remove('pureshield-picker-highlight');
+        el.classList.remove('pureshield-preview-hidden');
+      });
+      ancestryChain = [];
+    }
+    selectedElement = null;
+    selectedIndex = 0;
+    previewActive = false;
+  }
+
+  function renderPickerToolbar() {
+    if (!pickerToolbar) return;
+
+    chrome.storage.local.get(['customCosmeticRules'], (data) => {
+      const customRules = data.customCosmeticRules || {};
+      const domainRules = customRules[hostname] || [];
+      const hasUndoable = domainRules.length > 0 || sessionZapHistory.length > 0;
+
+      if (pickerState === 'picking') {
+        pickerToolbar.innerHTML = `
+          <div class="pureshield-toolbar-section">
+            <div class="pureshield-toolbar-title">⚡ Element Zapper</div>
+            <div class="pureshield-toolbar-desc">Hover and click any element to select & tune it.</div>
+          </div>
+          <div class="pureshield-toolbar-actions">
+            <button class="pureshield-btn-undo" id="pureshield-picker-undo" ${hasUndoable ? '' : 'disabled'} title="Undo last zapped item on this domain">
+              ↩ Undo
+            </button>
+            <button class="pureshield-btn-cancel" id="pureshield-picker-cancel" title="Exit Element Zapper">
+              ✕ Exit (Esc)
+            </button>
+          </div>
+        `;
+      } else if (pickerState === 'tuning') {
+        const currEl = ancestryChain[selectedIndex] || selectedElement;
+        const currentTag = currEl ? currEl.tagName.toLowerCase() : 'element';
+        const currentSelector = getUniqueSelector(currEl);
+
+        pickerToolbar.innerHTML = `
+          <div class="pureshield-toolbar-section pureshield-tuning-main">
+            <div class="pureshield-tuning-header">
+              <span class="pureshield-toolbar-title">🎯 Adjust Selection</span>
+              <span class="pureshield-depth-badge" id="pureshield-depth-badge">
+                Level ${selectedIndex + 1}/${ancestryChain.length} &lt;${currentTag}&gt;
+              </span>
+            </div>
+            <div class="pureshield-lever-container">
+              <span class="pureshield-lever-label">🎯 Element</span>
+              <input type="range" class="pureshield-lever" id="pureshield-picker-lever" min="0" max="${Math.max(0, ancestryChain.length - 1)}" step="1" value="${selectedIndex}">
+              <span class="pureshield-lever-label">📦 Container</span>
+            </div>
+            <div class="pureshield-selector-row">
+              <code class="pureshield-selector-badge" id="pureshield-selector-badge" title="${currentSelector}">${currentSelector}</code>
+            </div>
+          </div>
+          <div class="pureshield-toolbar-actions">
+            <button class="pureshield-btn-preview ${previewActive ? 'pureshield-btn-preview-active' : ''}" id="pureshield-picker-preview" title="Preview page with element hidden (P)">
+              ${previewActive ? '👁️ Preview: Hidden' : '👁️ Preview'}
+            </button>
+            <button class="pureshield-btn-zap" id="pureshield-picker-zap" title="Permanently zap this element (Enter)">
+              ⚡ Vaporize (Enter)
+            </button>
+            <button class="pureshield-btn-repick" id="pureshield-picker-repick" title="Deselect and pick another element">
+              ↺ Re-pick
+            </button>
+            <button class="pureshield-btn-undo" id="pureshield-picker-undo" ${hasUndoable ? '' : 'disabled'} title="Undo last zapped item on this domain">
+              ↩ Undo
+            </button>
+            <button class="pureshield-btn-cancel" id="pureshield-picker-cancel" title="Exit Element Zapper">
+              ✕ Exit (Esc)
+            </button>
+          </div>
+        `;
+
+        const lever = pickerToolbar.querySelector('#pureshield-picker-lever');
+        if (lever) {
+          lever.addEventListener('input', (e) => {
+            handleLeverChange(parseInt(e.target.value, 10));
+          });
+        }
+
+        const previewBtn = pickerToolbar.querySelector('#pureshield-picker-preview');
+        if (previewBtn) {
+          previewBtn.addEventListener('click', togglePreview);
+        }
+
+        const zapBtn = pickerToolbar.querySelector('#pureshield-picker-zap');
+        if (zapBtn) {
+          zapBtn.addEventListener('click', handleAcceptZap);
+        }
+
+        const repickBtn = pickerToolbar.querySelector('#pureshield-picker-repick');
+        if (repickBtn) {
+          repickBtn.addEventListener('click', resetToPickMode);
+        }
+      }
+
+      // Wire common action buttons
+      const cancelBtn = pickerToolbar.querySelector('#pureshield-picker-cancel');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', deactivateElementPicker);
+      }
+
+      const undoBtn = pickerToolbar.querySelector('#pureshield-picker-undo');
+      if (undoBtn) {
+        undoBtn.addEventListener('click', handleUndoZap);
+      }
+    });
+  }
+
   function handlePickerMouseOver(e) {
-    if (!pickerActive) return;
+    if (!pickerActive || pickerState !== 'picking') return;
     const target = e.target;
-    if (target === pickerToolbar || (pickerToolbar && pickerToolbar.contains(target))) return;
+    if (isExtensionElement(target) || target === document.body || target === document.documentElement) return;
 
     if (hoveredElement && hoveredElement !== target) {
       hoveredElement.classList.remove('pureshield-picker-highlight');
@@ -767,41 +933,100 @@
   }
 
   function handlePickerMouseOut(e) {
-    if (!pickerActive) return;
+    if (!pickerActive || pickerState !== 'picking') return;
     if (e.target && e.target.classList) {
       e.target.classList.remove('pureshield-picker-highlight');
     }
   }
 
-  function getUniqueSelector(el) {
-    if (el.id) return `#${CSS.escape(el.id)}`;
-    
-    let path = [];
-    while (el && el.nodeType === Node.ELEMENT_NODE) {
-      let selector = el.nodeName.toLowerCase();
-      if (el.className && typeof el.className === 'string') {
-        const validClasses = el.className.split(/\s+/).filter(c => c && !c.startsWith('pureshield-') && !c.includes(':'));
-        if (validClasses.length > 0) {
-          selector += '.' + validClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
-        }
-      }
-      path.unshift(selector);
-      if (path.length >= 3) break;
-      el = el.parentNode;
-    }
-    return path.join(' > ');
-  }
-
   function handlePickerClick(e) {
     if (!pickerActive) return;
     const target = e.target;
-    if (target === pickerToolbar || (pickerToolbar && pickerToolbar.contains(target))) return;
+    if (isExtensionElement(target)) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    const selector = getUniqueSelector(target);
-    target.style.setProperty('display', 'none', 'important');
+    if (pickerState === 'picking') {
+      // Enter tuning mode
+      if (hoveredElement) {
+        hoveredElement.classList.remove('pureshield-picker-highlight');
+        hoveredElement = null;
+      }
+
+      ancestryChain = buildAncestryChain(target);
+      selectedIndex = 0;
+      selectedElement = ancestryChain[0];
+      pickerState = 'tuning';
+      previewActive = false;
+
+      updateHighlightAndPreview();
+      renderPickerToolbar();
+    }
+  }
+
+  function handleLeverChange(newIndex) {
+    if (newIndex < 0 || newIndex >= ancestryChain.length) return;
+    selectedIndex = newIndex;
+    selectedElement = ancestryChain[selectedIndex];
+
+    updateHighlightAndPreview();
+
+    // Update depth badge and selector
+    const depthBadge = pickerToolbar?.querySelector('#pureshield-depth-badge');
+    const selectorBadge = pickerToolbar?.querySelector('#pureshield-selector-badge');
+    if (selectedElement) {
+      const tag = selectedElement.tagName.toLowerCase();
+      const sel = getUniqueSelector(selectedElement);
+      if (depthBadge) depthBadge.textContent = `Level ${selectedIndex + 1}/${ancestryChain.length} <${tag}>`;
+      if (selectorBadge) {
+        selectorBadge.textContent = sel;
+        selectorBadge.title = sel;
+      }
+    }
+  }
+
+  function togglePreview() {
+    previewActive = !previewActive;
+    updateHighlightAndPreview();
+    
+    const previewBtn = pickerToolbar?.querySelector('#pureshield-picker-preview');
+    if (previewBtn) {
+      if (previewActive) {
+        previewBtn.classList.add('pureshield-btn-preview-active');
+        previewBtn.innerHTML = '👁️ Preview: Hidden';
+      } else {
+        previewBtn.classList.remove('pureshield-btn-preview-active');
+        previewBtn.innerHTML = '👁️ Preview';
+      }
+    }
+  }
+
+  function updateHighlightAndPreview() {
+    // Clear previous highlights and preview styles
+    ancestryChain.forEach(el => {
+      el.classList.remove('pureshield-picker-highlight');
+      el.classList.remove('pureshield-preview-hidden');
+    });
+
+    const activeEl = ancestryChain[selectedIndex];
+    if (!activeEl) return;
+
+    if (previewActive) {
+      activeEl.classList.add('pureshield-preview-hidden');
+    } else {
+      activeEl.classList.add('pureshield-picker-highlight');
+    }
+  }
+
+  function handleAcceptZap() {
+    const targetEl = ancestryChain[selectedIndex] || selectedElement;
+    if (!targetEl) return;
+
+    const selector = getUniqueSelector(targetEl);
+    if (!selector) return;
+
+    clearHighlightsAndPreviews();
 
     chrome.storage.local.get(['customCosmeticRules'], (data) => {
       const customRules = data.customCosmeticRules || {};
@@ -811,17 +1036,77 @@
       if (!customRules[hostname].includes(selector)) {
         customRules[hostname].push(selector);
       }
+      sessionZapHistory.push(selector);
+
       chrome.storage.local.set({ customCosmeticRules: customRules }, () => {
         applyCustomCosmeticRules(customRules);
-        deactivateElementPicker();
-        showBlockedPopupToast(`Zapped & hidden: ${selector}`);
+        showBlockedPopupToast(`⚡ Vaporized: ${selector}`);
+        resetToPickMode();
       });
     });
   }
 
+  function handleUndoZap() {
+    chrome.storage.local.get(['customCosmeticRules'], (data) => {
+      const customRules = data.customCosmeticRules || {};
+      const domainRules = customRules[hostname] || [];
+
+      if (domainRules.length === 0 && sessionZapHistory.length === 0) {
+        showBlockedPopupToast('No zapped items to undo on this site.');
+        return;
+      }
+
+      let removedSelector = sessionZapHistory.pop();
+      if (!removedSelector && domainRules.length > 0) {
+        removedSelector = domainRules.pop();
+      } else if (removedSelector) {
+        const idx = domainRules.indexOf(removedSelector);
+        if (idx !== -1) domainRules.splice(idx, 1);
+      }
+
+      customRules[hostname] = domainRules;
+
+      chrome.storage.local.set({ customCosmeticRules: customRules }, () => {
+        applyCustomCosmeticRules(customRules);
+        showBlockedPopupToast(`↩️ Restored: ${removedSelector || 'Element'}`);
+        resetToPickMode();
+      });
+    });
+  }
+
+  function resetToPickMode() {
+    clearHighlightsAndPreviews();
+    pickerState = 'picking';
+    renderPickerToolbar();
+  }
+
   function handlePickerKeyDown(e) {
     if (e.key === 'Escape') {
-      deactivateElementPicker();
+      if (pickerState === 'tuning') {
+        resetToPickMode();
+      } else {
+        deactivateElementPicker();
+      }
+    } else if (pickerState === 'tuning') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAcceptZap();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const newIdx = Math.max(0, selectedIndex - 1);
+        const lever = pickerToolbar?.querySelector('#pureshield-picker-lever');
+        if (lever) lever.value = newIdx;
+        handleLeverChange(newIdx);
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const newIdx = Math.min(ancestryChain.length - 1, selectedIndex + 1);
+        const lever = pickerToolbar?.querySelector('#pureshield-picker-lever');
+        if (lever) lever.value = newIdx;
+        handleLeverChange(newIdx);
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        togglePreview();
+      }
     }
   }
 
