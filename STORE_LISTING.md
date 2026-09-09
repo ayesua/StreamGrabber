@@ -1,4 +1,4 @@
-﻿# StreamGrabber: Chrome Web Store Submission & Metadata Guide (v3.2.1)
+# StreamGrabber: Chrome Web Store Submission & Metadata Guide (v3.3.0)
 
 ---
 
