@@ -95,6 +95,7 @@
           blockTrackers: settings.blockTrackers,
           blockFingerprinting: settings.blockFingerprinting,
           defuseAntiAdblock: settings.defuseAntiAdblock,
+          blockMediaPrerolls: settings.blockMediaPrerolls === true,
           whitelisted: isWhitelisted
         }
       }));

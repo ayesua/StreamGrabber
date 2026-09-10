@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnToggleCookies = document.getElementById('btn-toggle-cookies');
   const btnToggleAdblock = document.getElementById('btn-toggle-adblock-defuse');
   const btnToggleFingerprint = document.getElementById('btn-toggle-fingerprint');
+  const btnTogglePrerolls = document.getElementById('btn-toggle-prerolls');
   const btnTogglePause = document.getElementById('btn-toggle-pause');
 
   const accordionToggle = document.getElementById('accordion-toggle');
@@ -103,6 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateToolBtn(btnToggleCookies, settings.dismissCookieBanners !== false);
     updateToolBtn(btnToggleAdblock, settings.defuseAntiAdblock !== false);
     updateToolBtn(btnToggleFingerprint, settings.blockFingerprinting !== false);
+    if (btnTogglePrerolls) updateToolBtn(btnTogglePrerolls, settings.blockMediaPrerolls === true);
 
     // Update Donation Handles
     const ds = data.donationSettings || { kofi: 'yesuag' };
@@ -249,6 +251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnToggleCookies?.addEventListener('click', () => toggleSetting('dismissCookieBanners', btnToggleCookies));
   btnToggleAdblock?.addEventListener('click', () => toggleSetting('defuseAntiAdblock', btnToggleAdblock));
   btnToggleFingerprint?.addEventListener('click', () => toggleSetting('blockFingerprinting', btnToggleFingerprint));
+  btnTogglePrerolls?.addEventListener('click', () => toggleSetting('blockMediaPrerolls', btnTogglePrerolls));
 
   btnTogglePause?.addEventListener('click', async () => {
     await chrome.runtime.sendMessage({ action: 'pauseProtection', minutes: 15 });

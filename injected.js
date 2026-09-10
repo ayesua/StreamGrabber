@@ -21,6 +21,7 @@
     blockRedirects: true,
     blockFingerprinting: true,
     defuseAntiAdblock: true,
+    blockMediaPrerolls: false,
     stripParams: true,
     whitelisted: false
   };
@@ -696,14 +697,14 @@
   };
 
   /* ==========================================================================
-     3B. KVS & TUBE PLAYER PRE-ROLL AUTO-SKIPPER
+     3B. KVS & TUBE PLAYER PRE-ROLL AUTO-SKIPPER (Optional Toggle)
      ========================================================================== */
   try {
     let _ktPlayer = window.kt_player;
     Object.defineProperty(window, 'kt_player', {
       get: () => function (container, swf, width, height, flashvars) {
         const player = _ktPlayer ? _ktPlayer.apply(this, arguments) : null;
-        if (player && typeof player.skip_preroll === 'function') {
+        if (config.blockMediaPrerolls && player && typeof player.skip_preroll === 'function') {
           setTimeout(() => {
             try { player.skip_preroll(); } catch (_) {}
           }, 20);
@@ -714,11 +715,12 @@
       configurable: true
     });
 
-    // Auto-skip active KVS preroll / postroll when player is present (auto-terminates to prevent timer leak)
+    // Auto-skip active KVS preroll / postroll ONLY when blockMediaPrerolls toggle is enabled
     let kvsInterval = null;
     let kvsCount = 0;
     function checkKVS() {
       try {
+        if (!config.blockMediaPrerolls) return;
         kvsCount++;
         let playerFound = false;
         if (window.kvsplayer && typeof window.kvsplayer === 'object') {

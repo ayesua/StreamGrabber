@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   stripParams: true,
   showToastNotifications: true,
   blockWebRTCLeaks: true,
+  blockMediaPrerolls: false,
   // Advanced Optional Features
   stripPingAttributes: false,
   trimReferrers: false,
