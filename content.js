@@ -223,34 +223,79 @@
     'cherrytale',
     'ero-labs',
     'mybid',
-    'ero-labs.art'
+    'ero-labs.art',
+    'kartela.ink',
+    'kartel69'
   ];
 
-  window.addEventListener('click', (e) => {
-    if (isWhitelisted) return;
-    let target = e.target;
-    while (target && target !== document) {
-      if (target.tagName === 'A' || target.tagName === 'AREA') {
-        const href = target.getAttribute('href') || target.href || '';
-        const hrefLower = String(href).toLowerCase();
-        if (SUSPICIOUS_AD_HREFS.some(p => hrefLower.includes(p))) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          console.warn('[ExtremeShield] Intercepted malicious ad link click:', href);
-          safeSendMessage({
-            action: 'recordBlockedEvent',
-            data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
-          });
-          if (settings.showToastNotifications) {
-            showBlockedPopupToast(href);
+  function isSearchOrAdRedirect(href) {
+    if (!href || typeof href !== 'string') return false;
+    const lower = href.toLowerCase();
+    if (SUSPICIOUS_AD_HREFS.some(p => lower.includes(p))) return true;
+    if (lower.includes('google.') && (lower.includes('/search') || lower.includes('/url?'))) return true;
+    if (lower.includes('bing.com/search') || lower.includes('search.yahoo.com') || lower.includes('duckduckgo.com/?q=')) return true;
+    return false;
+  }
+
+  function isMediaTarget(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'video' || tag === 'audio' || tag === 'canvas' || tag === 'embed') return true;
+    if (tag === 'iframe' && (el.src && (el.src.includes('embed') || el.src.includes('video') || el.src.includes('player')))) return true;
+    return Boolean(el.closest('video, audio, [class*="player" i], [id*="player" i], .video-js, .jwplayer, .plyr, .html5-video-player, [class*="video-container" i], [class*="media-player" i], #video-player'));
+  }
+
+  ['click', 'auxclick', 'mousedown'].forEach(eventType => {
+    window.addEventListener(eventType, (e) => {
+      if (isWhitelisted) return;
+      let target = e.target;
+
+      // 1. Check if clicking on an overlay placed directly above a media element
+      if (target && target !== document.body && target !== document.documentElement) {
+        const inMedia = isMediaTarget(target);
+        if (inMedia && (target.tagName === 'A' || target.getAttribute('target') === '_blank' || target.classList?.contains('overlay') || target.classList?.contains('click-trap'))) {
+          const href = target.getAttribute('href') || target.href || '';
+          if (href && !href.startsWith('#') && !href.startsWith('javascript:') && isSearchOrAdRedirect(href)) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.warn('[ExtremeShield] Defused media click-jacking overlay link:', href);
+            try { target.remove(); } catch (_) {}
+            safeSendMessage({
+              action: 'recordBlockedEvent',
+              data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
+            });
+            if (settings.showToastNotifications) {
+              showBlockedPopupToast(href);
+            }
+            return;
           }
-          return;
         }
       }
-      target = target.parentNode;
-    }
-  }, true);
+
+      // 2. Check general anchor targets
+      while (target && target !== document) {
+        if (target.tagName === 'A' || target.tagName === 'AREA') {
+          const href = target.getAttribute('href') || target.href || '';
+          if (isSearchOrAdRedirect(href)) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.warn('[ExtremeShield] Intercepted malicious ad / search hijack link click:', href);
+            safeSendMessage({
+              action: 'recordBlockedEvent',
+              data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
+            });
+            if (settings.showToastNotifications) {
+              showBlockedPopupToast(href);
+            }
+            return;
+          }
+        }
+        target = target.parentNode;
+      }
+    }, true);
+  });
 
   /* ==========================================================================
      4. TELEMETRY EVENT LISTENER

@@ -331,13 +331,40 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'cherrytale',
   'ero-labs',
   'mybid',
-  'ero-labs.art'
+  'ero-labs.art',
+  'kartela.ink',
+  'kartel69'
 ];
 
 function isMaliciousAdUrl(url) {
   if (!url || typeof url !== 'string') return false;
   const lower = url.toLowerCase();
   return KNOWN_AD_POPUP_PATTERNS.some(p => lower.includes(p));
+}
+
+function isSearchMasquerade(targetUrl, openerUrl) {
+  if (!targetUrl || typeof targetUrl !== 'string' || !targetUrl.startsWith('http')) return false;
+  try {
+    const targetObj = new URL(targetUrl);
+    const targetHost = targetObj.hostname.toLowerCase();
+    const isSearchEngine = targetHost.includes('google.') || targetHost.includes('bing.com') || targetHost.includes('yahoo.com') || targetHost.includes('duckduckgo.com');
+    if (!isSearchEngine) return false;
+
+    // If opener host is itself the search engine (user searching legitimately), allow!
+    if (openerUrl && typeof openerUrl === 'string' && openerUrl.startsWith('http')) {
+      const openerHost = new URL(openerUrl).hostname.toLowerCase();
+      if (openerHost.includes('google.') || openerHost.includes('bing.com') || openerHost.includes('yahoo.com') || openerHost.includes('duckduckgo.com')) {
+        return false;
+      }
+    }
+
+    // A third-party site opening a search engine query / redirect in a popup tab is 100% a hijack
+    const pathname = targetObj.pathname.toLowerCase();
+    if (pathname.includes('/search') || pathname.includes('/url') || targetObj.searchParams.has('q') || targetObj.searchParams.has('p')) {
+      return true;
+    }
+  } catch (_) {}
+  return false;
 }
 
 // 1. Watchdog for new tabs created (instant termination of ad popups/popunders)
@@ -353,6 +380,26 @@ chrome.tabs.onCreated.addListener((tab) => {
       url,
       domain: 'Ad Popup Shield',
       timestamp: Date.now()
+    });
+    return;
+  }
+
+  // Check if opener tab was a third-party site spawning a search engine query masquerade
+  if (tab.openerTabId && url) {
+    chrome.tabs.get(tab.openerTabId, (opener) => {
+      if (chrome.runtime.lastError || !opener) return;
+      if (isSearchMasquerade(url, opener.url)) {
+        console.warn('[ExtremeShield] Terminating search masquerade popup tab on creation:', url);
+        try {
+          chrome.tabs.remove(tab.id, () => { if (chrome.runtime.lastError) {} });
+        } catch (_) {}
+        recordBlockedItem(tab.openerTabId, {
+          type: 'popup',
+          url,
+          domain: 'Search Hijack Shield',
+          timestamp: Date.now()
+        });
+      }
     });
   }
 });
@@ -372,6 +419,25 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       timestamp: Date.now()
     });
     return;
+  }
+
+  // Check if popup tab was navigated to search engine masquerade
+  if (tab?.openerTabId && changeInfo.url) {
+    chrome.tabs.get(tab.openerTabId, (opener) => {
+      if (chrome.runtime.lastError || !opener) return;
+      if (isSearchMasquerade(changeInfo.url, opener.url)) {
+        console.warn('[ExtremeShield] Terminating search masquerade popup tab on update:', changeInfo.url);
+        try {
+          chrome.tabs.remove(tabId, () => { if (chrome.runtime.lastError) {} });
+        } catch (_) {}
+        recordBlockedItem(tab.openerTabId, {
+          type: 'popup',
+          url: changeInfo.url,
+          domain: 'Search Hijack Shield',
+          timestamp: Date.now()
+        });
+      }
+    });
   }
 
   if (changeInfo.status === 'loading') {

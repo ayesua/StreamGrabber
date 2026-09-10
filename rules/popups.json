@@ -628,5 +628,23 @@
       "urlFilter": "||strpchat.com^",
       "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
     }
+  },
+  {
+    "id": 2071,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||kartela.ink^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2072,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||kartel69^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
   }
 ]

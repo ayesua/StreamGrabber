@@ -116,7 +116,9 @@
     'cherrytale',
     'ero-labs',
     'mybid',
-    'ero-labs.art'
+    'ero-labs.art',
+    'kartela.ink',
+    'kartel69'
   ];
 
   const SUSPICIOUS_QUERY_PATTERNS = [
@@ -132,7 +134,12 @@
     'smartpopbucketid=',
     'gototheroom',
     'modelname=',
-    'modelid='
+    'modelid=',
+    'google.com/search',
+    'google.com/url?',
+    'bing.com/search',
+    'search.yahoo.com',
+    'duckduckgo.com/?q='
   ];
 
   function isTrackerOrRedirectUrl(url) {
@@ -174,24 +181,52 @@
   }
 
   function createDummyWindow(urlStr) {
-    return {
-      closed: true,
-      focus: () => {},
-      blur: () => {},
-      close: () => {},
-      postMessage: () => {},
-      location: {
-        href: urlStr || 'about:blank',
-        replace: () => {},
-        assign: () => {}
-      },
-      document: {
-        write: () => {},
-        writeln: () => {},
-        open: () => {},
-        close: () => {}
-      }
+    const dummyLoc = {
+      href: urlStr || 'about:blank',
+      search: '',
+      pathname: '',
+      hash: '',
+      host: '',
+      hostname: '',
+      protocol: 'about:',
+      origin: 'null',
+      replace: function () {},
+      assign: function () {},
+      reload: function () {},
+      toString: function () { return this.href; }
     };
+    const dummyDoc = {
+      write: function () {},
+      writeln: function () {},
+      open: function () { return dummyDoc; },
+      close: function () {},
+      createElement: function () { return document.createElement.apply(document, arguments); },
+      location: dummyLoc
+    };
+    const dummyWin = {
+      closed: true,
+      focus: function () {},
+      blur: function () {},
+      close: function () {},
+      postMessage: function () {},
+      addEventListener: function () {},
+      removeEventListener: function () {},
+      dispatchEvent: function () { return true; },
+      location: dummyLoc,
+      document: dummyDoc,
+      window: null,
+      top: null,
+      parent: null,
+      opener: null,
+      frames: [],
+      length: 0,
+      name: ''
+    };
+    dummyWin.window = dummyWin;
+    dummyWin.top = dummyWin;
+    dummyWin.parent = dummyWin;
+    dummyWin.self = dummyWin;
+    return dummyWin;
   }
 
   // Listen for config sync from content.js
@@ -209,16 +244,30 @@
   }
 
   /* ==========================================================================
-     1. USER INTERACTION TRACKER
+     1. USER & MEDIA INTERACTION TRACKER
      ========================================================================== */
   let lastUserInteractionTime = 0;
+  let lastMediaInteractionTime = 0;
   let lastClickedLinkHref = '';
   let lastClickedLinkTarget = '';
   let lastClickTime = 0;
 
-  function recordClickedAnchor(e) {
+  function isMediaElement(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'video' || tag === 'audio' || tag === 'canvas' || tag === 'embed') return true;
+    if (tag === 'iframe' && (el.src && (el.src.includes('embed') || el.src.includes('video') || el.src.includes('player')))) return true;
+    return Boolean(el.closest('video, audio, [class*="player" i], [id*="player" i], .video-js, .jwplayer, .plyr, .html5-video-player, [class*="video-container" i], [class*="media-player" i], #video-player'));
+  }
+
+  function recordInteraction(e) {
     if (!e.isTrusted) return;
     lastUserInteractionTime = Date.now();
+
+    if (isMediaElement(e.target)) {
+      lastMediaInteractionTime = Date.now();
+    }
+
     let el = e.target;
     while (el && el !== document) {
       if (el.tagName === 'A' || el.tagName === 'AREA') {
@@ -232,7 +281,7 @@
   }
 
   ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(eventType => {
-    window.addEventListener(eventType, recordClickedAnchor, { capture: true, passive: true });
+    window.addEventListener(eventType, recordInteraction, { capture: true, passive: true });
   });
 
   window.addEventListener('keydown', (e) => {
@@ -243,8 +292,12 @@
     return (Date.now() - lastUserInteractionTime) < 800;
   }
 
+  function isRecentMediaAction() {
+    return (Date.now() - lastMediaInteractionTime) < 3500;
+  }
+
   /* ==========================================================================
-     2. AGGRESSIVE POPUP & POPUNDER DEFUSER
+     2. AGGRESSIVE POPUP & POPUNDER DEFUSER (Zero-Popup Media Zone)
      ========================================================================== */
   const originalOpen = window.open;
 
@@ -256,22 +309,34 @@
 
       const urlStr = String(url || '').trim();
       const hasRecentAction = isRecentUserAction();
+      const inMediaZone = isRecentMediaAction();
 
-      // 1. Direct Tracker / Ad-network / Redirect pattern detection
+      // 1. Direct Tracker / Ad-network / Search Masquerade detection: ALWAYS block
       if (isTrackerOrRedirectUrl(urlStr)) {
         console.warn('[ExtremeShield] Blocked ad/redirect window.open:', urlStr);
         notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
         return createDummyWindow(urlStr);
       }
 
-      // 2. Unsolicited / Timer / Video-ended popups without recent user interaction: Strictly block
+      // 2. ZERO-POPUP MEDIA ZONE:
+      // When user is interacting with a video/player, window.open to external/blank URLs is 100% blocked
+      if (inMediaZone) {
+        const isSameHost = isSameDomainOrSubdomain(urlStr);
+        if (!isSameHost || !urlStr || urlStr === 'about:blank') {
+          console.warn('[ExtremeShield] Blocked window.open during video/media interaction:', urlStr || 'about:blank');
+          notifyBlocked('popup', { url: urlStr || 'Media-zone Popup', target: String(target || '_blank') });
+          return createDummyWindow(urlStr);
+        }
+      }
+
+      // 3. Unsolicited / Timer / Video-ended popups without recent user interaction: Strictly block
       if (!hasRecentAction) {
         console.warn('[ExtremeShield] Blocked background/unsolicited window.open:', urlStr || 'about:blank');
         notifyBlocked('popup', { url: urlStr || 'about:blank', target: String(target || '_blank') });
         return createDummyWindow(urlStr);
       }
 
-      // 3. Tab-Under Protection:
+      // 4. Tab-Under Protection:
       // A. Block window.open cloning the exact current page
       const isCurrentPageUrl = Boolean(
         urlStr && (
@@ -287,9 +352,7 @@
         return createDummyWindow(urlStr);
       }
 
-      // B. Block tab-under clone of clicked links:
-      // When clicking a link that the user intended to follow, ad networks call window.open(clickedLink)
-      // to open it in a new tab while hijacking the current tab with an ad.
+      // B. Block tab-under clone of clicked links
       if (lastClickTime && (Date.now() - lastClickTime < 1200) && lastClickedLinkHref) {
         let isSameAsClicked = false;
         try {
@@ -307,7 +370,14 @@
         }
       }
 
-      // 4. Popups triggered during clicks: Block if cross-domain unless OAuth whitelist
+      // 5. Blank window handler: Never open real blank browser tabs for third-party scripts
+      if (!urlStr || urlStr === 'about:blank') {
+        console.warn('[ExtremeShield] Neutralized blank window.open hijack attempt');
+        notifyBlocked('popup', { url: 'about:blank', target: String(target || '_blank') });
+        return createDummyWindow('about:blank');
+      }
+
+      // 6. Popups triggered during clicks: Block if cross-domain unless OAuth whitelist
       const isSameHost = isSameDomainOrSubdomain(urlStr);
       const isOAuth = isAllowedPopupDomain(urlStr);
 
@@ -317,46 +387,31 @@
         return createDummyWindow(urlStr);
       }
 
-      // 5. Blank window handler: prevent delayed ad redirect on opened window
-      const openedWin = originalOpen.apply(this, arguments);
-      if (openedWin && (!urlStr || urlStr === 'about:blank')) {
-        try {
-          let checkCount = 0;
-          const timer = setInterval(() => {
-            checkCount++;
-            try {
-              if (openedWin.closed) {
-                clearInterval(timer);
-                return;
-              }
-              const childUrl = openedWin.location.href;
-              if (childUrl && childUrl !== 'about:blank') {
-                if (isTrackerOrRedirectUrl(childUrl) || (!isSameDomainOrSubdomain(childUrl) && !isAllowedPopupDomain(childUrl))) {
-                  console.warn('[ExtremeShield] Closed child window navigated to ad/cross-origin:', childUrl);
-                  notifyBlocked('popup', { url: childUrl, detail: 'Closed blank popup navigated to cross-origin' });
-                  try { openedWin.close(); } catch (_) {}
-                  clearInterval(timer);
-                }
-              }
-            } catch (_) {
-              // DOMException thrown: blank window was navigated cross-origin to a 3rd-party domain (classic popunder)
-              console.warn('[ExtremeShield] Closed child window that navigated cross-origin to ad');
-              notifyBlocked('popup', { url: 'cross-origin popunder', detail: 'Blank window navigated to external domain' });
-              try { openedWin.close(); } catch (_) {}
-              clearInterval(timer);
-            }
-            if (checkCount > 60) {
-              clearInterval(timer);
-            }
-          }, 50);
-        } catch (_) {}
-      }
-
-      return openedWin;
+      return originalOpen.apply(this, arguments);
     };
   } catch (err) {
     console.error('[ExtremeShield] Error wrapping window.open:', err);
   }
+
+  // Prevent dynamic iframe bypass of window.open
+  try {
+    const origContentWindowDesc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow');
+    if (origContentWindowDesc && origContentWindowDesc.get) {
+      const origGet = origContentWindowDesc.get;
+      Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+        get: function () {
+          const win = origGet.call(this);
+          if (win && win.open && win.open !== window.open) {
+            try {
+              win.open = window.open;
+            } catch (_) {}
+          }
+          return win;
+        },
+        configurable: true
+      });
+    }
+  } catch (_) {}
 
   // Intercept synthetic click exploits on dynamically generated links
   try {
@@ -515,14 +570,14 @@
       return true;
     }
 
-    // 1. Same-domain navigation is always allowed
-    if (isSameDomainOrSubdomain(urlStr)) {
-      return true;
-    }
-
-    // 2. Direct tracker or ad network URLs are NEVER allowed
+    // 1. Direct tracker, ad network or search engine query masquerade is NEVER allowed
     if (isTrackerOrRedirectUrl(urlStr)) {
       return false;
+    }
+
+    // 2. Same-domain navigation is always allowed
+    if (isSameDomainOrSubdomain(urlStr)) {
+      return true;
     }
 
     // 3. Known OAuth login providers are allowed
@@ -530,10 +585,17 @@
       return true;
     }
 
-    // 4. Tab-Under Protection:
+    // 4. Media Zone Protection:
+    // If user interacted with video/player, NEVER allow navigating current tab to external domain!
+    if (isRecentMediaAction()) {
+      console.warn('[ExtremeShield] Blocked cross-domain redirect during media interaction:', urlStr);
+      return false;
+    }
+
+    // 5. Tab-Under Protection:
     // If the user clicked a link on the current domain (e.g. video link on pussyspace.com),
     // a script attempting to navigate the current tab to a DIFFERENT domain is 100% a tab-under attack!
-    if (lastClickTime && (Date.now() - lastClickTime < 1500) && lastClickedLinkHref) {
+    if (lastClickTime && (Date.now() - lastClickTime < 2000) && lastClickedLinkHref) {
       try {
         const clickedOrigin = new URL(lastClickedLinkHref, window.location.href).origin;
         const targetOrigin = new URL(urlStr, window.location.href).origin;
@@ -548,7 +610,7 @@
       } catch (_) {}
     }
 
-    // 5. Block unsolicited cross-domain programmatic redirects
+    // 6. Block unsolicited cross-domain programmatic redirects
     return false;
   }
 
