@@ -565,6 +565,7 @@
      7. COSMETIC FILTERING ENGINE (Built-in & Custom Rules)
      ========================================================================== */
   let cosmeticStyleTag = null;
+  const BUILTIN_COSMETIC_SELECTORS = [];
 
   function ensureCosmeticStyles() {
     if (!cosmeticStyleTag) {
