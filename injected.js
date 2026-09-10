@@ -254,10 +254,10 @@
 
   function isMediaElement(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
-    const tag = el.tagName.toLowerCase();
-    if (tag === 'video' || tag === 'audio' || tag === 'canvas' || tag === 'embed') return true;
-    if (tag === 'iframe' && (el.src && (el.src.includes('embed') || el.src.includes('video') || el.src.includes('player')))) return true;
-    return Boolean(el.closest('video, audio, [class*="player" i], [id*="player" i], .video-js, .jwplayer, .plyr, .html5-video-player, [class*="video-container" i], [class*="media-player" i], #video-player'));
+    const tag = el.tagName;
+    if (tag === 'VIDEO' || tag === 'AUDIO' || tag === 'CANVAS' || tag === 'EMBED') return true;
+    if (tag === 'IFRAME' && el.src && (el.src.includes('embed') || el.src.includes('video') || el.src.includes('player'))) return true;
+    return Boolean(el.closest && el.closest('video, audio, [class*="player" i], [id*="player" i], .video-js, .jwplayer, .plyr, .html5-video-player, [class*="video-container" i], [class*="media-player" i], #video-player'));
   }
 
   function recordInteraction(e) {
@@ -714,18 +714,26 @@
       configurable: true
     });
 
-    // Auto-skip active KVS preroll / postroll when player is present
+    // Auto-skip active KVS preroll / postroll when player is present (auto-terminates to prevent timer leak)
     let kvsInterval = null;
+    let kvsCount = 0;
     function checkKVS() {
       try {
+        kvsCount++;
+        let playerFound = false;
         if (window.kvsplayer && typeof window.kvsplayer === 'object') {
           for (const id in window.kvsplayer) {
             const p = window.kvsplayer[id];
             if (p) {
+              playerFound = true;
               if (typeof p.skip_preroll === 'function') p.skip_preroll();
               if (typeof p.skip_postroll === 'function') p.skip_postroll();
             }
           }
+        }
+        if ((kvsCount > 60 || (!playerFound && kvsCount > 15)) && kvsInterval) {
+          clearInterval(kvsInterval);
+          kvsInterval = null;
         }
       } catch (_) {}
     }
@@ -950,11 +958,14 @@
           return origToDataURL.apply(this, arguments);
         }
         try {
-          const ctx = this.getContext('2d');
-          if (ctx && this.width > 0 && this.height > 0) {
-            const px = ctx.getImageData(0, 0, 1, 1);
-            px.data[0] = (px.data[0] ^ 1);
-            ctx.putImageData(px, 0, 0);
+          // Safeguard: only apply pixel perturbation on valid 2D contexts within sensible dimensions
+          if (this.width > 0 && this.height > 0 && this.width < 4096 && this.height < 4096) {
+            const ctx = this.getContext('2d');
+            if (ctx) {
+              const px = ctx.getImageData(0, 0, 1, 1);
+              px.data[0] = (px.data[0] ^ 1);
+              ctx.putImageData(px, 0, 0);
+            }
           }
         } catch (_) {}
         return origToDataURL.apply(this, arguments);

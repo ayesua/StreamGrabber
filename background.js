@@ -94,7 +94,15 @@ function runMemoryGarbageCollection() {
   });
 }
 
-// Run GC every 10 minutes
+// Service Worker Alarm + Interval for persistent GC
+try {
+  chrome.alarms?.create('memory_gc', { periodInMinutes: 10 });
+  chrome.alarms?.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'memory_gc') {
+      runMemoryGarbageCollection();
+    }
+  });
+} catch (_) {}
 setInterval(runMemoryGarbageCollection, 10 * 60 * 1000);
 
 /* ==========================================================================
@@ -476,32 +484,24 @@ async function recordBlockedItem(senderTabId, eventData) {
     updateTabBadge(senderTabId);
   }
 
-  // 2. Update Persisted Lifetime Statistics
-  const data = await chrome.storage.local.get(['stats', 'trackerLogs']);
-  const stats = data.stats || {
-    totalPopupsBlocked: 0,
-    totalTrackersBlocked: 0,
-    totalAnnoyancesBlocked: 0,
-    totalDataSavedKB: 0,
-    totalTimeSavedSec: 0
-  };
+  // 2. Update Persisted Lifetime Statistics (Debounced memory cache)
+  await ensureStorageCache();
 
   if (type === 'popup') {
-    stats.totalPopupsBlocked++;
-    stats.totalDataSavedKB += 120;
-    stats.totalTimeSavedSec += 0.8;
+    cachedStats.totalPopupsBlocked++;
+    cachedStats.totalDataSavedKB += 120;
+    cachedStats.totalTimeSavedSec += 0.8;
   } else if (type === 'annoyance') {
-    stats.totalAnnoyancesBlocked++;
-    stats.totalDataSavedKB += 35;
-    stats.totalTimeSavedSec += 0.2;
+    cachedStats.totalAnnoyancesBlocked++;
+    cachedStats.totalDataSavedKB += 35;
+    cachedStats.totalTimeSavedSec += 0.2;
   } else {
-    stats.totalTrackersBlocked++;
-    stats.totalDataSavedKB += 45;
-    stats.totalTimeSavedSec += 0.3;
+    cachedStats.totalTrackersBlocked++;
+    cachedStats.totalDataSavedKB += 45;
+    cachedStats.totalTimeSavedSec += 0.3;
   }
 
-  const logs = data.trackerLogs || [];
-  logs.unshift({
+  cachedLogs.unshift({
     type,
     url: url || 'Blocked Resource',
     domain: domain || '',
@@ -509,9 +509,39 @@ async function recordBlockedItem(senderTabId, eventData) {
     timestamp: timestamp || Date.now()
   });
 
-  if (logs.length > 100) logs.pop();
+  if (cachedLogs.length > 100) cachedLogs.pop();
 
-  await chrome.storage.local.set({ stats, trackerLogs: logs });
+  scheduleStorageFlush();
+}
+
+let cachedStats = null;
+let cachedLogs = null;
+let storageFlushTimer = null;
+
+async function ensureStorageCache() {
+  if (!cachedStats || !cachedLogs) {
+    const data = await chrome.storage.local.get(['stats', 'trackerLogs']);
+    cachedStats = data.stats || {
+      totalPopupsBlocked: 0,
+      totalTrackersBlocked: 0,
+      totalAnnoyancesBlocked: 0,
+      totalDataSavedKB: 0,
+      totalTimeSavedSec: 0
+    };
+    cachedLogs = data.trackerLogs || [];
+  }
+}
+
+function scheduleStorageFlush() {
+  if (storageFlushTimer) return;
+  storageFlushTimer = setTimeout(async () => {
+    storageFlushTimer = null;
+    if (cachedStats && cachedLogs) {
+      try {
+        await chrome.storage.local.set({ stats: cachedStats, trackerLogs: cachedLogs });
+      } catch (_) {}
+    }
+  }, 1000);
 }
 
 function categorizeTracker(url) {

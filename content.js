@@ -357,21 +357,31 @@
 
   const processedNodes = new WeakSet();
   let domScanTimeout = null;
+  const pendingScanRoots = new Set();
 
   function performOptimizedScan(targetRoot = document) {
-    if (isWhitelisted || !targetRoot) return;
+    if (isWhitelisted || !targetRoot || document.hidden) return;
 
     // 1. Strip popunder trigger classes like .popito
     if (settings.blockPopups && targetRoot.querySelectorAll) {
+      if (targetRoot.classList && targetRoot.classList.contains('popito')) {
+        targetRoot.classList.remove('popito');
+      }
       const popitos = targetRoot.querySelectorAll('.popito');
       for (let i = 0; i < popitos.length; i++) {
         popitos[i].classList.remove('popito');
       }
     }
 
-    // 2. Scan for Tracker elements (Only inspect direct script/img/iframe nodes)
+    // 2. Scan for Tracker elements (Inspect target root and direct descendants)
     if (settings.blockTrackers && targetRoot.querySelectorAll) {
-      const elements = targetRoot.querySelectorAll('script[src], img[src], iframe[src]');
+      const elements = [];
+      if (targetRoot.matches && targetRoot.matches('script[src], img[src], iframe[src]')) {
+        elements.push(targetRoot);
+      }
+      const children = targetRoot.querySelectorAll('script[src], img[src], iframe[src]');
+      for (let j = 0; j < children.length; j++) elements.push(children[j]);
+
       for (let i = 0; i < elements.length; i++) {
         const el = elements[i];
         if (processedNodes.has(el)) continue;
@@ -445,9 +455,9 @@
     ];
 
     function checkVideoAds() {
-      if (isWhitelisted) return;
+      // Zero CPU overhead if page is hidden or no videos are present
+      if (isWhitelisted || document.hidden) return;
 
-      // Only execute if a video element is present on the page (Zero CPU/memory overhead on text/article sites)
       const video = document.querySelector('video');
       if (!video) return;
 
@@ -489,18 +499,29 @@
       }
     }
 
-    // Check once per second only when videos are active
+    // Check once per second only when active
     setInterval(checkVideoAds, 1000);
   }
 
   // Schedule scan with requestIdleCallback and 300ms debounce
-  function scheduleScan(root) {
+  function scheduleScan(root = document) {
+    if (root) pendingScanRoots.add(root);
     if (domScanTimeout) clearTimeout(domScanTimeout);
     domScanTimeout = setTimeout(() => {
+      const run = () => {
+        if (pendingScanRoots.has(document)) {
+          pendingScanRoots.clear();
+          performOptimizedScan(document);
+        } else {
+          pendingScanRoots.forEach(r => performOptimizedScan(r));
+          pendingScanRoots.clear();
+        }
+      };
+
       if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(() => performOptimizedScan(root), { timeout: 500 });
+        window.requestIdleCallback(run, { timeout: 500 });
       } else {
-        performOptimizedScan(root);
+        run();
       }
     }, 300);
   }
@@ -515,17 +536,27 @@
     setupVideoAdSkipper();
   }
 
-  // MutationObserver throttled with childList filter
+  // MutationObserver only scans newly added subtrees (not the whole document)
   const observer = new MutationObserver((mutations) => {
-    if (isWhitelisted) return;
+    if (isWhitelisted || document.hidden) return;
     for (let i = 0; i < mutations.length; i++) {
-      if (mutations[i].addedNodes && mutations[i].addedNodes.length > 0) {
-        scheduleScan(document);
-        break;
+      const added = mutations[i].addedNodes;
+      if (added && added.length > 0) {
+        for (let j = 0; j < added.length; j++) {
+          if (added[j].nodeType === Node.ELEMENT_NODE) {
+            scheduleScan(added[j]);
+          }
+        }
       }
     }
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !isWhitelisted) {
+      scheduleScan(document);
+    }
+  });
 
   /* ==========================================================================
      6. DISCREET TOAST NOTIFICATION
@@ -544,6 +575,11 @@
   function showBlockedPopupToast(popupUrl) {
     if (!document.body) return;
     const container = ensureToastContainer();
+
+    // Prevent toast flooding & memory accumulation
+    while (container.children.length >= 3) {
+      container.removeChild(container.firstChild);
+    }
 
     const toast = document.createElement('div');
     toast.className = 'pureshield-toast';
@@ -734,8 +770,11 @@
 
     if (pickerToolbar && pickerToolbar.parentNode) {
       pickerToolbar.parentNode.removeChild(pickerToolbar);
-      pickerToolbar = null;
     }
+    pickerToolbar = null;
+    hoveredElement = null;
+    selectedElement = null;
+    ancestryChain = [];
 
     document.removeEventListener('mouseover', handlePickerMouseOver, true);
     document.removeEventListener('mouseout', handlePickerMouseOut, true);
@@ -1051,6 +1090,7 @@
         customRules[hostname].push(selector);
       }
       sessionZapHistory.push(selector);
+      if (sessionZapHistory.length > 50) sessionZapHistory.shift();
 
       chrome.storage.local.set({ customCosmeticRules: customRules }, () => {
         applyCustomCosmeticRules(customRules);
