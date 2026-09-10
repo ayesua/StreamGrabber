@@ -1,5 +1,21 @@
 /* PureShield Element Picker & On-Page UI Overlay */
 
+/* Global cursor when picker is active */
+html.pureshield-picking-active,
+html.pureshield-picking-active * {
+  cursor: crosshair !important;
+}
+
+html.pureshield-picking-active #pureshield-picker-toolbar,
+html.pureshield-picking-active #pureshield-picker-toolbar * {
+  cursor: default !important;
+}
+
+html.pureshield-picking-active #pureshield-picker-toolbar button,
+html.pureshield-picking-active #pureshield-picker-toolbar input[type="range"] {
+  cursor: pointer !important;
+}
+
 /* Highlighting overlay for targeted elements */
 .pureshield-picker-highlight {
   outline: 3px dashed #10b981 !important;

@@ -660,6 +660,8 @@
     selectedIndex = 0;
     ancestryChain = [];
 
+    document.documentElement.classList.add('pureshield-picking-active');
+
     if (!pickerToolbar) {
       pickerToolbar = document.createElement('div');
       pickerToolbar.id = 'pureshield-picker-toolbar';
@@ -681,6 +683,7 @@
     isLocked = false;
     previewActive = false;
 
+    document.documentElement.classList.remove('pureshield-picking-active');
     clearHighlightsAndPreviews();
 
     if (pickerToolbar && pickerToolbar.parentNode) {
@@ -695,14 +698,16 @@
   }
 
   function clearHighlightsAndPreviews() {
-    if (hoveredElement) {
+    if (hoveredElement && hoveredElement.classList && typeof hoveredElement.classList.remove === 'function') {
       hoveredElement.classList.remove('pureshield-picker-highlight');
       hoveredElement = null;
     }
     if (ancestryChain.length > 0) {
       ancestryChain.forEach(el => {
-        el.classList.remove('pureshield-picker-highlight');
-        el.classList.remove('pureshield-preview-hidden');
+        if (el && el.classList && typeof el.classList.remove === 'function') {
+          el.classList.remove('pureshield-picker-highlight');
+          el.classList.remove('pureshield-preview-hidden');
+        }
       });
       ancestryChain = [];
     }
@@ -958,12 +963,14 @@
   function updateHighlightAndPreview() {
     // Clear previous highlights and preview styles on chain
     ancestryChain.forEach(el => {
-      el.classList.remove('pureshield-picker-highlight');
-      el.classList.remove('pureshield-preview-hidden');
+      if (el && el.classList && typeof el.classList.remove === 'function') {
+        el.classList.remove('pureshield-picker-highlight');
+        el.classList.remove('pureshield-preview-hidden');
+      }
     });
 
     const activeEl = ancestryChain[selectedIndex] || selectedElement || hoveredElement;
-    if (!activeEl) return;
+    if (!activeEl || !activeEl.classList || typeof activeEl.classList.add !== 'function') return;
 
     if (previewActive) {
       activeEl.classList.add('pureshield-preview-hidden');
