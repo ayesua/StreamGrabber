@@ -648,6 +648,29 @@
       return true;
     }
 
+    // Toggle / Force HTML5 Video Player Controls
+    if (request.action === 'TOGGLE_VIDEO_CONTROLS') {
+      try {
+        const videos = document.querySelectorAll('video');
+        let enabledState = false;
+        videos.forEach(v => {
+          if (request.enable !== undefined) {
+            v.controls = Boolean(request.enable);
+            enabledState = Boolean(request.enable);
+          } else {
+            v.controls = !v.controls;
+            enabledState = v.controls;
+          }
+          // Remove custom pointer-events overlays if present
+          v.style.pointerEvents = 'auto';
+        });
+        sendResponse({ success: true, count: videos.length, enabled: enabledState });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+      return true;
+    }
+
 
     // In-Page Manifest Fetch (Runs with page's cookies, origin & headers -> Bypasses HTTP 412)
     if (request.action === 'PAGE_FETCH_TEXT') {

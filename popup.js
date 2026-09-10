@@ -97,6 +97,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const btnToggleVideoControls = document.getElementById('btnToggleVideoControls');
+  if (btnToggleVideoControls) {
+    btnToggleVideoControls.addEventListener('click', () => {
+      if (!currentTabId) return;
+      chrome.tabs.sendMessage(currentTabId, { action: 'TOGGLE_VIDEO_CONTROLS' }, (res) => {
+        if (chrome.runtime.lastError) {
+          chrome.scripting.executeScript({
+            target: { tabId: currentTabId },
+            files: ['content.js']
+          }).then(() => {
+            chrome.tabs.sendMessage(currentTabId, { action: 'TOGGLE_VIDEO_CONTROLS' });
+          }).catch(() => {});
+        }
+        btnToggleVideoControls.classList.add('active-toggle');
+        setTimeout(() => {
+          btnToggleVideoControls.classList.remove('active-toggle');
+        }, 1000);
+      });
+    });
+  }
+
   const btnOpenPremium = document.getElementById('btnOpenPremium');
   if (btnOpenPremium) {
     btnOpenPremium.addEventListener('click', () => {
