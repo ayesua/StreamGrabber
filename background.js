@@ -105,7 +105,15 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (!tab || !tab.id) return;
 
   if (command === 'zap_element') {
-    chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' });
+    chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' }, (res) => {
+      if (chrome.runtime.lastError || !res) {
+        chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).then(() => {
+          chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['element-picker.css'] }).then(() => {
+            chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' });
+          });
+        }).catch(() => {});
+      }
+    });
   } else if (command === 'toggle_protection') {
     const data = await chrome.storage.local.get(['masterEnabled']);
     const newState = !(data.masterEnabled !== false);
@@ -199,7 +207,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab || !tab.id) return;
 
   if (info.menuItemId === 'pureshield-zap-element') {
-    chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' });
+    chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' }, (res) => {
+      if (chrome.runtime.lastError || !res) {
+        chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).then(() => {
+          chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['element-picker.css'] }).then(() => {
+            chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' });
+          });
+        }).catch(() => {});
+      }
+    });
   } else if (info.menuItemId === 'pureshield-whitelist-domain') {
     try {
       const url = new URL(tab.url);

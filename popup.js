@@ -260,7 +260,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 6. Core Zap Button & Header Zap Action
   const triggerElementPicker = () => {
     if (currentTab && currentTab.id) {
-      chrome.tabs.sendMessage(currentTab.id, { action: 'startElementPicker' });
+      chrome.tabs.sendMessage(currentTab.id, { action: 'startElementPicker' }, (res) => {
+        if (chrome.runtime.lastError || !res) {
+          chrome.scripting.executeScript({
+            target: { tabId: currentTab.id },
+            files: ['content.js']
+          }).then(() => {
+            chrome.scripting.insertCSS({
+              target: { tabId: currentTab.id },
+              files: ['element-picker.css']
+            }).then(() => {
+              chrome.tabs.sendMessage(currentTab.id, { action: 'startElementPicker' });
+            });
+          }).catch(() => {});
+        }
+      });
       window.close();
     }
   };

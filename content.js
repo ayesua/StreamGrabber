@@ -725,9 +725,9 @@
 
       <div class="pureshield-toolbar-middle" id="pureshield-toolbar-middle">
         <div class="pureshield-lever-container">
-          <span class="pureshield-lever-label" title="Decrease depth / narrow to child">🎯 Narrow</span>
-          <input type="range" class="pureshield-lever" id="pureshield-picker-lever" min="0" max="0" step="1" value="0" title="Slide to adjust selection scope / container depth">
-          <span class="pureshield-lever-label" title="Increase depth / expand to parent container">📦 Expand</span>
+          <button class="pureshield-btn-step" id="pureshield-btn-narrow" title="Narrow selection to child element (←)">➖</button>
+          <input type="range" class="pureshield-lever" id="pureshield-picker-lever" min="0" max="1" step="1" value="0" title="Slide to adjust selection scope / container depth">
+          <button class="pureshield-btn-step" id="pureshield-btn-expand" title="Expand selection to parent container (→)">➕</button>
         </div>
         <div class="pureshield-selector-row">
           <code class="pureshield-selector-badge" id="pureshield-selector-badge" title="CSS Selector">Click any element on page</code>
@@ -757,6 +757,20 @@
     if (lever) {
       lever.addEventListener('input', (e) => {
         handleLeverChange(parseInt(e.target.value, 10));
+      });
+    }
+
+    const btnNarrow = pickerToolbar.querySelector('#pureshield-btn-narrow');
+    if (btnNarrow) {
+      btnNarrow.addEventListener('click', () => {
+        handleLeverChange(Math.max(0, selectedIndex - 1));
+      });
+    }
+
+    const btnExpand = pickerToolbar.querySelector('#pureshield-btn-expand');
+    if (btnExpand) {
+      btnExpand.addEventListener('click', () => {
+        handleLeverChange(Math.min(Math.max(0, ancestryChain.length - 1), selectedIndex + 1));
       });
     }
 
@@ -793,6 +807,8 @@
     const depthBadge = pickerToolbar.querySelector('#pureshield-depth-badge');
     const selectorBadge = pickerToolbar.querySelector('#pureshield-selector-badge');
     const lever = pickerToolbar.querySelector('#pureshield-picker-lever');
+    const btnNarrow = pickerToolbar.querySelector('#pureshield-btn-narrow');
+    const btnExpand = pickerToolbar.querySelector('#pureshield-btn-expand');
     const previewBtn = pickerToolbar.querySelector('#pureshield-picker-preview');
     const repickBtn = pickerToolbar.querySelector('#pureshield-picker-repick');
     const undoBtn = pickerToolbar.querySelector('#pureshield-picker-undo');
@@ -830,6 +846,8 @@
         lever.max = Math.max(0, ancestryChain.length - 1);
         lever.value = selectedIndex;
       }
+      if (btnNarrow) btnNarrow.disabled = (selectedIndex <= 0);
+      if (btnExpand) btnExpand.disabled = (selectedIndex >= ancestryChain.length - 1 || ancestryChain.length <= 1);
     } else {
       if (depthBadge) depthBadge.textContent = 'Click an element to adjust';
       if (selectorBadge) selectorBadge.textContent = 'Click any element to tune size';
@@ -837,6 +855,8 @@
         lever.max = 0;
         lever.value = 0;
       }
+      if (btnNarrow) btnNarrow.disabled = true;
+      if (btnExpand) btnExpand.disabled = true;
     }
 
     // Update Preview Button

@@ -4,7 +4,7 @@
 .pureshield-picker-highlight {
   outline: 3px dashed #10b981 !important;
   outline-offset: -2px !important;
-  background-color: rgba(16, 185, 129, 0.2) !important;
+  background-color: rgba(16, 185, 129, 0.22) !important;
   cursor: crosshair !important;
   transition: outline 0.1s ease-in-out, background-color 0.1s ease-in-out !important;
 }
@@ -20,18 +20,19 @@
 /* Floating Banner / Toolbar for Element Picker */
 #pureshield-picker-toolbar {
   position: fixed !important;
-  bottom: 20px !important;
+  bottom: 24px !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
   z-index: 2147483647 !important;
-  background: rgba(15, 23, 42, 0.97) !important;
+  background: #090d16 !important;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(9, 13, 22, 0.98) 100%) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
   color: #f8fafc !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
   border-radius: 16px !important;
-  padding: 10px 18px !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(16, 185, 129, 0.3) !important;
+  padding: 12px 20px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(16, 185, 129, 0.2) !important;
   display: flex !important;
   align-items: center !important;
   gap: 16px !important;
@@ -61,19 +62,19 @@
 }
 
 #pureshield-picker-toolbar .pureshield-toolbar-title {
-  font-weight: 700 !important;
+  font-weight: 800 !important;
   display: flex !important;
   align-items: center !important;
   gap: 6px !important;
   color: #34d399 !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   letter-spacing: -0.2px !important;
 }
 
 .pureshield-status-pill {
   font-size: 10px !important;
-  font-weight: 600 !important;
-  padding: 2px 7px !important;
+  font-weight: 700 !important;
+  padding: 2px 8px !important;
   border-radius: 9999px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.5px !important;
@@ -86,9 +87,9 @@
 }
 
 .pureshield-status-pill.locked {
-  background: rgba(56, 189, 248, 0.2) !important;
-  color: #7dd3fc !important;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  background: rgba(56, 189, 248, 0.25) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.5) !important;
 }
 
 .pureshield-depth-badge {
@@ -97,11 +98,14 @@
   font-size: 11px !important;
   font-weight: 600 !important;
   padding: 2px 8px !important;
-  border-radius: 9999px !important;
+  border-radius: 6px !important;
   border: 1px solid rgba(16, 185, 129, 0.3) !important;
   display: inline-flex !important;
   align-items: center !important;
   white-space: nowrap !important;
+  max-width: 220px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 /* Lever & Selector Middle Section */
@@ -109,9 +113,9 @@
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
-  padding: 0 8px !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 0 12px !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 .pureshield-lever-container {
@@ -120,50 +124,90 @@
   gap: 8px !important;
 }
 
-.pureshield-lever-label {
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  color: #94a3b8 !important;
-  user-select: none !important;
-  white-space: nowrap !important;
+.pureshield-btn-step {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
 }
 
-.pureshield-lever {
+.pureshield-btn-step:hover:not(:disabled) {
+  background: #334155 !important;
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+}
+
+.pureshield-btn-step:disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+}
+
+/* Chrome/Safari Range Slider Styling */
+#pureshield-picker-toolbar input[type="range"].pureshield-lever {
   -webkit-appearance: none !important;
   appearance: none !important;
-  width: 140px !important;
-  height: 6px !important;
-  background: #334155 !important;
-  border-radius: 4px !important;
+  width: 160px !important;
+  height: 8px !important;
+  background: #1e293b !important;
+  border-radius: 9999px !important;
   outline: none !important;
   cursor: pointer !important;
   margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  vertical-align: middle !important;
+  display: inline-block !important;
 }
 
-.pureshield-lever::-webkit-slider-thumb {
+#pureshield-picker-toolbar input[type="range"].pureshield-lever::-webkit-slider-runnable-track {
+  height: 8px !important;
+  background: #1e293b !important;
+  border-radius: 9999px !important;
+  border: none !important;
+}
+
+#pureshield-picker-toolbar input[type="range"].pureshield-lever::-webkit-slider-thumb {
   -webkit-appearance: none !important;
   appearance: none !important;
-  width: 18px !important;
-  height: 18px !important;
+  width: 22px !important;
+  height: 22px !important;
   border-radius: 50% !important;
   background: #10b981 !important;
   cursor: pointer !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8) !important;
-  transition: transform 0.1s ease !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.9), 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+  margin-top: -7px !important;
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
 }
 
-.pureshield-lever::-webkit-slider-thumb:hover {
+#pureshield-picker-toolbar input[type="range"].pureshield-lever::-webkit-slider-thumb:hover {
   transform: scale(1.2) !important;
+  background: #34d399 !important;
 }
 
-.pureshield-lever::-moz-range-thumb {
-  width: 18px !important;
-  height: 18px !important;
+#pureshield-picker-toolbar input[type="range"].pureshield-lever::-moz-range-track {
+  height: 8px !important;
+  background: #1e293b !important;
+  border-radius: 9999px !important;
+  border: none !important;
+}
+
+#pureshield-picker-toolbar input[type="range"].pureshield-lever::-moz-range-thumb {
+  width: 22px !important;
+  height: 22px !important;
   border-radius: 50% !important;
   background: #10b981 !important;
   cursor: pointer !important;
-  border: none !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.9) !important;
 }
 
 .pureshield-selector-row {
@@ -179,7 +223,7 @@
   background: #020617 !important;
   padding: 3px 8px !important;
   border-radius: 6px !important;
-  max-width: 240px !important;
+  max-width: 260px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
