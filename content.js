@@ -355,7 +355,23 @@
     '.cc-window',
     '#klaro',
     '.cookie-consent',
-    '#truste-consent-track'
+    '#truste-consent-track',
+    '.cookie-privacy-modal',
+    '.cookies-message',
+    '.cookie-message',
+    '#accept-cookies-btn',
+    '.tp-modal',
+    '.tp-backdrop',
+    '.tp-iframe-wrapper',
+    '#pianoOfferContainer',
+    '.pianoOfferContainer',
+    '.piano_wrapper',
+    '#piano-experience',
+    '.sp-carton-expand__overlay',
+    '#webpushBanner-eluniversal',
+    '.fc-consent-root',
+    '.fc-dialog-overlay',
+    '.privacy-modal'
   ];
 
   const processedNodes = new WeakSet();
@@ -403,8 +419,19 @@
       }
     }
 
-    // 3. Auto-dismiss Cookie Banners
+    // 3. Auto-dismiss Cookie Banners and Auto-Accept
     if (settings.dismissCookieBanners && targetRoot.querySelector) {
+      // Auto-click accept buttons on cookie consent banners if present
+      const acceptBtn = targetRoot.querySelector('#accept-cookies-btn, .cookie-message__btn');
+      if (acceptBtn && typeof acceptBtn.click === 'function') {
+        try { acceptBtn.click(); } catch (_) {}
+      }
+
+      // Pre-set consent cookies on known sites to prevent banner initialization
+      if (hostname.includes('eluniversal.com.mx') && !document.cookie.includes('cookies_accepted=1')) {
+        try { document.cookie = 'cookies_accepted=1; path=/; max-age=31536000'; } catch (_) {}
+      }
+
       for (const selector of COOKIE_BANNER_SELECTORS) {
         const banner = targetRoot.querySelector(selector);
         if (banner && banner.style.display !== 'none') {
@@ -418,12 +445,8 @@
       }
     }
 
-    // 4. Body Scroll Lock Recovery (if modal blocked)
-    if (settings.removeOverlays && document.body) {
-      if (document.body.style.overflow === 'hidden') {
-        document.body.style.setProperty('overflow', 'auto', 'important');
-      }
-    }
+    // 4. Scroll Lock Recovery (Unlocks html and body overflow)
+    unlockScroll();
 
     // 5. Apply advanced features if enabled
     applyAdvancedFeatures();
@@ -539,11 +562,46 @@
     setupVideoAdSkipper();
   }
 
-  // MutationObserver only scans newly added subtrees (not the whole document)
+  function unlockScroll() {
+    if (isWhitelisted || !settings.removeOverlays) return;
+    const docEl = document.documentElement;
+    const body = document.body;
+    const lockClasses = ['tp-modal-open', 'modal-open', 'no-scroll', 'overflow-hidden', 'scroll-locked', 'disable-scroll', 'fancybox-active', 'has-modal'];
+
+    if (docEl) {
+      if (docEl.style.overflow === 'hidden' || docEl.style.overflowY === 'hidden') {
+        docEl.style.setProperty('overflow', 'auto', 'important');
+        docEl.style.setProperty('overflow-y', 'auto', 'important');
+      }
+      for (const cls of lockClasses) {
+        if (docEl.classList.contains(cls)) docEl.classList.remove(cls);
+      }
+    }
+
+    if (body) {
+      if (body.style.overflow === 'hidden' || body.style.overflowY === 'hidden') {
+        body.style.setProperty('overflow', 'auto', 'important');
+        body.style.setProperty('overflow-y', 'auto', 'important');
+      }
+      if (body.style.position === 'fixed') {
+        body.style.setProperty('position', 'static', 'important');
+      }
+      for (const cls of lockClasses) {
+        if (body.classList.contains(cls)) body.classList.remove(cls);
+      }
+    }
+  }
+
+  // MutationObserver only scans newly added subtrees and watches scroll locks on html/body
   const observer = new MutationObserver((mutations) => {
     if (isWhitelisted || document.hidden) return;
     for (let i = 0; i < mutations.length; i++) {
-      const added = mutations[i].addedNodes;
+      const m = mutations[i];
+      if (m.type === 'attributes' && (m.target === document.documentElement || m.target === document.body)) {
+        unlockScroll();
+        continue;
+      }
+      const added = m.addedNodes;
       if (added && added.length > 0) {
         for (let j = 0; j < added.length; j++) {
           if (added[j].nodeType === Node.ELEMENT_NODE) {
@@ -553,11 +611,12 @@
       }
     }
   });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && !isWhitelisted) {
       scheduleScan(document);
+      unlockScroll();
     }
   });
 

@@ -542,11 +542,38 @@ html:not([data-extremeshield-whitelisted="true"]) iframe[src*="magsrv"],
 html:not([data-extremeshield-whitelisted="true"]) iframe[src*="ero-advertising"],
 html:not([data-extremeshield-whitelisted="true"]) iframe[src*="adxad.com"],
 html:not([data-extremeshield-whitelisted="true"]) iframe[src*="juicyads.com"],
-html:not([data-extremeshield-whitelisted="true"]) iframe[src*="tubecorporate.com"] {
+html:not([data-extremeshield-whitelisted="true"]) iframe[src*="tubecorporate.com"],
+html:not([data-extremeshield-whitelisted="true"]) .cookie-privacy-modal,
+html:not([data-extremeshield-whitelisted="true"]) .cookies-message,
+html:not([data-extremeshield-whitelisted="true"]) .cookie-message,
+html:not([data-extremeshield-whitelisted="true"]) .tp-modal,
+html:not([data-extremeshield-whitelisted="true"]) .tp-backdrop,
+html:not([data-extremeshield-whitelisted="true"]) .tp-iframe-wrapper,
+html:not([data-extremeshield-whitelisted="true"]) #pianoOfferContainer,
+html:not([data-extremeshield-whitelisted="true"]) .pianoOfferContainer,
+html:not([data-extremeshield-whitelisted="true"]) .sp-carton-expand__overlay {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
   height: 0 !important;
   width: 0 !important;
   opacity: 0 !important;
+}
+
+/* ExtremeShield Anti-Scroll-Lock Recovery for Paywalls & Modals */
+html:not([data-extremeshield-whitelisted="true"]).tp-modal-open,
+body:not([data-extremeshield-whitelisted="true"]).tp-modal-open,
+html:not([data-extremeshield-whitelisted="true"])[class*="modal-open"],
+body:not([data-extremeshield-whitelisted="true"])[class*="modal-open"],
+html:not([data-extremeshield-whitelisted="true"]).no-scroll,
+body:not([data-extremeshield-whitelisted="true"]).no-scroll,
+html:not([data-extremeshield-whitelisted="true"]).overflow-hidden,
+body:not([data-extremeshield-whitelisted="true"]).overflow-hidden,
+html:not([data-extremeshield-whitelisted="true"]).scroll-locked,
+body:not([data-extremeshield-whitelisted="true"]).scroll-locked,
+html:not([data-extremeshield-whitelisted="true"])[class*="scroll-lock"],
+body:not([data-extremeshield-whitelisted="true"])[class*="scroll-lock"] {
+  overflow: auto !important;
+  overflow-y: auto !important;
+  position: static !important;
 }
