@@ -21,7 +21,7 @@
     blockRedirects: true,
     blockFingerprinting: true,
     defuseAntiAdblock: true,
-    blockMediaPrerolls: false,
+    blockMediaPrerolls: true,
     stripParams: true,
     whitelisted: false
   };
@@ -135,12 +135,7 @@
     'smartpopbucketid=',
     'gototheroom',
     'modelname=',
-    'modelid=',
-    'google.com/search',
-    'google.com/url?',
-    'bing.com/search',
-    'search.yahoo.com',
-    'duckduckgo.com/?q='
+    'modelid='
   ];
 
   function isTrackerOrRedirectUrl(url) {
@@ -697,9 +692,183 @@
   };
 
   /* ==========================================================================
-     3B. KVS & TUBE PLAYER PRE-ROLL AUTO-SKIPPER (Optional Toggle)
+     3B. KVS, JWPLAYER & VAST PRE-ROLL DEFUSER (Error Code 224003 Defense)
      ========================================================================== */
   try {
+    // 1. Defuse fetch & XHR VAST ad requests by returning empty VAST XML (<VAST version="4.0"/>)
+    // According to IAB VAST specifications, an empty root node signals "No Ad Available" cleanly.
+    // This allows JWPlayer, Video.js, and HTML5 players to proceed directly to the video without Error 224003.
+    const EMPTY_VAST_XML = '<?xml version="1.0" encoding="UTF-8"?><VAST version="4.0"/>';
+
+    function isVastAdUrl(url) {
+      if (!url || typeof url !== 'string') return false;
+      const lower = url.toLowerCase();
+      // Never intercept actual video/audio media or streaming segments
+      if (lower.includes('.mp4') || lower.includes('.m3u8') || lower.includes('.mpd') ||
+          lower.includes('.ts') || lower.includes('.webm') || lower.includes('.key') ||
+          lower.includes('.m4s') || lower.includes('.vtt') || lower.includes('.aac')) {
+        return false;
+      }
+      return (
+        lower.includes('/vast') ||
+        lower.includes('vast.xml') ||
+        lower.includes('vast=') ||
+        lower.includes('format=vast') ||
+        lower.includes('output=vast') ||
+        lower.includes('type=vast') ||
+        lower.includes('/vpaid') ||
+        lower.includes('/ad_server') ||
+        lower.includes('in_stream_ad') ||
+        lower.includes('jwpreroll') ||
+        lower.includes('ad_preroll')
+      );
+    }
+
+    const origFetch = window.fetch;
+    if (typeof origFetch === 'function') {
+      window.fetch = function (resource, init) {
+        if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
+          const urlStr = String(typeof resource === 'string' ? resource : (resource?.url || ''));
+          if (isVastAdUrl(urlStr)) {
+            console.warn('[ExtremeShield] Returning empty VAST XML response to prevent Error 224003:', urlStr);
+            return Promise.resolve(new Response(EMPTY_VAST_XML, {
+              status: 200,
+              statusText: 'OK',
+              headers: { 'Content-Type': 'application/xml; charset=utf-8' }
+            }));
+          }
+        }
+        return origFetch.apply(this, arguments);
+      };
+    }
+
+    const origXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url) {
+      if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
+        this._is_vast_ad = isVastAdUrl(String(url || ''));
+        if (this._is_vast_ad) {
+          this._vast_target_url = String(url || '');
+        }
+      }
+      return origXHROpen.apply(this, arguments);
+    };
+
+    const origXHRSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function () {
+      if (this._is_vast_ad) {
+        console.warn('[ExtremeShield] Intercepted XHR VAST ad request, returning empty VAST:', this._vast_target_url);
+        Object.defineProperty(this, 'responseText', { value: EMPTY_VAST_XML, writable: true, configurable: true });
+        try {
+          const doc = new DOMParser().parseFromString(EMPTY_VAST_XML, 'text/xml');
+          Object.defineProperty(this, 'responseXML', { value: doc, writable: true, configurable: true });
+          Object.defineProperty(this, 'response', { value: EMPTY_VAST_XML, writable: true, configurable: true });
+        } catch (_) {}
+        Object.defineProperty(this, 'status', { value: 200, writable: true, configurable: true });
+        Object.defineProperty(this, 'statusText', { value: 'OK', writable: true, configurable: true });
+        Object.defineProperty(this, 'readyState', { value: 4, writable: true, configurable: true });
+        setTimeout(() => {
+          if (typeof this.onreadystatechange === 'function') this.onreadystatechange();
+          if (typeof this.onload === 'function') this.onload();
+          this.dispatchEvent(new Event('readystatechange'));
+          this.dispatchEvent(new Event('load'));
+          this.dispatchEvent(new Event('loadend'));
+        }, 10);
+        return;
+      }
+      return origXHRSend.apply(this, arguments);
+    };
+
+    // 2. JWPlayer Instance Hook & Pre-roll Sanitizer
+    function wrapJWPlayerInstance(player) {
+      if (!player || typeof player !== 'object' || player.__es_wrapped__) return player;
+      player.__es_wrapped__ = true;
+
+      if (typeof player.setup === 'function') {
+        const origSetup = player.setup;
+        player.setup = function (options) {
+          if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
+            if (options && typeof options === 'object') {
+              if (options.advertising) {
+                console.warn('[ExtremeShield] Sanitizing JWPlayer advertising config to prevent Error 224003');
+                delete options.advertising;
+              }
+            }
+          }
+          const res = origSetup.apply(this, arguments);
+          if (typeof player.on === 'function') {
+            player.on('adError', () => {
+              console.warn('[ExtremeShield] Handled JWPlayer adError, resuming main content');
+              try { player.play(); } catch (_) {}
+            });
+          }
+          return res;
+        };
+      }
+
+      if (typeof player.playAd === 'function') {
+        player.playAd = function () {
+          console.warn('[ExtremeShield] JWPlayer playAd defused to prevent Error 224003');
+          return false;
+        };
+      }
+
+      return player;
+    }
+
+    let _jwplayer = window.jwplayer;
+    function jwPlayerProxy(target) {
+      if (typeof _jwplayer !== 'function') return undefined;
+      const p = _jwplayer.apply(this, arguments);
+      return wrapJWPlayerInstance(p);
+    }
+    function syncJWPlayerProps() {
+      if (typeof _jwplayer === 'function') {
+        for (const k of Object.keys(_jwplayer)) {
+          try { jwPlayerProxy[k] = _jwplayer[k]; } catch (_) {}
+        }
+      }
+    }
+
+    Object.defineProperty(window, 'jwplayer', {
+      get: () => {
+        if (!_jwplayer) return undefined;
+        syncJWPlayerProps();
+        return jwPlayerProxy;
+      },
+      set: (fn) => {
+        _jwplayer = fn;
+        syncJWPlayerProps();
+      },
+      configurable: true
+    });
+
+    // 3. bdsmx-porn & Tube Specific Player & Ad Globals
+    let _pl3748 = window.pl3748;
+    Object.defineProperty(window, 'pl3748', {
+      get: () => _pl3748,
+      set: (p) => {
+        _pl3748 = wrapJWPlayerInstance(p);
+      },
+      configurable: true
+    });
+
+    let _vadv2 = window.videoadvertising2;
+    Object.defineProperty(window, 'videoadvertising2', {
+      get: () => _vadv2 || { tag: '' },
+      set: (v) => {
+        _vadv2 = (v && typeof v === 'object') ? { ...v, tag: '' } : { tag: '' };
+      },
+      configurable: true
+    });
+
+    let _ad_preroll2 = window.ad_preroll2;
+    Object.defineProperty(window, 'ad_preroll2', {
+      get: () => _ad_preroll2 || (() => false),
+      set: () => { _ad_preroll2 = () => false; },
+      configurable: true
+    });
+
+    // 4. KVS Player Auto-Skipper
     let _ktPlayer = window.kt_player;
     Object.defineProperty(window, 'kt_player', {
       get: () => function (container, swf, width, height, flashvars) {
@@ -715,7 +884,6 @@
       configurable: true
     });
 
-    // Auto-skip active KVS preroll / postroll ONLY when blockMediaPrerolls toggle is enabled
     let kvsInterval = null;
     let kvsCount = 0;
     function checkKVS() {

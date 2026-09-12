@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     blockWebRTCLeaks: document.getElementById('opt-blockWebRTCLeaks'),
     dismissCookieBanners: document.getElementById('opt-dismissCookieBanners'),
     defuseAntiAdblock: document.getElementById('opt-defuseAntiAdblock'),
+    blockMediaPrerolls: document.getElementById('opt-blockMediaPrerolls'),
     showToastNotifications: document.getElementById('opt-showToastNotifications'),
     // Advanced Optional Shields
     stripPingAttributes: document.getElementById('opt-stripPingAttributes'),
@@ -114,6 +115,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       whatItDoes: 'Neutraliza los scripts que intentan detectar si estás usando un bloqueador y les entrega respuestas simuladas inofensivas.',
       benefit: 'Evita los mensajes de "Desactiva tu bloqueador para continuar" en páginas de noticias y descargas.',
       compat: 'Recomendado activo.'
+    },
+    'media-prerolls': {
+      title: '🎬 Desactivador de Anuncios Pre-roll y Error 224003 en Videos',
+      whatItDoes: 'Neutraliza las peticiones de anuncios VAST/VPAID y salta los anuncios previos ("pre-rolls") en reproductores como JWPlayer, Video.js y KVS. Entrega respuestas VAST simuladas para evitar bloqueos.',
+      benefit: 'Elimina el molesto error "This video file cannot be played. (Error Code: 224003)" en sitios de video (como bdsmx-porn.com) y permite que los videos comiencen a reproducirse inmediatamente sin anuncios.',
+      compat: 'Recomendado activo para ver videos sin interrupciones ni fallos de reproducción.'
     },
     'toasts': {
       title: '💬 Alertas Flotantes de Popups Bloqueados',

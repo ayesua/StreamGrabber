@@ -95,7 +95,7 @@
           blockTrackers: settings.blockTrackers,
           blockFingerprinting: settings.blockFingerprinting,
           defuseAntiAdblock: settings.defuseAntiAdblock,
-          blockMediaPrerolls: settings.blockMediaPrerolls === true,
+          blockMediaPrerolls: settings.blockMediaPrerolls !== false,
           whitelisted: isWhitelisted
         }
       }));
@@ -233,8 +233,10 @@
     if (!href || typeof href !== 'string') return false;
     const lower = href.toLowerCase();
     if (SUSPICIOUS_AD_HREFS.some(p => lower.includes(p))) return true;
-    if (lower.includes('google.') && (lower.includes('/search') || lower.includes('/url?'))) return true;
-    if (lower.includes('bing.com/search') || lower.includes('search.yahoo.com') || lower.includes('duckduckgo.com/?q=')) return true;
+    const isSearchEngine = lower.includes('google.') || lower.includes('bing.com') || lower.includes('search.yahoo.com') || lower.includes('duckduckgo.com');
+    if (isSearchEngine) {
+      return SUSPICIOUS_AD_HREFS.some(p => lower.includes(p));
+    }
     return false;
   }
 

@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateToolBtn(btnToggleCookies, settings.dismissCookieBanners !== false);
     updateToolBtn(btnToggleAdblock, settings.defuseAntiAdblock !== false);
     updateToolBtn(btnToggleFingerprint, settings.blockFingerprinting !== false);
-    if (btnTogglePrerolls) updateToolBtn(btnTogglePrerolls, settings.blockMediaPrerolls === true);
+    if (btnTogglePrerolls) updateToolBtn(btnTogglePrerolls, settings.blockMediaPrerolls !== false);
 
     // Update Donation Handles
     const ds = data.donationSettings || { kofi: 'yesuag' };
