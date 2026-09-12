@@ -40,7 +40,7 @@
     '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
     'vast', 'vpaid', 'popunder', 'ad_banner',
     'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
-    'interstitial', '/ads/video/', '/sponsor/'
+    'interstitial', '/ads/video/', '/sponsor/', 'exo_ad', 'ad_media'
   ];
 
   function isAdOrAnnounceUrl(url) {

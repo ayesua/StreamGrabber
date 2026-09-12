@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StreamGrabber - Main World Page Hook
  * Runs at document_start in the MAIN execution context to disable pre-roll announcements,
  * skip video ads cleanly without Error 224003, and broadcast authentic video stream URLs.
@@ -31,6 +31,8 @@
       // Disable internal video ad engine safely using the player's native flags
       player.disableVideoAds = true;
       player.has_adblocker = true;
+      if (player.id_ad) player.id_ad = 0;
+      if (player.ad_id) player.ad_id = 0;
 
       if (typeof player.enableVideoPreRollAds === 'function') {
         player.enableVideoPreRollAds = function () {};
@@ -53,7 +55,38 @@
         if (player.videos.postroll) player.videos.postroll.bEnabled = false;
       }
 
-      // Sniff and broadcast stream data when setVideoHLS / setVideoUrlHigh is called
+      // Extract existing stream URLs if already populated on player initialization
+      const playerTitle = player.sTitle || document.title;
+      const playerThumb = player.sUrlThumb || null;
+      if (player.url_high || player.sUrlHigh) {
+        broadcastStreamData({
+          url: player.url_high || player.sUrlHigh,
+          type: 'MP4',
+          quality: '1080p Full HD',
+          title: playerTitle,
+          poster: playerThumb
+        });
+      }
+      if (player.url_low || player.sUrlLow) {
+        broadcastStreamData({
+          url: player.url_low || player.sUrlLow,
+          type: 'MP4',
+          quality: '360p SD',
+          title: playerTitle,
+          poster: playerThumb
+        });
+      }
+      if (player.url_hls || player.sUrlHls) {
+        broadcastStreamData({
+          url: player.url_hls || player.sUrlHls,
+          type: 'HLS',
+          quality: 'HD Stream',
+          title: playerTitle,
+          poster: playerThumb
+        });
+      }
+
+      // Sniff and broadcast stream data when setVideoHLS / setVideoUrlHigh / setVideoUrlLow is called
       const origSetHLS = player.setVideoHLS;
       if (origSetHLS) {
         player.setVideoHLS = function (url) {
@@ -83,6 +116,22 @@
             });
           }
           return origSetHigh.apply(this, arguments);
+        };
+      }
+
+      const origSetLow = player.setVideoUrlLow;
+      if (origSetLow) {
+        player.setVideoUrlLow = function (url) {
+          if (url && typeof url === 'string') {
+            broadcastStreamData({
+              url: url,
+              type: 'MP4',
+              quality: '360p SD',
+              title: player.sTitle || document.title,
+              poster: player.sUrlThumb || null
+            });
+          }
+          return origSetLow.apply(this, arguments);
         };
       }
     } catch (e) {}
