@@ -9,21 +9,6 @@
     return;
   }
 
-  // Filter out ad iframes from polluting detected media
-  if (window.self !== window.top) {
-    const loc = (window.location.href || '').toLowerCase();
-    const docTitle = (document.title || '').toLowerCase();
-    if (isAdOrAnnounceUrl(loc) || loc.includes('about:blank') || loc.includes('banner') || loc.includes('sponsor') || loc.includes('ads') || docTitle.includes('ad')) {
-      return; // Do not run sniffer inside ad iframes
-    }
-  }
-
-  if (window.__STREAMGRABBER_INITIALIZED__) return;
-  window.__STREAMGRABBER_INITIALIZED__ = true;
-
-  const detectedUrls = new Set();
-  let cachedPoster = null;
-
   const KNOWN_AD_DOMAINS = [
     'trafficstars.com', 'tsyndicate.com', 'magsrv.com', 'exoclick.com',
     'traffichaus.com', 'trafficfactory.biz', 'ero-advertising.com',
@@ -50,6 +35,21 @@
     if (AD_URL_PATTERNS.some(p => lower.includes(p))) return true;
     return false;
   }
+
+  // Filter out ad iframes from polluting detected media
+  if (window.self !== window.top) {
+    const loc = (window.location.href || '').toLowerCase();
+    const docTitle = (document.title || '').toLowerCase();
+    if (isAdOrAnnounceUrl(loc) || loc.includes('about:blank') || loc.includes('banner') || loc.includes('sponsor') || loc.includes('ads') || docTitle.includes('ad')) {
+      return; // Do not run sniffer inside ad iframes
+    }
+  }
+
+  if (window.__STREAMGRABBER_INITIALIZED__) return;
+  window.__STREAMGRABBER_INITIALIZED__ = true;
+
+  const detectedUrls = new Set();
+  let cachedPoster = null;
 
   function detectQualityFromUrl(url, defaultQuality = 'Auto HD') {
     if (!url) return defaultQuality;
