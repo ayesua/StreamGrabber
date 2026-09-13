@@ -774,7 +774,7 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
       if (item.rotation && item.rotation !== 0 && ext === '.mp4') {
         startRotatedDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.rotation, downloadTabId);
       } else {
-        startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.size);
+        startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.size, downloadTabId);
       }
     }
   });
@@ -1079,7 +1079,7 @@ async function resolveFinalDirectUrl(rawUrl, referer) {
   return targetUrl;
 }
 
-async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, expectedSize) {
+async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, expectedSize, downloadTabId) {
   try {
     // 1. Resolve redirect so Chrome connects directly to the final media server with the Referer header
     const finalUrl = await resolveFinalDirectUrl(rawUrl, referer);
@@ -1116,22 +1116,47 @@ async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs
       } else {
         const err = chrome.runtime.lastError?.message || 'Direct download failed';
         console.warn('[StreamGrabber] chrome.downloads.download failed, trying fallback fetch:', err);
-        fetchFallbackDownload(finalUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle);
+        fetchFallbackDownload(finalUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
       }
     });
   } catch (err) {
     console.error('[StreamGrabber] Error starting download:', err);
-    fetchFallbackDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle);
+    fetchFallbackDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
   }
 }
 
-async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs, sendResponse, itemTitle) {
+async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs, sendResponse, itemTitle, tabId) {
   try {
-    const headers = referer ? { 'Referer': referer } : {};
-    const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const blob = await res.blob();
+    let blob = null;
+    try {
+      const headers = referer ? { 'Referer': referer } : {};
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      blob = await res.blob();
+    } catch (bgErr) {
+      // If background fetch returns HTTP 503 or CORS error, delegate to in-page content script
+      if (tabId) {
+        const inPageRes = await new Promise((resolve) => {
+          chrome.tabs.sendMessage(tabId, { action: 'PAGE_FETCH_BUFFER', url }, (r) => {
+            if (chrome.runtime.lastError || !r || !r.success || !r.base64) {
+              resolve(null);
+            } else {
+              resolve(r);
+            }
+          });
+        });
+        if (inPageRes && inPageRes.base64) {
+          const binary = atob(inPageRes.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          blob = new Blob([bytes], { type: 'video/mp4' });
+        } else {
+          throw bgErr;
+        }
+      } else {
+        throw bgErr;
+      }
+    }
     const blobKey = 'fallback_' + Date.now();
     await saveBlobToDB(blobKey, blob);
     await ensureOffscreenDocument();
