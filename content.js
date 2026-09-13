@@ -457,7 +457,9 @@
       }
 
       // Yandex Video / VK / OK / Generic JSON payload stream extraction
-      const yandexStreams = fullHtml.match(/["']?(?:hlsUrl|manifestUrl|video_src|stream_url|content_url|playback_url|fileUrl)["']?\s*[:=]\s*["']([^"']+\.(?:m3u8|mp4|webm)[^"']*)["']/gi);
+      const yandexStreams = fullHtml.match(/["']?(?:hlsUrl|manifestUrl|video_src|stream_url|content_url|playback_url|fileUrl|src|url)["']?\s*[:=]\s*["']([^"']+(?:yandex|vh-video|strm)[^"']*\.(?:m3u8|mp4|webm)[^"']*)["']/gi) ||
+                            fullHtml.match(/["'](https?:\/\/[^"']*(?:yandex|vh-video|strm)[^"']*\.(?:m3u8|mp4|webm)[^"']*)["']/gi) ||
+                            fullHtml.match(/["'](https?:\/\/[^"']*\.(?:m3u8|mp4)[^"']*)["']/gi);
       if (yandexStreams) {
         for (const str of yandexStreams) {
           const match = str.match(/["']([^"']+\.(?:m3u8|mp4|webm)[^"']*)["']/i);
@@ -896,10 +898,10 @@
     if (videos.length === 0) videos = rawVideos;
     if (videos.length === 0) return null;
 
-    const playing = videos.find(v => !v.paused && v.readyState >= 1 && (!v.duration || v.duration >= 30));
+    const playing = videos.find(v => !v.paused && v.readyState >= 1);
     if (playing) {
       const r = playing.getBoundingClientRect();
-      if (r.width >= 140 && r.height >= 90 && r.bottom > 40 && r.top < window.innerHeight - 40) {
+      if (r.width >= 80 && r.height >= 50) {
         return playing;
       }
     }
@@ -908,7 +910,7 @@
     let maxArea = 0;
     for (const v of videos) {
       const r = v.getBoundingClientRect();
-      if (r.width >= 140 && r.height >= 90 && r.bottom > 40 && r.top < window.innerHeight - 40) {
+      if (r.width >= 80 && r.height >= 50) {
         const area = r.width * r.height;
         if (area > maxArea) {
           maxArea = area;

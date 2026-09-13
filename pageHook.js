@@ -24,6 +24,29 @@
     } catch (e) {}
   }
 
+  // Intercept HTMLMediaElement.prototype.src to catch dynamic video sources loaded via JS (Yandex, VK, HLS.js, etc.)
+  try {
+    const origSrcDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src');
+    if (origSrcDesc && origSrcDesc.set) {
+      Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+        configurable: true,
+        enumerable: true,
+        get: origSrcDesc.get,
+        set: function (val) {
+          if (val && typeof val === 'string' && val.startsWith('http') && !val.includes('blob:')) {
+            broadcastStreamData({
+              url: val,
+              type: val.includes('.m3u8') ? 'HLS' : 'MP4',
+              quality: 'Auto HD',
+              title: document.title
+            });
+          }
+          return origSrcDesc.set.call(this, val);
+        }
+      });
+    }
+  } catch (e) {}
+
   // 1. XVideos & XNXX HTML5Player Ad-Disabling & Stream Sniffer Hook
   function hookXvideosPlayer(player) {
     if (!player) return;
