@@ -98,12 +98,12 @@ body {
 .brand-icon {
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #ff003c, #ff3366);
+  background: linear-gradient(135deg, #dc2626, #ef4444);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 14px rgba(255, 0, 60, 0.55);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
 }
 
 .brand-title {

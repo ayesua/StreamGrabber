@@ -184,17 +184,19 @@ Todos los archivos generados cumplen con las especificaciones exactas de Google 
    * Screenshot 4: [`screenshot_4_tracker_inspector_1280x800.jpg`](file:///c:/Users/yesua/PY/Browser/ExtremeShield/screenshot_4_tracker_inspector_1280x800.jpg)
    * Screenshot 5: [`screenshot_5_advanced_shields_1280x800.jpg`](file:///c:/Users/yesua/PY/Browser/ExtremeShield/screenshot_5_advanced_shields_1280x800.jpg)
 4. **Production Package:**
-   * [`ExtremeShield-v1.0.28.zip`](file:///c:/Users/yesua/PY/Browser/Extension/ExtremeShield-v1.0.28.zip)
+   * [`ExtremeShield-v1.0.29.zip`](file:///c:/Users/yesua/PY/Browser/Extension/ExtremeShield-v1.0.29.zip)
 
 ---
 
-## 🚀 7. Release Notes & Changelog (v1.0.28)
+## 🚀 7. Release Notes & Changelog (v1.0.29)
 
-* **NEW - History Trapping Defense**: Intercepts abusive `history.pushState` / `history.replaceState` flooding that attempts to hijack and break the browser's "Back" button, with full compatibility for legitimate Single Page Apps (YouTube, Twitter, Gmail).
-* **NEW - Deceptive Fullscreen Hijack Defense**: Overrides `Element.prototype.requestFullscreen` to block phishing and lockout scams while seamlessly permitting legitimate video playback and user-initiated fullscreen actions.
-* **NEW - Deep Shadow DOM Scanner**: Recursively inspects open shadow roots (`element.shadowRoot`) up to 3 levels deep to discover and neutralize hidden tracking pixels, scripts, and embedded overlays.
-* **NEW - Video Pre-Roll & VAST Defuser**: Intercepts VAST ad network calls with clean empty responses to permanently fix **Error Code: 224003** on JWPlayer and HTML5 players.
+* **NEW (v1.0.29) - Recommended Tools Hub**: Added dedicated StreamGrabber companion showcase in Settings (Tab 4B) for seamless video/HLS downloading.
+* **NEW (v1.0.29) - Brand Icon Polish**: Refined radiant red gradient (#dc2626 → #ef4444) with enhanced glow box-shadow.
+* **NEW (v1.0.28) - History Trapping Defense**: Intercepts abusive `history.pushState` / `history.replaceState` flooding that attempts to hijack and break the browser's "Back" button, with full compatibility for legitimate Single Page Apps (YouTube, Twitter, Gmail).
+* **NEW (v1.0.28) - Deceptive Fullscreen Hijack Defense**: Overrides `Element.prototype.requestFullscreen` to block phishing and lockout scams while seamlessly permitting legitimate video playback and user-initiated fullscreen actions.
+* **NEW (v1.0.28) - Deep Shadow DOM Scanner**: Recursively inspects open shadow roots (`element.shadowRoot`) up to 3 levels deep to discover and neutralize hidden tracking pixels, scripts, and embedded overlays.
+* **NEW (v1.0.28) - Video Pre-Roll & VAST Defuser**: Intercepts VAST ad network calls with clean empty responses to permanently fix **Error Code: 224003** on JWPlayer and HTML5 players.
 * **FIX - Scroll Lock Position Restoration**: Refined `unlockScroll()` to cleanly remove `position: fixed` without imposing forced `position: static !important` on site body elements, preserving sticky navigation bars and relative page layouts.
 * **FIX - Query Pattern Refinement**: Restricted `SUSPICIOUS_QUERY_PATTERNS` to target `landing_id=` and `landing_page_id=`, eliminating false positives on legitimate `?landing=...` web pages.
 * **FIX - JWPlayer Proxy Race Condition**: Wrapped `window.jw_player` and added `setupError` / `adError` event hooks to catch players instantiated prior to content script execution.
-* **BRAND - Radiant Red Brand Identity**: Full visual upgrade to bright red shield iconography (#ff003c / #ff3366) and updated high-resolution store promotional tiles and screenshots.
+* **BRAND - Radiant Red Brand Identity**: Full visual upgrade to bright red shield iconography and updated high-resolution store promotional tiles and screenshots.
