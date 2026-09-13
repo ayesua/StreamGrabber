@@ -704,12 +704,13 @@
         return resp.arrayBuffer();
       })
       .then(buffer => {
-        // Convert buffer to binary string / base64 for message passing
-        let binary = '';
+        // Convert buffer to base64 safely without stack overflow for large files
         const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(bytes[i]);
+        const CHUNK_SIZE = 0x8000; // 32KB chunks
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+          const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+          binary += String.fromCharCode.apply(null, chunk);
         }
         const base64 = btoa(binary);
         sendResponse({ success: true, base64, size: buffer.byteLength });

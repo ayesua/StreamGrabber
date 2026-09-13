@@ -1173,6 +1173,16 @@ async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs,
     } catch (bgErr) {
       // If background fetch returns HTTP 503 or CORS error, delegate to in-page content script
       if (tabId) {
+        const curState = activeDownloadsMap.get(downloadId);
+        if (curState) {
+          curState.status = 'downloading';
+          curState.progress = 30;
+          activeDownloadsMap.set(downloadId, curState);
+          chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: curState }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+        }
+
         const inPageRes = await new Promise((resolve) => {
           chrome.tabs.sendMessage(tabId, { action: 'PAGE_FETCH_BUFFER', url }, (r) => {
             if (chrome.runtime.lastError || !r || !r.success || !r.base64) {
@@ -1187,6 +1197,13 @@ async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs,
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
           blob = new Blob([bytes], { type: 'video/mp4' });
+          if (curState) {
+            curState.progress = 90;
+            activeDownloadsMap.set(downloadId, curState);
+            chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: curState }, () => {
+              if (chrome.runtime.lastError) {}
+            });
+          }
         } else {
           throw bgErr;
         }
