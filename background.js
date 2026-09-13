@@ -1132,7 +1132,44 @@ async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs,
       const headers = referer ? { 'Referer': referer } : {};
       const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      blob = await res.blob();
+
+      const contentLengthHeader = res.headers.get('content-length');
+      const totalBytes = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 0;
+      const reader = res.body.getReader();
+      const chunks = [];
+      let receivedBytes = 0;
+      let lastTime = Date.now();
+      let lastBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        receivedBytes += value.byteLength;
+
+        const now = Date.now();
+        const elapsed = (now - lastTime) / 1000;
+        if (elapsed >= 0.4) {
+          const speedBps = Math.max(0, (receivedBytes - lastBytes) / elapsed);
+          lastBytes = receivedBytes;
+          lastTime = now;
+          const progress = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : 50;
+
+          const curState = activeDownloadsMap.get(downloadId);
+          if (curState) {
+            curState.progress = progress;
+            curState.downloadedBytes = receivedBytes;
+            if (totalBytes > 0) curState.totalBytes = totalBytes;
+            curState.speedBps = speedBps;
+            activeDownloadsMap.set(downloadId, curState);
+            chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: curState }, () => {
+              if (chrome.runtime.lastError) {}
+            });
+          }
+        }
+      }
+
+      blob = new Blob(chunks, { type: 'video/mp4' });
     } catch (bgErr) {
       // If background fetch returns HTTP 503 or CORS error, delegate to in-page content script
       if (tabId) {
