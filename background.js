@@ -669,6 +669,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
 function handleStartDownload({ item, referer, downloadTabId, format }, callback) {
+  if (!item || !item.url) {
+    if (callback) callback({ success: false, error: 'Invalid media item' });
+    return;
+  }
+
+  // Strict check: Never download HTML / Web pages as video files
+  const lowerUrl = item.url.toLowerCase();
+  if (lowerUrl.match(/\.(html|htm|php|asp|aspx|jsp|shtml)(\?.*)?$/) || isAdOrAnnounceUrl(lowerUrl)) {
+    if (callback) callback({ success: false, error: 'Target URL is an HTML page or ad, not a valid video stream' });
+    return;
+  }
+
   const chosenFormat = (format || 'mp4').toLowerCase();
 
   chrome.storage.sync.get({ askFilename: false }, async (settings) => {
@@ -737,7 +749,10 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
       else if (item.type === 'WebM' && !chosenFormat) ext = '.webm';
       else if (item.type === 'FLV' && !chosenFormat) ext = '.flv';
 
-      const filename = `${sanitizedTitle}${ext}`;
+      let cleanBaseTitle = sanitizedTitle.replace(/\.(html|htm|php|asp|aspx|jsp|shtml)$/i, '').trim();
+      if (!cleanBaseTitle) cleanBaseTitle = 'video_completo';
+
+      const filename = `${cleanBaseTitle}${ext}`;
       const pageReferer = referer || item.pageUrl || '';
 
       const initialState = {
