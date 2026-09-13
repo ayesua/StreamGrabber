@@ -1,4 +1,4 @@
-# StreamGrabber: Chrome Web Store Submission & Metadata Guide (v3.3.0)
+# StreamGrabber: Chrome Web Store Submission & Metadata Guide (v3.4.7)
 
 ---
 
@@ -19,47 +19,59 @@
 ### 🇺🇸 English Listing Description
 
 ```markdown
-⚡ StreamGrabber: Fast Video, Audio & HLS (.m3u8) Downloader with Preview & Rotation
+⚡ StreamGrabber: Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation & Quality Selector
 
-StreamGrabber is a high-speed, modern media sniffer and stream downloader for Google Chrome. Seamlessly capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, and multi-resolution quality selection.
+StreamGrabber is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, and multi-resolution quality selection.
 
 ---
 
 ### 🚀 KEY FEATURES & CAPABILITIES
 
 🎬 Live In-Popup Preview & Orientation Rotation
-• Watch and verify video streams directly in the popup player before downloading.
-• Live Rotation Control: Rotate orientation (+90°, 180°, 270°, 0°) with 1 click using the top-right spinning arrow or toolbar.
-• Lossless MP4 Rotation: Embeds the selected orientation into the MP4 video track matrix without re-encoding quality loss!
+• Watch and verify video streams directly inside the popup player before downloading.
+• Live Rotation Controls: Rotate orientation (+90°, 180°, 270°, 0°) with 1 click using the top-right rotation icon or the toolbar.
+• Lossless MP4 Rotation: Seamlessly embeds your chosen orientation into the MP4 video track metadata without re-encoding quality loss!
 
 ⚡ Multi-Threaded HLS (.m3u8) & DASH Stream Engine
-• Downloads video segments concurrently using optimized parallel worker connections.
-• Full AES-128 cryptographic segment decryption and lossless assembly into MP4, MKV, or TS files.
-• Resolves Master Playlists and lets you pick your preferred bitrate/resolution (1080p Full HD, 720p HD, 480p SD).
-
-🛡️ Pre-Roll Ad & Announcement Bypass
-• Intelligent content sniffer filters out promotional clips, teasers, and pre-roll announcement ads.
-• Focuses exclusively on the authentic full-length main video stream.
+• Downloads video segments concurrently using parallel worker connections for blazing-fast downloads.
+• AES-128 cryptographic decryption and lossless assembly into MP4, MKV, or TS files.
+• Resolves Master Playlists with full bitrate and resolution selection (4K, 1080p Full HD, 720p HD, 480p SD).
 
 🎯 In-Page Floating Download Button
-• Sleek on-hover download button attached directly to HTML5 video players for effortless 1-click downloads.
-• Completely customizable in Settings (can be toggled on/off).
+• Sleek on-hover download button docked directly over HTML5 players and embedded web containers for instant 1-click downloads.
+• Docks seamlessly even on complex players with age-restriction disclaimers or overlay screens.
+• Fully customizable in Settings (can be toggled on or off at any time).
+
+📊 Smart Quality Dropdown & Size Ordering (NEW in v3.4)
+• Automatic Resolution Grouping: When a video is available in multiple resolutions, StreamGrabber neatly consolidates them into a single video card with an intuitive quality dropdown selector instead of cluttering your list.
+• Ordered from Largest to Smallest: Detected media items are automatically arranged from highest quality / largest file size to lowest for quick access.
+• Main Video Prioritization: Intelligently identifies and highlights the primary viewport player, discarding side thumbnails and hover preview clips.
+
+🌐 Advanced Portal & Embed Resolver (NEW in v3.4.7)
+• Full VK Video (vkvideo.ru & vk.com) support with dynamic stream resolution across React SPAs, age-restricted disclaimer overlays, HLS master playlists, and direct MP4 qualities (1080p, 720p, 480p, 360p, 240p).
+• Seamless support for Yandex Video preview players, Mail.ru embeds, and complex iframe video wrappers.
+• Dynamic SPA navigation tracking automatically detects new video streams as you browse without needing page reloads.
+
+🛡️ Smart Ad & Announcement Defense
+• Intelligent content filter removes promotional clips, teasers, and pre-roll announcement ads without false positives on legitimate player containers.
+• Always focuses on the authentic, full-length media stream.
 
 🎵 Audio MP3 Extractor & Direct Media Capture
-• Extract audio from any video stream and download as high-quality MP3 with a single click.
-• Full support for direct MP4, WebM, FLV, OGG, and AAC streams.
+• Extract audio from any video stream and download as high-fidelity MP3 with a single click.
+• Full native support for direct MP4, WebM, FLV, OGG, and AAC streams.
 
-✏️ Inline File Renaming & Customization
-• Rename videos directly in the popup or prompt before downloading.
-• Adjust concurrent download threads, minimum file size filters, and default formats in Settings.
+✏️ Inline Renaming & Customizable Download Prompts
+• Edit filenames directly in the popup cards before downloading.
+• Optional "Ask filename before downloading" modal prompt with instant preference sync.
+• Customize concurrent download threads, minimum file size filters, and default container formats in Settings.
 
 ---
 
 ### 🔒 100% FREE & PRIVACY FOCUSED
 
-• Zero Data Collection: We do not track, log, store, or sell your browsing history or downloaded files.
-• Local Processing: All media sniffing, segment decryption, and rotation are performed 100% locally in your browser.
-• Zero Paywalls: Every single feature is unlocked for everyone. Supported by voluntary community donations (Ko-fi, PayPal & Crypto).
+• Zero Data Collection: We do not track, collect, store, or sell your browsing history, personal data, or downloaded files.
+• Local Processing: All media sniffing, segment decryption, rotation, and file assembly are performed 100% locally on your computer.
+• Zero Paywalls: Every single feature is unlocked for everyone with no subscriptions. Supported by voluntary community donations (Ko-fi, PayPal & Crypto).
 
 *Note: In compliance with Google Chrome Web Store Developer Policies, downloading from YouTube is strictly not supported.*
 ```
@@ -69,46 +81,59 @@ StreamGrabber is a high-speed, modern media sniffer and stream downloader for Go
 ### 🇪🇸 Spanish Listing Description (Español)
 
 ```markdown
-⚡ StreamGrabber: Descargador Rápido de Videos, Audio y Streams HLS (.m3u8) con Previsualización y Rotación
+⚡ StreamGrabber: Descargador Rápido de Videos, Audio y Streams HLS (.m3u8) con Previsualización, Rotación y Selector de Calidad
 
-StreamGrabber es una potente y moderna extensión para detectar y descargar videos, audios y transmisiones HLS (.m3u8) y DASH (.mpd) en Google Chrome a máxima velocidad. Incluye reproductor de vista previa en vivo, rotación de orientación sin pérdida de calidad y selector de resolución.
+StreamGrabber es una extensión potente, ligera y ultrarrápida para detectar y descargar videos, audios y transmisiones HLS (.m3u8) y DASH (.mpd) en Google Chrome a máxima velocidad. Incluye reproductor de vista previa en vivo, rotación de orientación sin pérdida de calidad y selector inteligente de resolución.
 
 ---
 
 ### 🚀 CARACTERÍSTICAS PRINCIPALES
 
 🎬 Previsualización en Vivo y Rotación de Orientación
-• Mira y comprueba el video directamente en el reproductor del popup antes de iniciar la descarga.
-• Control de Rotación en Vivo: Gira la orientación (+90°, 180°, 270°, 0°) con un solo clic en la flecha giratoria superior o barra de orientación.
-• Rotación MP4 Sin Pérdida: Aplica la orientación en los metadatos del contenedor MP4 sin recodificar ni perder calidad.
+• Comprueba y reproduce el video directamente en la ventana emergente antes de iniciar la descarga.
+• Controles de Rotación en Vivo: Gira la orientación (+90°, 180°, 270°, 0°) con un solo clic en el icono giratorio o en la barra de herramientas.
+• Rotación MP4 Sin Pérdida: Aplica la orientación elegida directamente en los metadatos del archivo MP4 sin recodificar ni perder calidad de imagen.
 
-⚡ Motor de Descarga Multi-Hilo HLS (.m3u8) y DASH
-• Descarga segmentos de video en paralelo con conexiones optimizadas para máxima velocidad.
-• Soporte completo para descifrado AES-128 y ensamblado intacto en formatos MP4, MKV o TS.
-• Selector de Calidad: Elige entre 1080p Full HD, 720p HD, 480p SD o la mejor calidad disponible.
-
-🛡️ Filtro de Anuncios y Pre-rolls
-• Omite automáticamente los clips de anuncio iniciales y anuncios pre-roll para capturar únicamente el video completo auténtico.
+⚡ Motor Multi-Hilo HLS (.m3u8) y DASH
+• Descarga segmentos de video en paralelo con conexiones optimizadas para exprimir al máximo tu ancho de banda.
+• Descifrado criptográfico AES-128 y ensamblado intacto en formatos MP4, MKV o TS.
+• Detección de Listas Maestras con selección de resoluciones (4K, 1080p Full HD, 720p HD, 480p SD).
 
 🎯 Botón Flotante en Reproductores Web
-• Botón discreto integrado sobre los reproductores de video en páginas web para descargar en 1 clic.
-• Configurable en Opciones (activar o desactivar).
+• Botón elegante integrado sobre los reproductores HTML5 y contenedores web para descargar en 1 solo clic.
+• Se acopla perfectamente incluso en reproductores con avisos de advertencia o pantallas de confirmación de edad.
+• Totalmente configurable en Opciones (puedes activarlo o desactivarlo cuando desees).
+
+📊 Menú Desplegable de Calidades y Orden por Tamaño (NUEVO en v3.4)
+• Agrupación Inteligente: Si un video ofrece múltiples resoluciones, StreamGrabber las agrupa en una sola tarjeta con un práctico menú desplegable para elegir la calidad deseada en lugar de duplicar elementos en la lista.
+• Ordenado de Mayor a Menor: Los videos detectados se organizan automáticamente desde el tamaño más grande / mayor calidad hasta el menor.
+• Prioridad al Video Principal: Identifica el video central en pantalla y descarta previsualizaciones laterales y clips secundarios al pasar el ratón.
+
+🌐 Soporte Avanzado de Portales y Reproductores Embebidos (NUEVO en v3.4.7)
+• Compatibilidad total con VK Video (vkvideo.ru y vk.com) con resolución dinámica para aplicaciones React SPA, pantallas de advertencia de edad, listas HLS y calidades directas MP4 (1080p, 720p, 480p, 360p, 240p).
+• Soporte integrado para reproductores de Yandex Video, Mail.ru y reproductores embebidos en iframes.
+• Detección automática al navegar en plataformas SPA sin necesidad de recargar la página.
+
+🛡️ Filtro Inteligente de Anuncios y Pre-rolls
+• Omite automáticamente clips promocionales y anuncios pre-roll sin generar falsos positivos en los controles del reproductor original.
+• Captura exclusivamente la transmisión completa auténtica.
 
 🎵 Extractor de Audio MP3 y Formatos Directos
-• Extrae el audio de cualquier transmisión y guárdalo como MP3 de alta fidelidad.
+• Extrae el audio de cualquier video y guárdalo como MP3 de alta calidad con un solo clic.
 • Compatible con archivos directos MP4, WebM, FLV, AAC y OGG.
 
 ✏️ Renombrado Personalizado y Ajustes Avanzados
-• Edita el nombre del archivo en el popup o activa la confirmación antes de guardar.
-• Configura el número de conexiones simultáneas, filtros de tamaño mínimo y formato predeterminado.
+• Edita el nombre del archivo directamente en las tarjetas de la lista.
+• Ventana de confirmación opcional "Preguntar nombre antes de descargar" sincronizada al instante.
+• Ajusta conexiones simultáneas, filtros de tamaño mínimo y formato de guardado predeterminado en Opciones.
 
 ---
 
 ### 🔒 100% GRATIS Y CON TOTAL PRIVACIDAD
 
 • Cero Recopilación de Datos: No rastreamos, guardamos ni vendemos tu historial de navegación ni tus descargas.
-• Procesamiento 100% Local: Todo el análisis, descifrado y rotación se realiza localmente en tu navegador.
-• Sin Muros de Pago: Todas las funciones están desbloqueadas. Apoyado voluntariamente por la comunidad (Ko-fi, PayPal y Cripto).
+• Procesamiento 100% Local: Todo el análisis, descifrado, rotación y ensamblado se realiza localmente en tu ordenador.
+• Sin Muros de Pago: Todas las funciones están desbloqueadas para todos los usuarios. Proyecto apoyado voluntariamente por la comunidad (Ko-fi, PayPal y Cripto).
 
 *Nota: Por cumplimiento de las políticas de Chrome Web Store, la descarga desde YouTube no está soportada.*
 ```
