@@ -510,14 +510,17 @@
       const resources = window.performance.getEntriesByType('resource');
       resources.forEach(r => {
         const name = r.name;
-        if (name && (name.includes('.m3u8') || name.includes('.mpd'))) {
-          if (!isExcludedUrl(name)) {
-            reportMedia({
-              url: name,
-              quality: 'HD Stream',
-              type: detectTypeFromUrl(name),
-              poster: findVideoPoster()
-            });
+        if (name && typeof name === 'string') {
+          const lower = name.toLowerCase();
+          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('.mp4') || lower.includes('.webm') || lower.includes('/video/') || lower.includes('get-video') || lower.includes('strm.yandex')) {
+            if (!isExcludedUrl(name) && !isAdOrAnnounceUrl(name)) {
+              reportMedia({
+                url: name,
+                quality: detectQualityFromUrl(name, lower.includes('.m3u8') ? 'HD Stream' : 'Auto HD'),
+                type: detectTypeFromUrl(name),
+                poster: findVideoPoster()
+              });
+            }
           }
         }
       });

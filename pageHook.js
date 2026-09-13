@@ -47,6 +47,49 @@
     }
   } catch (e) {}
 
+  // Intercept window.fetch to sniff dynamic Yandex/VK stream API responses
+  try {
+    const origFetch = window.fetch;
+    if (origFetch) {
+      window.fetch = function (input, init) {
+        const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+        if (url && typeof url === 'string') {
+          const lower = url.toLowerCase();
+          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('get-video') || (lower.includes('.mp4') && !lower.includes('trailer'))) {
+            broadcastStreamData({
+              url: url,
+              type: lower.includes('.m3u8') ? 'HLS' : 'MP4',
+              quality: 'Auto HD',
+              title: document.title
+            });
+          }
+        }
+        return origFetch.apply(this, arguments);
+      };
+    }
+  } catch (e) {}
+
+  // Intercept XMLHttpRequest to sniff video stream URLs
+  try {
+    const origOpen = XMLHttpRequest.prototype.open;
+    if (origOpen) {
+      XMLHttpRequest.prototype.open = function (method, url) {
+        if (url && typeof url === 'string') {
+          const lower = url.toLowerCase();
+          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('get-video') || (lower.includes('.mp4') && !lower.includes('trailer'))) {
+            broadcastStreamData({
+              url: url,
+              type: lower.includes('.m3u8') ? 'HLS' : 'MP4',
+              quality: 'Auto HD',
+              title: document.title
+            });
+          }
+        }
+        return origOpen.apply(this, arguments);
+      };
+    }
+  } catch (e) {}
+
   // 1. XVideos & XNXX HTML5Player Ad-Disabling & Stream Sniffer Hook
   function hookXvideosPlayer(player) {
     if (!player) return;
