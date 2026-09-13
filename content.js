@@ -456,18 +456,34 @@
         });
       }
 
-      const previewVidMatch = fullHtml.match(/["']videoPreview["']\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
-      if (previewVidMatch && previewVidMatch[1] && !isExcludedUrl(previewVidMatch[1])) {
-        let u = previewVidMatch[1].replace(/\\/g, '');
-        if (u.startsWith('//')) u = location.protocol + u;
-        else if (u.startsWith('/')) u = location.origin + u;
-        reportMedia({
-          url: u,
-          quality: detectQualityFromUrl(u, 'Video Preview (MP4)'),
-          type: 'MP4',
-          poster: poster
-        });
+      // Yandex Video / VK / OK / Generic JSON payload stream extraction
+      const yandexStreams = fullHtml.match(/["']?(?:hlsUrl|manifestUrl|video_src|stream_url|content_url|playback_url|fileUrl)["']?\s*[:=]\s*["']([^"']+\.(?:m3u8|mp4|webm)[^"']*)["']/gi);
+      if (yandexStreams) {
+        for (const str of yandexStreams) {
+          const match = str.match(/["']([^"']+\.(?:m3u8|mp4|webm)[^"']*)["']/i);
+          if (match && match[1]) {
+            let u = match[1].replace(/\\/g, '');
+            if (u.startsWith('//')) u = location.protocol + u;
+            if (!isExcludedUrl(u) && !isAdOrAnnounceUrl(u)) {
+              reportMedia({
+                url: u,
+                quality: detectQualityFromUrl(u, u.includes('.m3u8') ? 'HD Stream' : 'Auto HD'),
+                type: detectTypeFromUrl(u),
+                poster: poster
+              });
+            }
+          }
+        }
       }
+
+      // Scan dynamic iframe src attributes for video embed players
+      const iframes = document.querySelectorAll('iframe[src*="video"], iframe[src*="embed"], iframe[src*="player"], iframe[src*="yandex"]');
+      iframes.forEach(iframe => {
+        const src = iframe.src || iframe.getAttribute('data-src');
+        if (src && src.startsWith('http') && !isExcludedUrl(src)) {
+          // Send request to scan iframe target if accessible
+        }
+      });
     } catch (e) {}
   }
 

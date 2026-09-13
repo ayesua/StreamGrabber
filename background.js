@@ -450,8 +450,8 @@ chrome.webRequest.onHeadersReceived.addListener(
     const isMediaUrl = url.match(/\.(m3u8|mp4|webm|mpd|flv|mp3|aac|m4a)(\?.*)?$/i);
 
     if (isMediaContent || isMediaUrl) {
-      // Ignore tiny fragments under 250KB unless it's an m3u8 playlist
-      if (contentLength > 0 && contentLength < 250 * 1024 && !url.includes('.m3u8')) {
+      // Ignore tiny fragments under 100KB unless it's an m3u8 playlist
+      if (contentLength > 0 && contentLength < 100 * 1024 && !url.includes('.m3u8')) {
         return;
       }
 
