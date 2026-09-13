@@ -29,10 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoDetectInput.value = items.autoDetect.toString();
   });
 
-  // Save options
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-
+  function saveOptions(showToast = true) {
     const askFilename = askFilenameInput ? askFilenameInput.checked : false;
     const showFloatingBtn = showFloatingBtnInput ? showFloatingBtnInput.checked : true;
     const minSizeKB = parseInt(minSizeInput.value, 10) || 100;
@@ -48,11 +45,39 @@ document.addEventListener('DOMContentLoaded', () => {
       defaultFormat,
       autoDetect
     }, () => {
-      toast.style.display = 'block';
-      setTimeout(() => {
-        toast.style.display = 'none';
-      }, 2500);
+      if (showToast && toast) {
+        toast.style.display = 'block';
+        setTimeout(() => {
+          toast.style.display = 'none';
+        }, 2000);
+      }
     });
+  }
+
+  // Auto-save immediately when user toggles or changes any preference
+  if (askFilenameInput) {
+    askFilenameInput.addEventListener('change', () => saveOptions(true));
+  }
+  if (showFloatingBtnInput) {
+    showFloatingBtnInput.addEventListener('change', () => saveOptions(true));
+  }
+  if (minSizeInput) {
+    minSizeInput.addEventListener('change', () => saveOptions(true));
+  }
+  if (maxThreadsInput) {
+    maxThreadsInput.addEventListener('change', () => saveOptions(true));
+  }
+  if (defaultFormatInput) {
+    defaultFormatInput.addEventListener('change', () => saveOptions(true));
+  }
+  if (autoDetectInput) {
+    autoDetectInput.addEventListener('change', () => saveOptions(true));
+  }
+
+  // Also save on form submit
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveOptions(true);
   });
 
   // 1-Click Copy for Crypto Addresses on Options page

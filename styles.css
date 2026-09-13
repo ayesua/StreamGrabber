@@ -853,6 +853,86 @@ body {
   border-color: var(--vdh-blue);
 }
 
+/* Modal Overlay for In-Popup Modals (Filename, Preview, Feedback, Donations) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-dialog {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  padding: 18px 20px;
+  width: 100%;
+  max-width: 380px;
+  border: 1px solid var(--vdh-border);
+  animation: modalPop 0.16s ease-out;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--vdh-text);
+  margin-bottom: 4px;
+}
+
+.modal-desc {
+  font-size: 12px;
+  color: var(--vdh-text-muted);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  border: 1.5px solid var(--vdh-blue);
+  border-radius: 8px;
+  outline: none;
+  margin-bottom: 16px;
+  font-family: var(--font-main);
+  background: #f8fafc;
+  color: var(--vdh-text);
+}
+
+.modal-input:focus {
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 135, 205, 0.2);
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-actions .btn-primary,
+.modal-actions .btn-secondary {
+  padding: 8px 16px;
+  font-size: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* Preview Modal & Player */
 .preview-dialog {
   max-width: 440px;

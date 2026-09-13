@@ -716,7 +716,7 @@ export class HLSEngine {
         chrome.downloads.download({
           url: downloadUrl,
           filename: filename,
-          saveAs: Boolean(options.saveAs)
+          saveAs: Boolean(saveAs)
         }, (downloadItemId) => {
           if (chrome.runtime.lastError) {
             updateState({ status: 'error', error: chrome.runtime.lastError.message });

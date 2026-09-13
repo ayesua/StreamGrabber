@@ -795,6 +795,14 @@ function promptForFilename(defaultTitle, callback) {
     btnConfirm.onclick = null;
     btnCancel.onclick = null;
     input.onkeydown = null;
+    modal.onclick = null;
+  };
+
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      cleanup();
+      callback(null);
+    }
   };
 
   btnConfirm.onclick = () => {
