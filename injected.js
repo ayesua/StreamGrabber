@@ -129,7 +129,8 @@
     'ext_click_id=',
     'subsource=',
     'prelanding=',
-    'landing=',
+    'landing_id=',
+    'landing_page_id=',
     'subid_',
     'track=',
     'smartpopbucketid=',
@@ -796,13 +797,30 @@
           }
           const res = origSetup.apply(this, arguments);
           if (typeof player.on === 'function') {
-            player.on('adError', () => {
-              console.warn('[ExtremeShield] Handled JWPlayer adError, resuming main content');
-              try { player.play(); } catch (_) {}
-            });
+            try {
+              player.on('adError', () => {
+                console.warn('[ExtremeShield] Handled JWPlayer adError, resuming main content');
+                try { player.play(); } catch (_) {}
+              });
+              player.on('setupError', (e) => {
+                console.warn('[ExtremeShield] Handled JWPlayer setupError:', e);
+              });
+            } catch (_) {}
           }
           return res;
         };
+      }
+
+      if (typeof player.on === 'function') {
+        try {
+          player.on('adError', () => {
+            console.warn('[ExtremeShield] Handled JWPlayer adError fallback, resuming main content');
+            try { player.play(); } catch (_) {}
+          });
+          player.on('setupError', (e) => {
+            console.warn('[ExtremeShield] Handled JWPlayer setupError fallback:', e);
+          });
+        } catch (_) {}
       }
 
       if (typeof player.playAd === 'function') {
@@ -816,6 +834,14 @@
     }
 
     let _jwplayer = window.jwplayer;
+    if (_jwplayer && typeof _jwplayer === 'function') {
+      try {
+        if (typeof _jwplayer.key === 'string') {
+          // If already instantiated, wrap existing players
+        }
+      } catch (_) {}
+    }
+
     function jwPlayerProxy(target) {
       if (typeof _jwplayer !== 'function') return undefined;
       const p = _jwplayer.apply(this, arguments);
@@ -843,6 +869,17 @@
     });
 
     // 3. bdsmx-porn & Tube Specific Player & Ad Globals
+    if (window.jw_player) wrapJWPlayerInstance(window.jw_player);
+    let _jw_player = window.jw_player;
+    Object.defineProperty(window, 'jw_player', {
+      get: () => _jw_player,
+      set: (p) => {
+        _jw_player = wrapJWPlayerInstance(p);
+      },
+      configurable: true
+    });
+
+    if (window.pl3748) wrapJWPlayerInstance(window.pl3748);
     let _pl3748 = window.pl3748;
     Object.defineProperty(window, 'pl3748', {
       get: () => _pl3748,
@@ -1087,6 +1124,91 @@
       },
       configurable: true
     });
+  } catch (_) {}
+
+  /* ==========================================================================
+     3E. HISTORY TRAPPING & BACK-BUTTON HIJACK DEFENSE
+     ========================================================================== */
+  try {
+    const origPushState = history.pushState;
+    const origReplaceState = history.replaceState;
+    let pushHistoryTimestamps = [];
+
+    history.pushState = function (state, title, url) {
+      if (!config.whitelisted && config.blockRedirects) {
+        const now = Date.now();
+        pushHistoryTimestamps = pushHistoryTimestamps.filter(t => (now - t) < 1000);
+
+        if (url && typeof url === 'string' && isTrackerOrRedirectUrl(url)) {
+          console.warn('[ExtremeShield] Blocked suspicious history.pushState URL:', url);
+          notifyBlocked('popup', { url: String(url), detail: 'Malicious history state push blocked' });
+          return;
+        }
+
+        // Defuse rapid burst without user interaction (>3 in 1s) or flood (>8 in 1s)
+        if ((pushHistoryTimestamps.length >= 3 && !isRecentUserAction()) || pushHistoryTimestamps.length >= 8) {
+          console.warn('[ExtremeShield] Blocked history trapping loop (pushState flood):', url);
+          notifyBlocked('annoyance', { detail: 'History back-button trapping defused' });
+          return;
+        }
+
+        pushHistoryTimestamps.push(now);
+      }
+      return origPushState.apply(this, arguments);
+    };
+
+    history.replaceState = function (state, title, url) {
+      if (!config.whitelisted && config.blockRedirects) {
+        if (url && typeof url === 'string' && isTrackerOrRedirectUrl(url)) {
+          console.warn('[ExtremeShield] Blocked suspicious history.replaceState URL:', url);
+          notifyBlocked('popup', { url: String(url), detail: 'Malicious history state replace blocked' });
+          return;
+        }
+      }
+      return origReplaceState.apply(this, arguments);
+    };
+  } catch (_) {}
+
+  /* ==========================================================================
+     3F. FULLSCREEN HIJACK DEFENSE (Phishing & Lockout Shield)
+     ========================================================================== */
+  try {
+    const origRequestFullscreen = Element.prototype.requestFullscreen ||
+                                  Element.prototype.webkitRequestFullscreen ||
+                                  Element.prototype.mozRequestFullScreen ||
+                                  Element.prototype.msRequestFullscreen;
+
+    if (typeof origRequestFullscreen === 'function') {
+      const wrappedRequestFullscreen = function () {
+        if (!config.whitelisted && config.blockPopups) {
+          const isVideoOrEmbed = this.tagName === 'VIDEO' ||
+                                 this.tagName === 'IFRAME' ||
+                                 isMediaElement(this) ||
+                                 Boolean(this.querySelector && this.querySelector('video, audio, iframe'));
+          const hasUserGesture = isRecentUserAction();
+
+          if (!isVideoOrEmbed && !hasUserGesture) {
+            console.warn('[ExtremeShield] Suppressed unauthorized fullscreen hijack attempt on:', this.tagName);
+            notifyBlocked('annoyance', { detail: 'Fullscreen hijack attempt blocked' });
+            return Promise.reject(new DOMException('Fullscreen request suppressed by ExtremeShield', 'NotAllowedError'));
+          }
+        }
+        return origRequestFullscreen.apply(this, arguments);
+      };
+
+      if (Element.prototype.requestFullscreen) {
+        Element.prototype.requestFullscreen = wrappedRequestFullscreen;
+      }
+      if (Element.prototype.webkitRequestFullscreen) {
+        Element.prototype.webkitRequestFullscreen = wrappedRequestFullscreen;
+      }
+      if (Element.prototype.mozRequestFullScreen) {
+        Element.prototype.mozRequestFullScreen = wrappedRequestFullscreen;
+      }
+      if (Element.prototype.msRequestFullscreen) {
+        Element.prototype.msRequestFullscreen = wrappedRequestFullscreen;
+      }
+    }
   } catch (_) {}
 
   /* ==========================================================================

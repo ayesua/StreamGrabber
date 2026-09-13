@@ -575,5 +575,4 @@ html:not([data-extremeshield-whitelisted="true"])[class*="scroll-lock"],
 body:not([data-extremeshield-whitelisted="true"])[class*="scroll-lock"] {
   overflow: auto !important;
   overflow-y: auto !important;
-  position: static !important;
 }

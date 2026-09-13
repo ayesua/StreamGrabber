@@ -445,6 +445,58 @@
       }
     }
 
+    // 3B. Shadow DOM Deep Scanner (Inspects open shadow roots recursively up to depth 3)
+    function scanShadowRoots(root, depth = 0) {
+      if (!root || depth > 2 || !root.querySelectorAll) return;
+      try {
+        const potentialHosts = root.querySelectorAll('*');
+        for (let i = 0; i < potentialHosts.length; i++) {
+          const host = potentialHosts[i];
+          const shadow = host.shadowRoot;
+          if (shadow && !processedNodes.has(shadow)) {
+            processedNodes.add(shadow);
+
+            // Scan trackers inside shadow root
+            if (settings.blockTrackers) {
+              const shadowTrackers = shadow.querySelectorAll('script[src], img[src], iframe[src]');
+              for (let j = 0; j < shadowTrackers.length; j++) {
+                const el = shadowTrackers[j];
+                if (processedNodes.has(el)) continue;
+                processedNodes.add(el);
+                const src = el.src || '';
+                if (src && TRACKER_DOM_PATTERNS.some(pat => src.toLowerCase().includes(pat))) {
+                  safeSendMessage({
+                    action: 'recordBlockedEvent',
+                    data: { type: 'tracker', url: src, domain: hostname, timestamp: Date.now() }
+                  });
+                }
+              }
+            }
+
+            // Scan cookie/overlay banners inside shadow root
+            if (settings.dismissCookieBanners) {
+              for (const selector of COOKIE_BANNER_SELECTORS) {
+                const banner = shadow.querySelector(selector);
+                if (banner && banner.style.display !== 'none') {
+                  banner.style.setProperty('display', 'none', 'important');
+                  banner.setAttribute('aria-hidden', 'true');
+                  safeSendMessage({
+                    action: 'recordBlockedEvent',
+                    data: { type: 'annoyance', url: selector, domain: hostname, timestamp: Date.now() }
+                  });
+                }
+              }
+            }
+
+            // Recurse deeper if needed
+            scanShadowRoots(shadow, depth + 1);
+          }
+        }
+      } catch (_) {}
+    }
+
+    scanShadowRoots(targetRoot, 0);
+
     // 4. Scroll Lock Recovery (Unlocks html and body overflow)
     unlockScroll();
 
@@ -584,7 +636,7 @@
         body.style.setProperty('overflow-y', 'auto', 'important');
       }
       if (body.style.position === 'fixed') {
-        body.style.setProperty('position', 'static', 'important');
+        body.style.removeProperty('position');
       }
       for (const cls of lockClasses) {
         if (body.classList.contains(cls)) body.classList.remove(cls);

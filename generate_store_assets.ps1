@@ -1,7 +1,10 @@
-﻿Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Drawing
 
-$baseDir = "c:\Users\yesua\PY\Browser\ExtremeShield"
-$highResIconPath = Join-Path $baseDir "icon_high_res.jpg"
+$baseDir = "c:\Users\yesua\PY\Browser\Extension"
+$highResIconPath = Join-Path $baseDir "icon_high_res.png"
+if (-not (Test-Path $highResIconPath)) {
+    $highResIconPath = Join-Path $baseDir "icon_high_res.jpg"
+}
 $highResIcon = if (Test-Path $highResIconPath) { [System.Drawing.Image]::FromFile($highResIconPath) } else { $null }
 
 function Save-StoreImage($bitmap, $baseName) {
@@ -24,28 +27,31 @@ function Save-StoreImage($bitmap, $baseName) {
     Write-Host "[OK] Saved: $baseName.jpg and $baseName.png" -ForegroundColor Green
 }
 
-# Common Color Palette
-$colBgDark = [System.Drawing.Color]::FromArgb(9, 13, 22)
-$colBgCard = [System.Drawing.Color]::FromArgb(18, 26, 42)
-$colEmerald = [System.Drawing.Color]::FromArgb(16, 185, 129)
+# Red Theme & Contrast Palette
+$colBgDark = [System.Drawing.Color]::FromArgb(9, 12, 20)
+$colBgCard = [System.Drawing.Color]::FromArgb(17, 24, 39)
+$colRed = [System.Drawing.Color]::FromArgb(255, 0, 60)         # #ff003c
+$colRedBright = [System.Drawing.Color]::FromArgb(255, 51, 102)  # #ff3366
 $colCyan = [System.Drawing.Color]::FromArgb(6, 182, 212)
 $colAmber = [System.Drawing.Color]::FromArgb(245, 158, 11)
-$colRose = [System.Drawing.Color]::FromArgb(244, 63, 94)
+$colEmerald = [System.Drawing.Color]::FromArgb(16, 185, 129)
 $colWhite = [System.Drawing.Color]::FromArgb(248, 250, 252)
-$colGray = [System.Drawing.Color]::FromArgb(148, 163, 184)
-$colMuted = [System.Drawing.Color]::FromArgb(100, 116, 139)
+$colGray = [System.Drawing.Color]::FromArgb(156, 163, 175)
+$colMuted = [System.Drawing.Color]::FromArgb(107, 114, 128)
 
 $brushWhite = New-Object System.Drawing.SolidBrush($colWhite)
-$brushEmerald = New-Object System.Drawing.SolidBrush($colEmerald)
+$brushRed = New-Object System.Drawing.SolidBrush($colRed)
+$brushRedBright = New-Object System.Drawing.SolidBrush($colRedBright)
 $brushCyan = New-Object System.Drawing.SolidBrush($colCyan)
 $brushAmber = New-Object System.Drawing.SolidBrush($colAmber)
-$brushRose = New-Object System.Drawing.SolidBrush($colRose)
+$brushEmerald = New-Object System.Drawing.SolidBrush($colEmerald)
 $brushGray = New-Object System.Drawing.SolidBrush($colGray)
 $brushMuted = New-Object System.Drawing.SolidBrush($colMuted)
 
-$penEmerald = New-Object System.Drawing.Pen($colEmerald, 2)
+$penRed = New-Object System.Drawing.Pen($colRed, 2)
+$penRedBright = New-Object System.Drawing.Pen($colRedBright, 2)
 $penCyan = New-Object System.Drawing.Pen($colCyan, 2)
-$penCard = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(40, 55, 80), 1.5)
+$penCard = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(45, 30, 45), 1.5)
 
 # =============================================================================
 # 1. SMALL PROMO TILE (440x280)
@@ -61,38 +67,38 @@ $bgBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
     (New-Object System.Drawing.Point(0, 0)),
     (New-Object System.Drawing.Point($w, $h)),
     $colBgDark,
-    [System.Drawing.Color]::FromArgb(15, 28, 48)
+    [System.Drawing.Color]::FromArgb(24, 14, 24)
 )
 $g.FillRectangle($bgBrush, 0, 0, $w, $h)
 
-$glowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(25, 16, 185, 129))
-$g.FillEllipse($glowBrush, -40, -40, 180, 180)
-$g.FillEllipse($glowBrush, ($w - 140), ($h - 140), 180, 180)
-$g.DrawRectangle($penEmerald, 1, 1, ($w - 2), ($h - 2))
+$glowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 255, 0, 60))
+$g.FillEllipse($glowBrush, -40, -40, 200, 200)
+$g.FillEllipse($glowBrush, ($w - 140), ($h - 140), 200, 200)
+$g.DrawRectangle($penRed, 1, 1, ($w - 2), ($h - 2))
 
 if ($highResIcon) {
-    $iconRect = New-Object System.Drawing.Rectangle(24, 40, 84, 84)
+    $iconRect = New-Object System.Drawing.Rectangle(24, 32, 80, 80)
     $g.DrawImage($highResIcon, $iconRect)
-    $g.DrawRectangle($penCyan, $iconRect)
 }
 
 $fontTitle = New-Object System.Drawing.Font("Segoe UI", 21, [System.Drawing.FontStyle]::Bold)
-$fontSub = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-$fontBadge = New-Object System.Drawing.Font("Segoe UI", 8.5, [System.Drawing.FontStyle]::Bold)
-$fontDesc = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
+$fontSub = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Bold)
+$fontBadge = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Bold)
+$fontDesc = New-Object System.Drawing.Font("Segoe UI", 8.5, [System.Drawing.FontStyle]::Regular)
 
-$g.DrawString("ExtremeShield", $fontTitle, $brushWhite, 122, 40)
+$g.DrawString("ExtremeShield", $fontTitle, $brushWhite, 116, 32)
 
-$badgeRect = New-Object System.Drawing.Rectangle(124, 82, 195, 22)
-$badgeBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 16, 185, 129))
+$badgeRect = New-Object System.Drawing.Rectangle(118, 74, 235, 22)
+$badgeBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(45, 255, 0, 60))
 $g.FillRectangle($badgeBg, $badgeRect)
-$g.DrawRectangle($penEmerald, $badgeRect)
-$g.DrawString("TOP SECURITY PRIVACY ARMOR", $fontBadge, $brushEmerald, 127, 85)
+$g.DrawRectangle($penRed, $badgeRect)
+$g.DrawString("EXTREME SECURITY & PRIVACY ARMOR", $fontBadge, $brushRedBright, 122, 77)
 
-$g.DrawString("🚫 Anti-Popups & Popunders", $fontSub, $brushWhite, 24, 144)
-$g.DrawString("🕵️ Anti-Tracking & Fingerprint Spoofing", $fontSub, $brushCyan, 24, 172)
-$g.DrawString("⚡ Core Element Zapper (Alt+Shift+Z)", $fontSub, $brushEmerald, 24, 200)
-$g.DrawString("100% Free • Manifest V3 • Zero Telemetry", $fontDesc, $brushGray, 24, 242)
+$g.DrawString("Anti-Popups, Popunders & Fullscreen Hijack", $fontSub, $brushWhite, 24, 130)
+$g.DrawString("Anti-Redirect & History Trapping Defense", $fontSub, $brushCyan, 24, 156)
+$g.DrawString("Video Pre-roll & VAST Defuser (Error 224003)", $fontSub, $brushRedBright, 24, 182)
+$g.DrawString("Anti-Tracking & Deep Shadow DOM Scanner", $fontSub, $brushEmerald, 24, 208)
+$g.DrawString("100% Free - Manifest V3 - Zero Telemetry - Alt+Shift+Z", $fontDesc, $brushGray, 24, 245)
 
 $g.Dispose()
 Save-StoreImage $bmp "small_promo_tile_440x280"
@@ -111,40 +117,39 @@ $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
 $bgBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
     (New-Object System.Drawing.Point(0, 0)),
     (New-Object System.Drawing.Point($w, $h)),
-    [System.Drawing.Color]::FromArgb(7, 10, 18),
-    [System.Drawing.Color]::FromArgb(15, 23, 42)
+    [System.Drawing.Color]::FromArgb(8, 10, 18),
+    [System.Drawing.Color]::FromArgb(26, 12, 22)
 )
 $g.FillRectangle($bgBrush, 0, 0, $w, $h)
 
-$glowBrush1 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(30, 16, 185, 129))
-$glowBrush2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(25, 6, 182, 212))
-$g.FillEllipse($glowBrush1, -100, -100, 450, 450)
-$g.FillEllipse($glowBrush2, ($w - 350), ($h - 350), 500, 500)
+$glowBrush1 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(40, 255, 0, 60))
+$glowBrush2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(30, 255, 51, 102))
+$g.FillEllipse($glowBrush1, -120, -120, 500, 500)
+$g.FillEllipse($glowBrush2, ($w - 380), ($h - 380), 550, 550)
 
-$borderPen3 = New-Object System.Drawing.Pen($colEmerald, 3)
+$borderPen3 = New-Object System.Drawing.Pen($colRed, 3)
 $g.DrawRectangle($borderPen3, 2, 2, ($w - 4), ($h - 4))
 
 if ($highResIcon) {
-    $iconRect = New-Object System.Drawing.Rectangle(80, 75, 150, 150)
+    $iconRect = New-Object System.Drawing.Rectangle(80, 65, 160, 160)
     $g.DrawImage($highResIcon, $iconRect)
-    $g.DrawRectangle($borderPen3, $iconRect)
 }
 
 $fontHero = New-Object System.Drawing.Font("Segoe UI", 42, [System.Drawing.FontStyle]::Bold)
 $fontTagline = New-Object System.Drawing.Font("Segoe UI", 18, [System.Drawing.FontStyle]::Bold)
-$fontCardTitle = New-Object System.Drawing.Font("Segoe UI", 13.5, [System.Drawing.FontStyle]::Bold)
-$fontCardDesc = New-Object System.Drawing.Font("Segoe UI", 10.5, [System.Drawing.FontStyle]::Regular)
+$fontCardTitle = New-Object System.Drawing.Font("Segoe UI", 13, [System.Drawing.FontStyle]::Bold)
+$fontCardDesc = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Regular)
 $fontPill = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
 
-$g.DrawString("ExtremeShield", $fontHero, $brushWhite, 260, 75)
-$g.DrawString("Ultimate Tracker, Popup & Fingerprint Defense", $fontTagline, $brushEmerald, 265, 145)
-$g.DrawString("Combining the power of uBlock, Privacy Badger & Ghostery in pure Manifest V3 speed", $fontCardDesc, $brushGray, 265, 185)
+$g.DrawString("ExtremeShield", $fontHero, $brushWhite, 265, 65)
+$g.DrawString("The Ultimate Tracker, Popup & Privacy Armor", $fontTagline, $brushRedBright, 270, 138)
+$g.DrawString("Pure Manifest V3 Speed - Zero Paywalls - Zero Telemetry - 100% Local Processing", $fontCardDesc, $brushGray, 272, 178)
 
 $cards = @(
-    @{ title = "🚫 Anti-Popups & Popunders"; desc = "Intercepts 100% of unprompted window spawns & synthetic click exploits."; col = $colEmerald },
-    @{ title = "🔀 Anti-Redirect Shield"; desc = "Neutralizes timer-based redirects and background tab-under hijacks."; col = $colCyan },
-    @{ title = "🕵️ Fingerprint Spoofing"; desc = "Deterministic noise injection on Canvas 2D & AudioContext APIs."; col = $colAmber },
-    @{ title = "⚡ Core Element Zapper"; desc = "Point, click and vaporize annoying banners permanently with laser UI."; col = $colEmerald }
+    @{ title = "Anti-Popups & Fullscreen"; desc = "Intercepts unprompted popups, popunders, and deceptive full-screen browser traps."; col = $colRedBright },
+    @{ title = "Anti-Redirect & History Trap"; desc = "Neutralizes timer-based redirects and history.pushState loops trapping back navigation."; col = $colCyan },
+    @{ title = "Video & VAST Defuser"; desc = "Eliminates Error 224003 on JWPlayer/HTML5 and defuses pre-roll video ad loops."; col = $colAmber },
+    @{ title = "Shadow DOM Tracker Scan"; desc = "Deep recursive inspection of open shadow roots plus Canvas & Audio noise spoofing."; col = $colEmerald }
 )
 
 $cardW = 285
@@ -164,26 +169,26 @@ for ($i = 0; $i -lt $cards.Count; $i++) {
     $g.DrawRectangle($cBorder, $cRect)
     
     $cTitleBrush = New-Object System.Drawing.SolidBrush($cards[$i].col)
-    $g.DrawString($cards[$i].title, $fontCardTitle, $cTitleBrush, ($cx + 14), ($cardY + 14))
+    $g.DrawString($cards[$i].title, $fontCardTitle, $cTitleBrush, ($cx + 12), ($cardY + 14))
     
-    $rectText = New-Object System.Drawing.RectangleF([float]($cx + 14), [float]($cardY + 48), [float]($cardW - 28), [float]($cardH - 58))
+    $rectText = New-Object System.Drawing.RectangleF([float]($cx + 12), [float]($cardY + 46), [float]($cardW - 24), [float]($cardH - 54))
     $g.DrawString($cards[$i].desc, $fontCardDesc, $brushGray, $rectText)
 }
 
-$p1 = New-Object System.Drawing.Rectangle(1050, 75, 270, 36)
-$pBg1 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 16, 185, 129))
+$p1 = New-Object System.Drawing.Rectangle(1050, 68, 270, 36)
+$pBg1 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(45, 255, 0, 60))
 $g.FillRectangle($pBg1, $p1)
-$g.DrawRectangle($penEmerald, $p1)
-$g.DrawString("🛡️ 100% FREE & ZERO-LOG", $fontPill, $brushEmerald, 1065, 82)
+$g.DrawRectangle($penRed, $p1)
+$g.DrawString("100% FREE & ZERO-LOG", $fontPill, $brushRedBright, 1075, 75)
 
-$p2 = New-Object System.Drawing.Rectangle(1050, 125, 270, 36)
-$pBg2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 6, 182, 212))
+$p2 = New-Object System.Drawing.Rectangle(1050, 118, 270, 36)
+$pBg2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(40, 6, 182, 212))
 $g.FillRectangle($pBg2, $p2)
 $penCyan = New-Object System.Drawing.Pen($colCyan, 1.5)
 $g.DrawRectangle($penCyan, $p2)
-$g.DrawString("⚡ MANIFEST V3 HIGH SPEED", $fontPill, $brushCyan, 1065, 132)
+$g.DrawString("MANIFEST V3 HIGH SPEED", $fontPill, $brushCyan, 1070, 125)
 
-$g.DrawString("Zero Paywalls • Cookie Walls Auto-Dismissed • WebRTC Leak Protection • CPU & RAM Ultra Optimized", $fontCardDesc, $brushGray, 80, 480)
+$g.DrawString("Core Element Zapper (Alt+Shift+Z) - Cookie Consent Auto-Dismissal - Scroll-Lock Recovery - WebRTC IP Leak Defense", $fontCardDesc, $brushGray, 80, 485)
 
 $g.Dispose()
 Save-StoreImage $bmp "marquee_promo_tile_1400x560"
@@ -204,16 +209,16 @@ function New-ScreenshotBase($title, $subtitle) {
         (New-Object System.Drawing.Point(0, 0)),
         (New-Object System.Drawing.Point($sw, $sh)),
         $colBgDark,
-        [System.Drawing.Color]::FromArgb(15, 24, 40)
+        [System.Drawing.Color]::FromArgb(22, 12, 22)
     )
     $sg.FillRectangle($sBgBrush, 0, 0, $sw, $sh)
 
-    $sgGlow1 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(25, 16, 185, 129))
-    $sgGlow2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(20, 6, 182, 212))
+    $sgGlow1 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 255, 0, 60))
+    $sgGlow2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(25, 255, 51, 102))
     $sg.FillEllipse($sgGlow1, -120, -120, 500, 500)
     $sg.FillEllipse($sgGlow2, ($sw - 380), ($sh - 380), 500, 500)
 
-    $sBorder = New-Object System.Drawing.Pen($colEmerald, 2)
+    $sBorder = New-Object System.Drawing.Pen($colRed, 2)
     $sg.DrawRectangle($sBorder, 1, 1, ($sw - 2), ($sh - 2))
 
     $fHead = New-Object System.Drawing.Font("Segoe UI", 25, [System.Drawing.FontStyle]::Bold)
@@ -223,10 +228,9 @@ function New-ScreenshotBase($title, $subtitle) {
     if ($highResIcon) {
         $iconMini = New-Object System.Drawing.Rectangle(50, 36, 48, 48)
         $sg.DrawImage($highResIcon, $iconMini)
-        $sg.DrawRectangle($penEmerald, $iconMini)
     }
 
-    $sg.DrawString("ExtremeShield", $fBrand, $brushEmerald, 110, 38)
+    $sg.DrawString("ExtremeShield", $fBrand, $brushRedBright, 110, 38)
     $sg.DrawString($title, $fHead, $brushWhite, 108, 56)
     $sg.DrawString($subtitle, $fSub, $brushCyan, 110, 106)
 
@@ -236,7 +240,7 @@ function New-ScreenshotBase($title, $subtitle) {
 # =============================================================================
 # SCREENSHOT 1: COMMAND & CONTROL CENTER (1280x800)
 # =============================================================================
-$res = New-ScreenshotBase "Command & Control Center" "Real-time master defense, live telemetry counters, and instant power switch"
+$res = New-ScreenshotBase "Command & Control Center" "Real-time master defense, live telemetry counters, and instant quick toggles"
 $sg = $res.Graphics
 $sbmp = $res.Bitmap
 
@@ -245,9 +249,9 @@ $ph = 590
 $px = 430
 $py = 160
 
-$popupBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(15, 23, 42))
+$popupBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(15, 21, 35))
 $sg.FillRectangle($popupBg, $px, $py, $pw, $ph)
-$penPop = New-Object System.Drawing.Pen($colEmerald, 2)
+$penPop = New-Object System.Drawing.Pen($colRed, 2)
 $sg.DrawRectangle($penPop, $px, $py, $pw, $ph)
 
 $fPopTitle = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
@@ -255,28 +259,28 @@ $fPopSub = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontS
 $fVal = New-Object System.Drawing.Font("Segoe UI", 18, [System.Drawing.FontStyle]::Bold)
 $fValLbl = New-Object System.Drawing.Font("Segoe UI", 8.5, [System.Drawing.FontStyle]::Bold)
 
-$sg.DrawString("🛡️ ExtremeShield Active", $fPopTitle, $brushWhite, ($px + 20), ($py + 18))
-$sg.DrawString("example.com • Protected", $fPopSub, $brushEmerald, ($px + 22), ($py + 44))
+$sg.DrawString("ExtremeShield Active", $fPopTitle, $brushWhite, ($px + 20), ($py + 18))
+$sg.DrawString("example.com - Protected (v1.0.28)", $fPopSub, $brushRedBright, ($px + 22), ($py + 44))
 
 $zapRect = New-Object System.Drawing.Rectangle(($px + 20), ($py + 80), ($pw - 40), 68)
-$zapBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(25, 16, 185, 129))
+$zapBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 255, 0, 60))
 $sg.FillRectangle($zapBg, $zapRect)
-$zapPen = New-Object System.Drawing.Pen($colEmerald, 1.8)
+$zapPen = New-Object System.Drawing.Pen($colRed, 1.8)
 $sg.DrawRectangle($zapPen, $zapRect)
 
 $fZapTitle = New-Object System.Drawing.Font("Segoe UI", 12.5, [System.Drawing.FontStyle]::Bold)
 $fZapDesc = New-Object System.Drawing.Font("Segoe UI", 8.5, [System.Drawing.FontStyle]::Regular)
 $fZapBadge = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Bold)
 
-$sg.DrawString("⚡ Zap Element on Page", $fZapTitle, $brushWhite, ($px + 36), ($py + 92))
+$sg.DrawString("Zap Element on Page", $fZapTitle, $brushWhite, ($px + 36), ($py + 92))
 $sg.DrawString("Point & click to vaporize any annoying banner", $fZapDesc, $brushGray, ($px + 36), ($py + 116))
-$sg.DrawString("Alt+Shift+Z", $fZapBadge, $brushEmerald, ($px + 290), ($py + 95))
+$sg.DrawString("Alt+Shift+Z", $fZapBadge, $brushRedBright, ($px + 290), ($py + 95))
 
 $statData = @(
-    @{ l = "Popups Blocked"; v = "18"; c = $colEmerald },
-    @{ l = "Trackers Blocked"; v = "64"; c = $colCyan },
-    @{ l = "Annoyances Dismissed"; v = "9"; c = $colAmber },
-    @{ l = "Bandwidth Saved"; v = "4.2 MB"; c = $colWhite }
+    @{ l = "Popups Blocked"; v = "24"; c = $colRedBright },
+    @{ l = "Trackers Blocked"; v = "86"; c = $colCyan },
+    @{ l = "Pre-rolls Defused"; v = "12"; c = $colAmber },
+    @{ l = "Bandwidth Saved"; v = "6.4 MB"; c = $colWhite }
 )
 $sCardW = [int](($pw - 52) / 2)
 $sCardH = 70
@@ -286,7 +290,7 @@ for ($i = 0; $i -lt 4; $i++) {
     $scy = $py + 165 + [int]([Math]::Floor($i / 2) * ($sCardH + 12))
     $scRect = New-Object System.Drawing.Rectangle($scx, $scy, $sCardW, $sCardH)
     
-    $scBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(24, 34, 54))
+    $scBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(24, 32, 48))
     $sg.FillRectangle($scBg, $scRect)
     $sg.DrawRectangle($penCard, $scRect)
     
@@ -295,16 +299,16 @@ for ($i = 0; $i -lt 4; $i++) {
     $sg.DrawString($statData[$i].l, $fValLbl, $brushGray, ($scx + 12), ($scy + 42))
 }
 
-$quickTools = @("🚫 Popups", "🔀 Redirects", "🍪 Cookie Walls", "🛡️ Anti-Adblock", "🕵️ Fingerprint", "⏸️ Pause 15m")
+$quickTools = @("Popups", "Redirects", "Pre-rolls", "Cookie Walls", "Fingerprint", "Pause 15m")
 $qBtnW = [int](($pw - 56) / 3)
 for ($i = 0; $i -lt 6; $i++) {
     $qcx = $px + 20 + ($i % 3) * ($qBtnW + 8)
     $qcy = $py + 345 + [int]([Math]::Floor($i / 3) * 44)
     $qRect = New-Object System.Drawing.Rectangle($qcx, $qcy, $qBtnW, 36)
     
-    $qBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(24, 34, 54))
+    $qBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(24, 32, 48))
     $sg.FillRectangle($qBg, $qRect)
-    $qPen = New-Object System.Drawing.Pen($colEmerald, 1.2)
+    $qPen = New-Object System.Drawing.Pen($colRedBright, 1.2)
     $sg.DrawRectangle($qPen, $qRect)
     
     $fTool = New-Object System.Drawing.Font("Segoe UI", 8.5, [System.Drawing.FontStyle]::Bold)
@@ -316,14 +320,14 @@ $fCalloutBody = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.F
 
 $lRect = New-Object System.Drawing.Rectangle(50, 240, 330, 180)
 $sg.FillRectangle((New-Object System.Drawing.SolidBrush($colBgCard)), $lRect)
-$sg.DrawRectangle($penEmerald, $lRect)
-$sg.DrawString("⚡ 100% Native Speed", $fCalloutHead, $brushEmerald, 70, 260)
+$sg.DrawRectangle($penRed, $lRect)
+$sg.DrawString("100% Native Speed", $fCalloutHead, $brushRedBright, 70, 260)
 $sg.DrawString("Built entirely on Chrome's Declarative Net Request (DNR) engine for zero-lag page loading with minimal CPU usage.", $fCalloutBody, $brushGray, (New-Object System.Drawing.RectangleF(70.0, 305.0, 290.0, 95.0)))
 
 $rRect = New-Object System.Drawing.Rectangle(900, 240, 330, 180)
 $sg.FillRectangle((New-Object System.Drawing.SolidBrush($colBgCard)), $rRect)
 $sg.DrawRectangle($penCyan, $rRect)
-$sg.DrawString("🔒 Zero-Log & Free", $fCalloutHead, $brushCyan, 920, 260)
+$sg.DrawString("Zero-Log & Free", $fCalloutHead, $brushCyan, 920, 260)
 $sg.DrawString("No user data collection, no telemetry analytics, and zero paywalls. Everything is processed 100% locally on your computer.", $fCalloutBody, $brushGray, (New-Object System.Drawing.RectangleF(920.0, 305.0, 290.0, 95.0)))
 
 $sg.Dispose()
@@ -333,115 +337,46 @@ $sbmp.Dispose()
 # =============================================================================
 # SCREENSHOT 2: PROMINENT ELEMENT ZAPPER (1280x800)
 # =============================================================================
-$res = New-ScreenshotBase "⚡ Prominent Element Zapper" "Laser-targeted point & click to vaporize intrusive banners, modals, and overlays"
+$res = New-ScreenshotBase "Prominent Element Zapper" "Laser-targeted point & click to vaporize intrusive banners, modals, and overlays"
 $sg = $res.Graphics
 $sbmp = $res.Bitmap
 
 $pageRect = New-Object System.Drawing.Rectangle(80, 160, 1120, 570)
-$pageBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(15, 23, 42))
+$pageBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(15, 21, 35))
 $sg.FillRectangle($pageBg, $pageRect)
 $sg.DrawRectangle($penCard, $pageRect)
 
 $wpHeader = New-Object System.Drawing.Rectangle(80, 160, 1120, 50)
-$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(30, 41, 59))), $wpHeader)
-$sg.DrawString("🌐 news-portal-example.com/article", (New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)), $brushGray, 105, 175)
+$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(28, 38, 54))), $wpHeader)
+$sg.DrawString("news-portal-example.com/article", (New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)), $brushGray, 105, 175)
 
 $zapTarget = New-Object System.Drawing.Rectangle(240, 270, 800, 280)
-$zapTargetBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(40, 239, 68, 68))
+$zapTargetBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(45, 255, 0, 60))
 $sg.FillRectangle($zapTargetBg, $zapTarget)
-$penLaser = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(239, 68, 68), 3)
-$sg.DrawRectangle($penLaser, $zapTarget)
+$penZapLase = New-Object System.Drawing.Pen($colRed, 2.5)
+$penZapLase.DashStyle = [System.Drawing.Drawing2D.DashStyle]::Dash
+$sg.DrawRectangle($penZapLase, $zapTarget)
 
-$sg.DrawString("🚨 INTRUSIVE FLOATING AD BANNER / NEWSLETTER POPUP", (New-Object System.Drawing.Font("Segoe UI", 16, [System.Drawing.FontStyle]::Bold)), $brushRose, 320, 360)
-$sg.DrawString("Target Selector: div#floating-newsletter-modal.sticky-ad", (New-Object System.Drawing.Font("Consolas", 12, [System.Drawing.FontStyle]::Regular)), $brushWhite, 360, 410)
+$bannerBox = New-Object System.Drawing.Rectangle(320, 310, 640, 190)
+$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 45, 65))), $bannerBox)
+$sg.DrawString("INTRUSIVE OVERLAY / NEWSLETTER POPUP", (New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)), $brushRedBright, 440, 350)
+$sg.DrawString("ExtremeShield laser target locked on element: div.newsletter-modal-backdrop", (New-Object System.Drawing.Font("Segoe UI", 10.5, [System.Drawing.FontStyle]::Regular)), $brushGray, 380, 395)
+$sg.DrawString("Click anywhere to permanently vaporize this element from this domain", (New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Italic)), $brushCyan, 410, 430)
 
-$hudRect = New-Object System.Drawing.Rectangle(360, 590, 560, 80)
-$hudBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(9, 13, 22))
-$sg.FillRectangle($hudBg, $hudRect)
-$sg.DrawRectangle($penEmerald, $hudRect)
-
-$sg.DrawString("⚡ ExtremeShield Element Zapper", (New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)), $brushEmerald, 385, 605)
-$sg.DrawString("Click element to vaporize permanently • Press ESC to cancel", (New-Object System.Drawing.Font("Segoe UI", 10.5, [System.Drawing.FontStyle]::Regular)), $brushGray, 385, 635)
+$hudRect = New-Object System.Drawing.Rectangle(410, 590, 460, 65)
+$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(20, 28, 44))), $hudRect)
+$sg.DrawRectangle($penRed, $hudRect)
+$sg.DrawString("ZAPPER HUD ACTIVE", (New-Object System.Drawing.Font("Segoe UI", 11.5, [System.Drawing.FontStyle]::Bold)), $brushRedBright, 430, 602)
+$sg.DrawString("Click: Zap Element  -  Esc: Cancel  -  Alt+Shift+Z", (New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Regular)), $brushWhite, 430, 626)
 
 $sg.Dispose()
 Save-StoreImage $sbmp "screenshot_2_element_zapper_1280x800"
 $sbmp.Dispose()
 
 # =============================================================================
-# SCREENSHOT 3: ANTI-REDIRECT & TAB-UNDER DEFENSE (1280x800)
+# SCREENSHOT 3: ANTI-REDIRECT & HISTORY TRAPPING (1280x800)
 # =============================================================================
-$res = New-ScreenshotBase "🔀 Anti-Redirect & Tab-Under Hijack Defense" "Neutralizes timer-based redirects, fake download buttons, and background tab hijacks"
-$sg = $res.Graphics
-$sbmp = $res.Bitmap
-
-$colW = 345
-$colH = 540
-$colY = 170
-$colStartX = 80
-$colGap = 42
-
-$redirectFeatures = @(
-    @{
-        icon = "🔀";
-        title = "Timer-Based Redirects";
-        sub = "Neutralizes Location.replace";
-        desc = "Traps unprompted redirects triggered by hidden setTimeout and setInterval scripts that try to bounce you across ad networks.";
-        accent = $colEmerald
-    },
-    @{
-        icon = "📑";
-        title = "Tab-Under Hijacking";
-        sub = "Protects Inactive Background Tabs";
-        desc = "Prevents shady websites from quietly navigating your current tab to an advertising landing page while opening new tabs behind your back.";
-        accent = $colCyan
-    },
-    @{
-        icon = "🛡️";
-        title = "Fake Download Traps";
-        sub = "Defuses Synthetic Anchor Clicks";
-        desc = "Stops malicious synthetic click exploits on invisible <a> tags with target='_blank' that bypass default browser popup blockers.";
-        accent = $colAmber
-    }
-)
-
-for ($i = 0; $i -lt 3; $i++) {
-    $cx = $colStartX + ($i * ($colW + $colGap))
-    $cRect = New-Object System.Drawing.Rectangle($cx, $colY, $colW, $colH)
-    
-    $cBg = New-Object System.Drawing.SolidBrush($colBgCard)
-    $sg.FillRectangle($cBg, $cRect)
-    $cPen = New-Object System.Drawing.Pen($redirectFeatures[$i].accent, 2)
-    $sg.DrawRectangle($cPen, $cRect)
-    
-    $fIcon = New-Object System.Drawing.Font("Segoe UI", 36, [System.Drawing.FontStyle]::Regular)
-    $fColTitle = New-Object System.Drawing.Font("Segoe UI", 16, [System.Drawing.FontStyle]::Bold)
-    $fColSub = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
-    $fColDesc = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
-    
-    $sg.DrawString($redirectFeatures[$i].icon, $fIcon, $brushWhite, ($cx + 25), ($colY + 25))
-    
-    $tBrush = New-Object System.Drawing.SolidBrush($redirectFeatures[$i].accent)
-    $sg.DrawString($redirectFeatures[$i].title, $fColTitle, $tBrush, ($cx + 25), ($colY + 95))
-    $sg.DrawString($redirectFeatures[$i].sub, $fColSub, $brushWhite, ($cx + 25), ($colY + 130))
-    
-    $descRect = New-Object System.Drawing.RectangleF([float]($cx + 25), [float]($colY + 175), [float]($colW - 50), 200.0)
-    $sg.DrawString($redirectFeatures[$i].desc, $fColDesc, $brushGray, $descRect)
-    
-    $pillRect = New-Object System.Drawing.Rectangle(($cx + 25), ($colY + 460), ($colW - 50), 42)
-    $pillBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 16, 185, 129))
-    $sg.FillRectangle($pillBg, $pillRect)
-    $sg.DrawRectangle($penEmerald, $pillRect)
-    $sg.DrawString("PROTECTION ACTIVE", (New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)), $brushEmerald, ($cx + 85), ($colY + 472))
-}
-
-$sg.Dispose()
-Save-StoreImage $sbmp "screenshot_3_anti_redirect_1280x800"
-$sbmp.Dispose()
-
-# =============================================================================
-# SCREENSHOT 4: LIVE TRACKER INSPECTOR (1280x800)
-# =============================================================================
-$res = New-ScreenshotBase "🕵️ Live Tracker Telemetry & Inspector" "Real-time breakdown of advertising trackers, behavioral profiling, and analytics beacons"
+$res = New-ScreenshotBase "Anti-Redirect & History Trapping Shield" "Neutralizes timer redirects, background tab-under exploits, and back-button pushState loops"
 $sg = $res.Graphics
 $sbmp = $res.Bitmap
 
@@ -450,7 +385,55 @@ $sg.FillRectangle((New-Object System.Drawing.SolidBrush($colBgCard)), $tRect)
 $sg.DrawRectangle($penCyan, $tRect)
 
 $thRect = New-Object System.Drawing.Rectangle(80, 165, 1120, 50)
-$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(30, 41, 59))), $thRect)
+$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(28, 38, 54))), $thRect)
+$fTh = New-Object System.Drawing.Font("Segoe UI", 11.5, [System.Drawing.FontStyle]::Bold)
+$sg.DrawString("DEFENSE ENGINE", $fTh, $brushWhite, 110, 180)
+$sg.DrawString("HIJACK VECTOR TRAPPED", $fTh, $brushWhite, 460, 180)
+$sg.DrawString("DEFENSE STATUS", $fTh, $brushWhite, 940, 180)
+
+$rowsRedirect = @(
+    @{ e = "History Back-Button Trap"; v = "history.pushState flood (>5 calls in 500ms defused)"; s = "TRAPPED & SUPPRESSED"; c = $colRedBright },
+    @{ e = "Deceptive Fullscreen Hijack"; v = "requestFullscreen() called without media or user gesture"; s = "REJECTED (NotAllowed)"; c = $colAmber },
+    @{ e = "Background Tab-Under"; v = "Window refocus & opener hijack to spam landing page"; s = "NEUTRALIZED"; c = $colCyan },
+    @{ e = "Delayed Timer Redirect"; v = "window.location.replace / href redirect hijack"; s = "INTERCEPTED (0ms)"; c = $colRedBright },
+    @{ e = "Meta Refresh Hijack"; v = "<meta http-equiv='refresh' content='0;url=...'>"; s = "REMOVED FROM DOM"; c = $colEmerald },
+    @{ e = "Synthetic Anchor Click"; v = "el.dispatchEvent(fakeClick) targeting ad network"; s = "CLICK DISARMED"; c = $colCyan },
+    @{ e = "JWPlayer VAST Ad Preroll"; v = "fetch / XHR VAST ad request causing Error 224003"; s = "EMPTY VAST RETURNED"; c = $colEmerald }
+)
+
+$fRowE = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+$fRowV = New-Object System.Drawing.Font("Consolas", 10.5, [System.Drawing.FontStyle]::Regular)
+$fRowS = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+
+for ($i = 0; $i -lt $rowsRedirect.Count; $i++) {
+    $ry = 225 + ($i * 68)
+    $rBg = if ($i % 2 -eq 0) { [System.Drawing.Color]::FromArgb(22, 30, 46) } else { [System.Drawing.Color]::FromArgb(17, 24, 38) }
+    $sg.FillRectangle((New-Object System.Drawing.SolidBrush($rBg)), 82, $ry, 1116, 64)
+    
+    $sg.DrawString($rowsRedirect[$i].e, $fRowE, $brushWhite, 110, ($ry + 20))
+    $sg.DrawString($rowsRedirect[$i].v, $fRowV, $brushGray, 460, ($ry + 22))
+    
+    $actBrush = New-Object System.Drawing.SolidBrush($rowsRedirect[$i].c)
+    $sg.DrawString($rowsRedirect[$i].s, $fRowS, $actBrush, 940, ($ry + 20))
+}
+
+$sg.Dispose()
+Save-StoreImage $sbmp "screenshot_3_anti_redirect_1280x800"
+$sbmp.Dispose()
+
+# =============================================================================
+# SCREENSHOT 4: CATEGORIZED TRACKER INSPECTOR & SHADOW DOM (1280x800)
+# =============================================================================
+$res = New-ScreenshotBase "Categorized Tracker Inspector & Shadow DOM" "Transparent real-time telemetry breakdown of every blocked pixel, beacon, and deep shadow tree"
+$sg = $res.Graphics
+$sbmp = $res.Bitmap
+
+$tRect = New-Object System.Drawing.Rectangle(80, 165, 1120, 565)
+$sg.FillRectangle((New-Object System.Drawing.SolidBrush($colBgCard)), $tRect)
+$sg.DrawRectangle($penCyan, $tRect)
+
+$thRect = New-Object System.Drawing.Rectangle(80, 165, 1120, 50)
+$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(28, 38, 54))), $thRect)
 $fTh = New-Object System.Drawing.Font("Segoe UI", 11.5, [System.Drawing.FontStyle]::Bold)
 $sg.DrawString("TRACKER / TELEMETRY DOMAIN", $fTh, $brushWhite, 110, 180)
 $sg.DrawString("CATEGORY", $fTh, $brushWhite, 650, 180)
@@ -459,10 +442,10 @@ $sg.DrawString("ACTION TAKEN", $fTh, $brushWhite, 940, 180)
 $rows = @(
     @{ d = "google-analytics.com / analytics.js"; cat = "Analytics & Telemetry"; act = "BLOCKED (0ms)"; c = $colEmerald },
     @{ d = "connect.facebook.net / signals / config"; cat = "Social Tracking Pixel"; act = "BLOCKED (0ms)"; c = $colCyan },
+    @{ d = "shadow-root: open > script[src*='adservice']"; cat = "Shadow DOM Embedded Tracker"; act = "BLOCKED (0ms)"; c = $colRedBright },
     @{ d = "doubleclick.net / pagead / id"; cat = "Advertising Profile Network"; act = "BLOCKED (0ms)"; c = $colAmber },
     @{ d = "criteo.net / event / tag"; cat = "Behavioral Retargeting"; act = "BLOCKED (0ms)"; c = $colAmber },
-    @{ d = "clarity.ms / s / 0.7.2 / clarity.js"; cat = "Session Recording & Heatmap"; act = "BLOCKED (0ms)"; c = $colEmerald },
-    @{ d = "utm_source, fbclid, gclid, mc_cid"; cat = "URL Parameter Tokens"; act = "STRIPPED"; c = $colRose },
+    @{ d = "utm_source, fbclid, gclid, mc_cid"; cat = "URL Parameter Tokens"; act = "STRIPPED"; c = $colRedBright },
     @{ d = "Canvas 2D / AudioContext Fingerprint"; cat = "Device Identity Hash"; act = "RANDOMIZED NOISE"; c = $colCyan }
 )
 
@@ -472,7 +455,7 @@ $fRowAct = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontSt
 
 for ($i = 0; $i -lt $rows.Count; $i++) {
     $ry = 225 + ($i * 68)
-    $rBg = if ($i % 2 -eq 0) { [System.Drawing.Color]::FromArgb(20, 28, 44) } else { [System.Drawing.Color]::FromArgb(16, 23, 38) }
+    $rBg = if ($i % 2 -eq 0) { [System.Drawing.Color]::FromArgb(22, 30, 46) } else { [System.Drawing.Color]::FromArgb(17, 24, 38) }
     $sg.FillRectangle((New-Object System.Drawing.SolidBrush($rBg)), 82, $ry, 1116, 64)
     
     $sg.DrawString($rows[$i].d, $fRow, $brushWhite, 110, ($ry + 20))
@@ -487,56 +470,56 @@ Save-StoreImage $sbmp "screenshot_4_tracker_inspector_1280x800"
 $sbmp.Dispose()
 
 # =============================================================================
-# SCREENSHOT 5: ADVANCED SHIELDS & INFO MODALS (1280x800)
+# SCREENSHOT 5: ADVANCED SHIELDS & INTERACTIVE INFO MODALS (1280x800)
 # =============================================================================
-$res = New-ScreenshotBase "⚙️ Advanced Shields & Interactive Info Modals" "Detailed transparency on every protection engine with 1-click information popups"
+$res = New-ScreenshotBase "Advanced Shields & Interactive Info Modals" "Detailed transparency on every protection engine with 1-click information popups"
 $sg = $res.Graphics
 $sbmp = $res.Bitmap
 
 $setRect = New-Object System.Drawing.Rectangle(80, 165, 580, 565)
 $sg.FillRectangle((New-Object System.Drawing.SolidBrush($colBgCard)), $setRect)
-$sg.DrawRectangle($penEmerald, $setRect)
+$sg.DrawRectangle($penRed, $setRect)
 
-$sg.DrawString("Core Defense Engines", (New-Object System.Drawing.Font("Segoe UI", 16, [System.Drawing.FontStyle]::Bold)), $brushEmerald, 110, 185)
+$sg.DrawString("Core Defense Engines", (New-Object System.Drawing.Font("Segoe UI", 16, [System.Drawing.FontStyle]::Bold)), $brushRedBright, 110, 185)
 
 $setItems = @(
-    "Aggressive Popup & Popunder Blocker",
-    "Anti-Redirect & Tab-Under Hijack Shield",
-    "Tracking & Telemetry Armor (DNR)",
+    "Aggressive Popup & Fullscreen Blocker",
+    "Anti-Redirect & History Trapping Shield",
+    "Video Pre-roll & VAST Defuser (Error 224003)",
+    "Tracking Armor & Deep Shadow DOM Scanner",
     "Canvas & Audio Fingerprint Randomizer",
     "WebRTC IP Leak Defense",
-    "Cookie Consent Banner Auto-Dismissal",
-    "Anti-Adblock Defuser & Stubs"
+    "Cookie Consent Auto-Dismiss & Scroll Unlock"
 )
 
-$fSet = New-Object System.Drawing.Font("Segoe UI", 11.5, [System.Drawing.FontStyle]::Bold)
+$fSet = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
 for ($i = 0; $i -lt $setItems.Count; $i++) {
     $sy = 230 + ($i * 64)
     $sg.DrawString($setItems[$i], $fSet, $brushWhite, 110, $sy)
     
-    # ℹ️ info button
-    $iBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(35, 16, 185, 129))
+    # info button
+    $iBg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(40, 255, 0, 60))
     $sg.FillEllipse($iBg, 510, ($sy - 2), 26, 26)
-    $sg.DrawEllipse($penEmerald, 510, ($sy - 2), 26, 26)
-    $sg.DrawString("i", (New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)), $brushEmerald, 519, ($sy + 1))
+    $sg.DrawEllipse($penRed, 510, ($sy - 2), 26, 26)
+    $sg.DrawString("i", (New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)), $brushRedBright, 519, ($sy + 1))
     
     # Toggle switch (ON)
     $swRect = New-Object System.Drawing.Rectangle(560, $sy, 44, 22)
-    $sg.FillRectangle((New-Object System.Drawing.SolidBrush($colEmerald)), $swRect)
+    $sg.FillRectangle((New-Object System.Drawing.SolidBrush($colRed)), $swRect)
     $sg.FillEllipse($brushWhite, 582, ($sy + 1), 20, 20)
 }
 
 # Modal Popup Preview on Right
 $mRect = New-Object System.Drawing.Rectangle(710, 165, 490, 565)
-$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(15, 23, 42))), $mRect)
+$sg.FillRectangle((New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(15, 21, 35))), $mRect)
 $sg.DrawRectangle($penCyan, $mRect)
 
-$sg.DrawString("ℹ️ Feature Information Modal", (New-Object System.Drawing.Font("Segoe UI", 15, [System.Drawing.FontStyle]::Bold)), $brushCyan, 735, 190)
+$sg.DrawString("Feature Information Modal", (New-Object System.Drawing.Font("Segoe UI", 15, [System.Drawing.FontStyle]::Bold)), $brushCyan, 735, 190)
 
 $mCards = @(
-    @{ title = "🔍 ¿Qué hace?"; desc = "Intercepta llamadas a window.open, bloquea redirecciones forzadas por temporizadores y neutraliza popunders antes de abrirse."; col = $colWhite; bg = [System.Drawing.Color]::FromArgb(24, 34, 54) },
-    @{ title = "🛡️ Beneficio de Privacidad"; desc = "Elimina el 100% de ventanas engañosas, publicidad invasiva y evita el rastreo cruzado entre páginas web."; col = $colEmerald; bg = [System.Drawing.Color]::FromArgb(25, 16, 185, 129) },
-    @{ title = "⚙️ Compatibilidad"; desc = "Las ventanas legítimas que abras conscientemente (inicios de sesión con Google/GitHub) siguen funcionando normalmente."; col = $colCyan; bg = [System.Drawing.Color]::FromArgb(25, 6, 182, 212) }
+    @{ title = "Que hace?"; desc = "Intercepta llamadas a window.open, bloquea redirecciones por temporizador, secuestro fullscreen y bucles de history.pushState que atrapan el boton Atras."; col = $colWhite; bg = [System.Drawing.Color]::FromArgb(24, 32, 48) },
+    @{ title = "Beneficio de Privacidad"; desc = "Elimina 100% de ventanas emergentes enganosas, evita el bloqueo de scroll y repara errores de video como Error 224003."; col = $colRedBright; bg = [System.Drawing.Color]::FromArgb(35, 255, 0, 60) },
+    @{ title = "Compatibilidad"; desc = "Las navegaciones legitimas, SPAs (YouTube, Twitter) e inicios de sesion con Google/GitHub continuan funcionando con total fluidez."; col = $colCyan; bg = [System.Drawing.Color]::FromArgb(35, 6, 182, 212) }
 )
 
 for ($i = 0; $i -lt 3; $i++) {

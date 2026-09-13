@@ -69,20 +69,20 @@ document.addEventListener('DOMContentLoaded', async () => {
      ========================================================================== */
   const FEATURE_DESCRIPTIONS = {
     'popups': {
-      title: '🚫 Bloqueador Agresivo de Popups y Popunders',
-      whatItDoes: 'Interviene la función `window.open` a nivel de navegador para interceptar ventanas emergentes no solicitadas, clics trampa sintéticos en enlaces ocultos y tácticas de "popunder" que intentan abrir pestañas detrás de tu ventana.',
-      benefit: 'Elimina el 100% de la publicidad engañosa, redirecciones automáticas a sitios de apuestas/virus y páginas molestas.',
-      compat: 'Las ventanas legítimas que tú abras conscientemente (como iniciar sesión con Google) siguen funcionando normalmente.'
+      title: '🚫 Bloqueador Agresivo de Popups, Popunders y Secuestro Fullscreen',
+      whatItDoes: 'Interviene la función `window.open` y `requestFullscreen` a nivel de navegador para interceptar ventanas emergentes no solicitadas, clics trampa sintéticos en enlaces ocultos, tácticas de "popunder" y secuestro engañoso de pantalla completa.',
+      benefit: 'Elimina el 100% de la publicidad engañosa, redirecciones automáticas a sitios de apuestas/virus, falsos avisos de pantalla completa y páginas molestas.',
+      compat: 'Las ventanas legítimas que tú abras conscientemente (como iniciar sesión con Google o reproducir video en pantalla completa) siguen funcionando normalmente.'
     },
     'redirect': {
-      title: '🔀 Escudo Anti-Redirecciones y Secuestro de Pestañas (Tab-Under)',
-      whatItDoes: 'Intercepta y neutraliza scripts maliciosos que intentan redirigir tu pestaña actual mediante temporizadores invisibles (`location.replace`, `location.href`), etiquetas `meta refresh` o clics simulados cuando cambias de pestaña o intentas descargar un archivo.',
-      benefit: 'Impide que páginas de descarga, streaming o sitios dudosos secuestren tu navegación y te lleven a portales de phishing, estafas o contenido no deseado.',
-      compat: 'Las navegaciones normales y clics directos del usuario funcionan con total fluidez.'
+      title: '🔀 Escudo Anti-Redirecciones, Tab-Under y Trampas de Historial',
+      whatItDoes: 'Intercepta y neutraliza scripts maliciosos que intentan redirigir tu pestaña actual mediante temporizadores invisibles (`location.replace`, `location.href`), manipulación masiva del historial (`history.pushState` loops que atrapan el botón Atrás) o etiquetas `meta refresh`.',
+      benefit: 'Impide que páginas de descarga o streaming secuestren tu navegación, te atrapen en la pestaña o te lleven a portales de phishing.',
+      compat: 'Las navegaciones normales, SPAs (YouTube, Twitter) y clics directos del usuario funcionan con total fluidez.'
     },
     'trackers': {
-      title: '🛡️ Escudo Contra Rastreadores y Telemetría',
-      whatItDoes: 'Bloquea solicitudes de red hacia más de 50 servidores de perfilamiento de usuarios, píxeles de seguimiento (Meta, TikTok, Criteo, Google Analytics) y scripts de mapa de calor (Hotjar, Clarity).',
+      title: '🛡️ Escudo Contra Rastreadores, Telemetría y Shadow DOM',
+      whatItDoes: 'Bloquea solicitudes de red e inspecciona elementos en el DOM y árboles de Shadow DOM abierto contra más de 50 servidores de perfilamiento, píxeles de seguimiento (Meta, TikTok, Criteo, Google) y mapas de calor.',
       benefit: 'Impide que las empresas creen un perfil publicitario con tu historial y acelera la carga de las páginas hasta un 40%.',
       compat: 'Recomendado mantener SIEMPRE activo.'
     },
