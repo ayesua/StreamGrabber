@@ -54,7 +54,7 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  box-shadow: 0 2px 10px rgba(0, 135, 205, 0.4);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.9);
   display: block;
 }
 
