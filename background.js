@@ -301,7 +301,7 @@ function addMediaItem(tabId, item) {
   // If item is HLS (.m3u8), it is top priority: clear out any low-priority short clips
   if (item.type === 'HLS') {
     for (const [url, existing] of tabStore.entries()) {
-      if (existing.type !== 'HLS' && (!existing.size || existing.size < 10 * 1024 * 1024)) {
+      if (existing.type !== 'HLS' && existing.source !== 'VK Video' && existing.source !== 'Mail.ru Player' && (!existing.size || existing.size < 10 * 1024 * 1024)) {
         tabStore.delete(url);
       }
     }
@@ -461,7 +461,19 @@ async function resolveEmbedMedia(embedData, tabId) {
       }
     }
 
-    // 3. Generic Embedded Players (nmcorp.video, embed-player.space, VK, Rutube, etc.)
+    // 3. VK Video Embeds (/video_ext.php, /video{oid}_{id}, etc.)
+    if (embedUrl.includes('vk.com') || embedUrl.includes('vkvideo.ru')) {
+      const vkMatch = embedUrl.match(/video(-?\d+_\d+)/) ||
+                      embedUrl.match(/video_ext\.php\?.*oid=(-?\d+).*id=(-?\d+)/);
+      if (vkMatch) {
+        const videoId = vkMatch[1].includes('_') ? vkMatch[1] : `${vkMatch[1]}_${vkMatch[2]}`;
+        const domain = embedUrl.includes('vk.com') ? 'vk.com' : 'vkvideo.ru';
+        await resolveVkVideo({ videoId, domain, pageUrl: embedUrl, title: pageTitle, poster: pagePoster }, tabId);
+        return;
+      }
+    }
+
+    // 4. Generic Embedded Players (nmcorp.video, embed-player.space, Rutube, etc.)
     const pageRes = await fetch(embedUrl, {
       headers: { 'Referer': embedData.pageUrl || 'https://gs.yandex.com.tr/' }
     });
@@ -494,6 +506,105 @@ async function resolveEmbedMedia(embedData, tabId) {
     }
   } catch (err) {
     console.warn('[StreamGrabber] resolveEmbedMedia error:', err);
+  }
+}
+
+async function resolveVkVideo(vkData, tabId) {
+  const videoId = vkData?.videoId;
+  if (!videoId || !tabId) return;
+
+  const domain = vkData.domain || 'vkvideo.ru';
+  const postUrl = `https://${domain}/al_video.php`;
+  const postBody = `act=show&al=1&video=${encodeURIComponent(videoId)}`;
+
+  try {
+    const res = await fetch(postUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': vkData.pageUrl || `https://${domain}/video${videoId}`,
+        'Origin': `https://${domain}`
+      },
+      body: postBody
+    });
+
+    if (!res.ok) return;
+
+    const arrayBuffer = await res.arrayBuffer();
+    const text = new TextDecoder('windows-1251').decode(arrayBuffer);
+    const json = JSON.parse(text);
+
+    let player = null;
+    if (Array.isArray(json.payload)) {
+      for (const part of json.payload) {
+        if (Array.isArray(part)) {
+          const found = part.find(x => x && x.player?.params?.[0]);
+          if (found) {
+            player = found.player.params[0];
+            break;
+          }
+        }
+      }
+    }
+
+    if (!player) return;
+
+    const title = player.md_title || vkData.title || tabTitles.get(tabId) || 'VK Video';
+    if (title && !isGenericOrTechnicalTitle(title)) {
+      tabTitles.set(tabId, title);
+    }
+
+    const poster = player.jpg || vkData.poster || tabPosters.get(tabId) || null;
+    if (poster) {
+      tabPosters.set(tabId, poster);
+    }
+
+    // 1. Register HLS Master Stream First
+    if (player.hls) {
+      addMediaItem(tabId, {
+        id: `vk_${videoId}_hls`,
+        url: player.hls,
+        title: title,
+        type: 'HLS',
+        quality: 'Auto HD',
+        isStream: true,
+        poster: poster,
+        source: 'VK Video',
+        timestamp: Date.now()
+      });
+    }
+
+    // 2. Direct MP4 Resolutions
+    const qualityMap = {
+      url2160: '4K 2160p',
+      url1440: '2K 1440p',
+      url1080: '1080p Full HD',
+      url720: '720p HD',
+      url480: '480p SD',
+      url360: '360p SD',
+      url240: '240p SD',
+      url144: '144p SD'
+    };
+
+    for (const [key, qLabel] of Object.entries(qualityMap)) {
+      if (player[key]) {
+        addMediaItem(tabId, {
+          id: `vk_${videoId}_${key}`,
+          url: player[key],
+          title: title,
+          type: 'MP4',
+          quality: qLabel,
+          poster: poster,
+          source: 'VK Video',
+          timestamp: Date.now()
+        });
+      }
+    }
+
+    updateBadge(tabId);
+  } catch (err) {
+    console.warn('[StreamGrabber] resolveVkVideo error:', err);
   }
 }
 
@@ -710,6 +821,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === 'RESOLVE_VK_VIDEO') {
+    const targetTabId = tabId || message.tabId;
+    if (targetTabId && message.videoId) {
+      resolveVkVideo(message, targetTabId);
+    }
+    return true;
+  }
+
   if (message.action === 'GET_TAB_MEDIA') {
     const tabStore = tabMediaStore.get(message.tabId);
     let mediaList = tabStore ? Array.from(tabStore.values()) : [];
@@ -827,6 +946,16 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
       .substring(0, 100);
 
     const downloadId = 'dl_' + Date.now();
+
+    // If a non-HLS variant was selected (e.g. direct MP4 from VK or other multi-quality source), route to direct downloader
+    if (item.selectedVariantUrl) {
+      const isVariantHls = item.selectedVariantUrl.includes('.m3u8') || item.selectedVariantUrl.includes('mpegurl');
+      if (!isVariantHls) {
+        item.url = item.selectedVariantUrl;
+        item.type = 'MP4';
+        delete item.selectedVariantUrl;
+      }
+    }
 
     if (item.type === 'HLS' || item.url.includes('.m3u8')) {
       const initialState = {

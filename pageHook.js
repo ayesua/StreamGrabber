@@ -65,7 +65,45 @@
             });
           }
         }
-        return origFetch.apply(this, arguments);
+
+        const promise = origFetch.apply(this, arguments);
+
+        if (url && typeof url === 'string' && url.includes('al_video.php')) {
+          promise.then(res => {
+            try {
+              const clone = res.clone();
+              clone.text().then(text => {
+                if (text && text.includes('player')) {
+                  const json = JSON.parse(text);
+                  let player = null;
+                  if (Array.isArray(json?.payload)) {
+                    for (const part of json.payload) {
+                      if (Array.isArray(part)) {
+                        const found = part.find(x => x && x.player?.params?.[0]);
+                        if (found) { player = found.player.params[0]; break; }
+                      }
+                    }
+                  }
+                  if (player) {
+                    const title = player.md_title || document.title;
+                    const poster = player.jpg || null;
+                    if (player.hls) {
+                      broadcastStreamData({ url: player.hls, type: 'HLS', quality: 'Auto HD', title, poster });
+                    }
+                    const qMap = { url2160: '4K 2160p', url1440: '2K 1440p', url1080: '1080p Full HD', url720: '720p HD', url480: '480p SD', url360: '360p SD', url240: '240p SD' };
+                    for (const [k, q] of Object.entries(qMap)) {
+                      if (player[k]) {
+                        broadcastStreamData({ url: player[k], type: 'MP4', quality: q, title, poster });
+                      }
+                    }
+                  }
+                }
+              }).catch(() => {});
+            } catch (err) {}
+          }).catch(() => {});
+        }
+
+        return promise;
       };
     }
   } catch (e) {}
@@ -84,6 +122,38 @@
               type: (lower.includes('.m3u8') || lower.includes('strm.yandex')) ? 'HLS' : 'MP4',
               quality: 'Auto HD',
               title: document.title
+            });
+          }
+
+          if (lower.includes('al_video.php')) {
+            this.addEventListener('load', function () {
+              try {
+                if (this.responseText && this.responseText.includes('player')) {
+                  const json = JSON.parse(this.responseText);
+                  let player = null;
+                  if (Array.isArray(json?.payload)) {
+                    for (const part of json.payload) {
+                      if (Array.isArray(part)) {
+                        const found = part.find(x => x && x.player?.params?.[0]);
+                        if (found) { player = found.player.params[0]; break; }
+                      }
+                    }
+                  }
+                  if (player) {
+                    const title = player.md_title || document.title;
+                    const poster = player.jpg || null;
+                    if (player.hls) {
+                      broadcastStreamData({ url: player.hls, type: 'HLS', quality: 'Auto HD', title, poster });
+                    }
+                    const qMap = { url2160: '4K 2160p', url1440: '2K 1440p', url1080: '1080p Full HD', url720: '720p HD', url480: '480p SD', url360: '360p SD', url240: '240p SD' };
+                    for (const [k, q] of Object.entries(qMap)) {
+                      if (player[k]) {
+                        broadcastStreamData({ url: player[k], type: 'MP4', quality: q, title, poster });
+                      }
+                    }
+                  }
+                }
+              } catch (err) {}
             });
           }
         }

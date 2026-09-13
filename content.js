@@ -280,16 +280,62 @@
     } catch (err) {}
   });
 
+  const AD_CONTAINER_SELECTOR = [
+    '.video-ads',
+    '.ad-container',
+    '.ads-container',
+    '.ad-overlay',
+    '.preroll-container',
+    '.video-ad-overlay',
+    '[id^="ad-slot"]',
+    '[id^="google_ads"]',
+    '[class*="vast-"]',
+    '[class*="exo_ad"]',
+    '[class*="outstream"]',
+    '[class^="ad-"]',
+    '[class*=" ad-"]',
+    '[class^="ads-"]',
+    '[class*=" ads-"]',
+    '[id^="ad-"]',
+    '[id^="ads-"]'
+  ].join(', ');
+
+  const PLAYER_CONTAINER_SELECTORS = [
+    'iframe.VideoPlayer-Sandbox',
+    'iframe[class*="VideoPlayer"]',
+    'iframe[src*="video-player"]',
+    'iframe[src*="video_ext"]',
+    'iframe[src*="vk.com"]',
+    'iframe[src*="vkvideo.ru"]',
+    '.VideoPlayer',
+    '.VideoViewer-EmbedPlayer',
+    '.video-player-container',
+    '[class*="VideoPlayer"]',
+    '[class*="video_player"]',
+    '[class*="videoplayer"]',
+    '[class*="PlayerContainer"]',
+    '[class*="VideoLayer"]',
+    '[class*="VideoViewer"]',
+    '[id*="video_box_wrap"]',
+    '[id*="video_player"]',
+    '[data-testid*="player"]',
+    'div.video_box',
+    'div.video_player',
+    '[data-bem*="player"]'
+  ].join(', ');
+
   function scanMediaElements() {
     const poster = findVideoPoster();
 
     const videoElements = document.querySelectorAll('video');
     videoElements.forEach(video => {
       // Check if video element is inside an ad wrapper or banner
-      const closestAd = video.closest(
-        '[class*="ad-"], [class*="ads-"], [id*="ad-"], [id*="ads-"], [class*="preroll"], [class*="sponsor"], [class*="banner"], [id*="vast"], [class*="exo_"]'
-      );
-      if (closestAd) return; // Skip ad videos!
+      const closestAd = video.closest(AD_CONTAINER_SELECTOR);
+      if (closestAd) {
+        const cls = (closestAd.className || '').toLowerCase();
+        const isPlayer = cls.includes('player') || cls.includes('video') || cls.includes('viewer');
+        if (!isPlayer) return; // Skip genuine ad containers!
+      }
 
       const quality = video.videoWidth ? `${video.videoWidth}x${video.videoHeight}` : 'Auto HD';
       const videoPoster = (video.poster && video.poster.startsWith('http')) ? video.poster : poster;
@@ -586,6 +632,73 @@
     } catch (e) {}
   }
 
+  function scanVkVideoPlayer() {
+    try {
+      const host = (window.location.hostname || '').toLowerCase();
+      const isVk = host.includes('vkvideo.ru') || host.includes('vk.com');
+
+      // 1. Direct page URL on VK: vkvideo.ru/video{oid}_{id} or vk.com/video{oid}_{id} or vk.com/...z=video{oid}_{id}
+      let videoId = null;
+      if (isVk) {
+        const pathMatch = window.location.pathname.match(/video(-?\d+_\d+)/);
+        if (pathMatch) {
+          videoId = pathMatch[1];
+        } else {
+          const zMatch = window.location.search.match(/[?&]z=video(-?\d+_\d+)/);
+          if (zMatch) {
+            videoId = zMatch[1];
+          } else {
+            const clipMatch = window.location.pathname.match(/clip(-?\d+_\d+)/);
+            if (clipMatch) {
+              videoId = clipMatch[1];
+            }
+          }
+        }
+      }
+
+      // 2. Scan iframes or embed links on any page for VK embeds
+      if (!videoId) {
+        const vkIframes = document.querySelectorAll('iframe[src*="vk.com"], iframe[src*="vkvideo.ru"]');
+        for (const ifr of vkIframes) {
+          const src = ifr.getAttribute('src') || ifr.src || '';
+          const m = src.match(/video_ext\.php\?.*oid=(-?\d+).*id=(-?\d+)/i) ||
+                    src.match(/video(-?\d+_\d+)/i);
+          if (m) {
+            videoId = m[1].includes('_') ? m[1] : `${m[1]}_${m[2]}`;
+            break;
+          }
+        }
+      }
+
+      // 3. Scan page HTML for data-video, video_id, or video-oid_id attributes
+      if (!videoId && isVk) {
+        const el = document.querySelector('[data-video], [data-video-id], [id*="video_box_wrap"]');
+        if (el) {
+          const vAttr = el.getAttribute('data-video') || el.getAttribute('data-video-id') || el.id;
+          const vm = vAttr ? vAttr.match(/(-?\d+_\d+)/) : null;
+          if (vm) videoId = vm[1];
+        }
+      }
+
+      if (videoId) {
+        const cacheKey = `vk_${videoId}`;
+        if (!detectedUrls.has(cacheKey)) {
+          detectedUrls.add(cacheKey);
+          chrome.runtime.sendMessage({
+            action: 'RESOLVE_VK_VIDEO',
+            videoId: videoId,
+            domain: isVk ? host : 'vkvideo.ru',
+            pageUrl: window.location.href,
+            title: getPageTitle(),
+            poster: findVideoPoster()
+          }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
   function scanMetaTags() {
     try {
       const ogVideo = document.querySelector('meta[property="og:video"]')?.content ||
@@ -647,6 +760,7 @@
 
   function runScan() {
     scanYandexVideoPlayer();
+    scanVkVideoPlayer();
     scanInlinePlayerScripts();
     scanMetaTags();
     scanMediaElements();
@@ -973,12 +1087,17 @@
           if (el.tagName === 'IFRAME' && (el.classList.contains('VideoPlayer-Sandbox') || (el.className && typeof el.className === 'string' && el.className.includes('VideoPlayer')) || (el.src && (el.src.includes('video') || el.src.includes('embed'))))) {
             return el;
           }
-          if (el.classList && (el.classList.contains('VideoPlayer') || el.classList.contains('VideoViewer-EmbedPlayer') || el.classList.contains('video-player-container'))) {
-            return el;
+          if (el.closest) {
+            const pc = el.closest(PLAYER_CONTAINER_SELECTORS);
+            if (pc) {
+              const innerVideo = pc.querySelector('video');
+              if (innerVideo && !isAdVideoElement(innerVideo)) return innerVideo;
+              return pc;
+            }
           }
           if (el.querySelector) {
             const v = el.querySelector('video');
-            if (v) return v;
+            if (v && !isAdVideoElement(v)) return v;
           }
         }
       }
@@ -988,10 +1107,12 @@
 
   function isAdVideoElement(v) {
     if (!v) return true;
-    const closestAd = v.closest(
-      '[class*="ad-"], [class*="ads-"], [id*="ad-"], [id*="ads-"], [class*="preroll"], [class*="sponsor"], [class*="banner"], [id*="vast"], [class*="exo_"], [class*="outstream"]'
-    );
-    if (closestAd) return true;
+    const closestAd = v.closest(AD_CONTAINER_SELECTOR);
+    if (closestAd) {
+      const cls = (closestAd.className || '').toLowerCase();
+      const isPlayer = cls.includes('player') || cls.includes('video') || cls.includes('viewer');
+      if (!isPlayer) return true;
+    }
     // Pre-roll ads are usually short (< 30 seconds)
     if (v.duration && v.duration > 0 && v.duration < 30) return true;
     const src = (v.currentSrc || v.src || '').toLowerCase();
@@ -1000,13 +1121,16 @@
   }
 
   function findMostVisibleVideo() {
-    // 1. Check for primary player iframe or container (Yandex, VK, and embedded players)
-    const playerContainers = Array.from(document.querySelectorAll(
-      'iframe.VideoPlayer-Sandbox, iframe[class*="VideoPlayer"], .VideoPlayer, .VideoViewer-EmbedPlayer, .video-player-container, [data-bem*="player"], iframe[src*="video-player"]'
-    ));
+    // 1. Check for primary player iframe or container (Yandex, VK, Mail.ru, and embedded players)
+    const playerContainers = Array.from(document.querySelectorAll(PLAYER_CONTAINER_SELECTORS));
     for (const el of playerContainers) {
       const r = el.getBoundingClientRect();
       if (r.width >= 300 && r.height >= 180 && r.top >= -50 && r.bottom <= window.innerHeight + 150) {
+        const innerVideo = el.querySelector('video');
+        if (innerVideo && !isAdVideoElement(innerVideo)) {
+          const vr = innerVideo.getBoundingClientRect();
+          if (vr.width >= 300 && vr.height >= 180) return innerVideo;
+        }
         return el;
       }
     }
@@ -1048,7 +1172,18 @@
     return best;
   }
 
+  let lastTrackedUrl = window.location.href;
+  function checkUrlChange() {
+    if (window.location.href !== lastTrackedUrl) {
+      lastTrackedUrl = window.location.href;
+      scanVkVideoPlayer();
+      scanYandexVideoPlayer();
+      runScan();
+    }
+  }
+
   function updateTracker() {
+    checkUrlChange();
     if (!isFloatingBtnEnabled) {
       if (floatingBtn) floatingBtn.style.display = 'none';
       return;
@@ -1118,6 +1253,9 @@
       }
     }, true);
 
+    window.addEventListener('popstate', checkUrlChange);
+    window.addEventListener('hashchange', checkUrlChange);
+
     setInterval(updateTracker, 1500);
     setTimeout(updateTracker, 500);
     setTimeout(updateTracker, 1500);
@@ -1126,6 +1264,7 @@
   const observer = new MutationObserver(() => {
     scanMediaElements();
     scanYandexVideoPlayer();
+    scanVkVideoPlayer();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 })();
