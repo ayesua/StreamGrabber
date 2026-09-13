@@ -426,6 +426,91 @@ function updateFilterCounts(mediaList) {
   if (countAudios) countAudios.textContent = audios;
 }
 
+function groupAndSortMediaList(rawList) {
+  if (!rawList || rawList.length === 0) return [];
+
+  // Group items that represent the same video (by pageUrl or base title or poster)
+  const groups = new Map();
+
+  rawList.forEach(item => {
+    // Generate clean group key
+    let key = (item.title || '').toLowerCase().trim();
+    if (isGenericOrTechnicalTitle(key)) {
+      key = item.poster ? item.poster.split('?')[0] : (item.pageUrl || item.url);
+    }
+
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(item);
+  });
+
+  const processedList = [];
+
+  for (const [, items] of groups.entries()) {
+    // Sort items in group from largest to smallest size / highest resolution
+    items.sort((a, b) => {
+      const sizeA = a.size || a.estimatedBytes || 0;
+      const sizeB = b.size || b.estimatedBytes || 0;
+      if (sizeA !== sizeB) return sizeB - sizeA;
+
+      const resHeightA = parseInt((a.quality || '').match(/(\d{3,4})/)?.[1] || '0', 10);
+      const resHeightB = parseInt((b.quality || '').match(/(\d{3,4})/)?.[1] || '0', 10);
+      return resHeightB - resHeightA;
+    });
+
+    const primaryItem = { ...items[0] };
+
+    // If multiple resolution/quality variants exist for the same video, merge them into dropdown variants
+    if (items.length > 1) {
+      const variantList = [];
+      items.forEach(it => {
+        if (it.variants && it.variants.length > 0) {
+          it.variants.forEach(v => variantList.push(v));
+        } else {
+          variantList.push({
+            url: it.url,
+            resolution: it.quality || 'Auto HD',
+            name: (it.quality || 'Option') + (it.sizeFormatted ? ` (${it.sizeFormatted})` : '')
+          });
+        }
+      });
+
+      // Deduplicate variant URLs
+      const uniqueVariants = [];
+      const seenVariantUrls = new Set();
+      variantList.forEach(v => {
+        if (!seenVariantUrls.has(v.url)) {
+          seenVariantUrls.add(v.url);
+          uniqueVariants.push(v);
+        }
+      });
+
+      if (uniqueVariants.length > 1) {
+        primaryItem.variants = uniqueVariants;
+      }
+    }
+
+    processedList.push(primaryItem);
+  }
+
+  // Sort overall media list from LARGEST file size to SMALLEST
+  processedList.sort((a, b) => {
+    if (a.type === 'HLS' && b.type !== 'HLS') return -1;
+    if (b.type === 'HLS' && a.type !== 'HLS') return 1;
+
+    const sizeA = a.size || a.estimatedBytes || 0;
+    const sizeB = b.size || b.estimatedBytes || 0;
+    if (sizeA !== sizeB) return sizeB - sizeA;
+
+    const resA = parseInt((a.quality || '').match(/(\d{3,4})/)?.[1] || '0', 10);
+    const resB = parseInt((b.quality || '').match(/(\d{3,4})/)?.[1] || '0', 10);
+    return resB - resA;
+  });
+
+  return processedList;
+}
+
 function renderMediaList(mediaList) {
   const container = document.getElementById('mediaListContainer');
   const emptyState = document.getElementById('emptyState');
@@ -438,6 +523,9 @@ function renderMediaList(mediaList) {
   } else if (currentFilter === 'audio') {
     filtered = mediaList.filter(m => m.type === 'Audio');
   }
+
+  // Deduplicate identical videos into resolution dropdown & sort largest to smallest
+  filtered = groupAndSortMediaList(filtered);
 
   countBadge.textContent = `${filtered.length} available`;
 
