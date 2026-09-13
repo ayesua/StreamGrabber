@@ -1055,11 +1055,15 @@ async function resolveFinalDirectUrl(rawUrl, referer) {
   let targetUrl = rawUrl;
   try {
     for (let hop = 0; hop < 5; hop++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(targetUrl, {
         method: 'GET',
         headers: referer ? { 'Referer': referer } : {},
-        redirect: 'manual'
+        redirect: 'manual',
+        signal: controller.signal
       });
+      clearTimeout(timer);
       if (res.status >= 300 && res.status < 400) {
         const loc = res.headers.get('location');
         if (loc) {
