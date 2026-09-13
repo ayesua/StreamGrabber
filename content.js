@@ -25,7 +25,8 @@
     '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
     'vast', 'vpaid', 'popunder', 'ad_banner',
     'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
-    'interstitial', '/ads/video/', '/sponsor/', 'exo_ad', 'ad_media'
+    'interstitial', '/ads/video/', '/sponsor/', 'exo_ad', 'ad_media',
+    'video-preview.s3.yandex', 'video-preview'
   ];
 
   function isAdOrAnnounceUrl(url) {
@@ -40,7 +41,7 @@
   if (window.self !== window.top) {
     const loc = (window.location.href || '').toLowerCase();
     const docTitle = (document.title || '').toLowerCase();
-    if (isAdOrAnnounceUrl(loc) || loc.includes('about:blank') || loc.includes('banner') || loc.includes('sponsor') || loc.includes('ads') || docTitle.includes('ad')) {
+    if (isAdOrAnnounceUrl(loc) || loc.includes('about:blank') || loc.includes('banner') || loc.includes('sponsor') || loc.includes('/ads/') || docTitle === 'ad' || docTitle.includes('advertisement') || docTitle.includes('anuncio')) {
       return; // Do not run sniffer inside ad iframes
     }
   }
@@ -479,13 +480,109 @@
       }
 
       // Scan dynamic iframe src attributes for video embed players
-      const iframes = document.querySelectorAll('iframe[src*="video"], iframe[src*="embed"], iframe[src*="player"], iframe[src*="yandex"]');
+      const iframes = document.querySelectorAll('iframe[src*="video"], iframe[src*="embed"], iframe[src*="player"], iframe[src*="yandex"], iframe[src*="mail.ru"]');
       iframes.forEach(iframe => {
-        const src = iframe.src || iframe.getAttribute('data-src');
-        if (src && src.startsWith('http') && !isExcludedUrl(src)) {
-          // Send request to scan iframe target if accessible
+        const src = iframe.src || iframe.getAttribute('data-src') || iframe.getAttribute('src');
+        if (src && src.startsWith('http') && !isExcludedUrl(src) && !isAdOrAnnounceUrl(src)) {
+          chrome.runtime.sendMessage({
+            action: 'RESOLVE_EMBED_MEDIA',
+            embedUrl: src,
+            pageUrl: window.location.href,
+            title: getPageTitle(),
+            poster: findVideoPoster()
+          }, () => { if (chrome.runtime.lastError) {} });
         }
       });
+    } catch (e) {}
+  }
+
+  function scanYandexVideoPlayer() {
+    const isYandex = location.hostname.includes('yandex.') || location.hostname.includes('ya.ru');
+    if (!isYandex) return;
+
+    try {
+      const pageHtml = document.documentElement ? document.documentElement.innerHTML : '';
+      const embedsToResolve = new Set();
+
+      // 1. Scan iframes (VideoPlayer-Sandbox or iframe-default or mailru or other player iframes)
+      const iframes = document.querySelectorAll(
+        'iframe.VideoPlayer-Sandbox, iframe[class*="VideoPlayer"], iframe[src*="video-player"], iframe[src*="pages-common"], iframe[src*="mailru"], iframe[src*="iframe-default"]'
+      );
+      iframes.forEach(iframe => {
+        const src = iframe.getAttribute('src') || iframe.src || '';
+        if (src) {
+          // Check hash #html=
+          if (src.includes('#html=')) {
+            try {
+              const rawHtml = decodeURIComponent(src.split('#html=')[1] || '');
+              const innerSrcMatch = rawHtml.match(/src=["']([^"']+)["']/i);
+              if (innerSrcMatch && innerSrcMatch[1]) {
+                let u = innerSrcMatch[1];
+                if (u.startsWith('//')) u = 'https:' + u;
+                embedsToResolve.add(u);
+              }
+            } catch (e) {}
+          }
+          // Direct embed iframe
+          if (src.startsWith('http') && !src.includes('yastatic.net') && (src.includes('embed') || src.includes('player') || src.includes('video'))) {
+            embedsToResolve.add(src);
+          }
+        }
+      });
+
+      // 2. Scan inline JSON / state for player configs (embedUrl, videoUrl)
+      const embedUrlMatches = pageHtml.matchAll(/"embedUrl"\s*:\s*"([^"]+)"/g);
+      for (const m of embedUrlMatches) {
+        if (m[1]) {
+          let u = m[1].replace(/\\/g, '');
+          if (u.startsWith('//')) u = 'https:' + u;
+          embedsToResolve.add(u);
+        }
+      }
+
+      const videoUrlMatches = pageHtml.matchAll(/"videoUrl"\s*:\s*"([^"]+)"/g);
+      for (const m of videoUrlMatches) {
+        if (m[1]) {
+          let u = m[1].replace(/\\/g, '');
+          if (u.startsWith('//')) u = 'https:' + u;
+          if (u.includes('mail.ru') || u.includes('vk.com') || u.includes('rutube') || u.includes('player')) {
+            embedsToResolve.add(u);
+          }
+        }
+      }
+
+      // 3. Scan for Yandex VH content_id or stream_url
+      const vhMatch = pageHtml.match(/"content_id"\s*:\s*"([^"]+)"/) || pageHtml.match(/frontend\.vh\.yandex\.ru\/v\d+\/player\/([^"'\s]+)\.json/);
+      if (vhMatch && vhMatch[1]) {
+        embedsToResolve.add(`https://frontend.vh.yandex.ru/v23/player/${vhMatch[1]}.json?service=ya-video`);
+      }
+
+      const strmMatch = pageHtml.match(/(https?:\/\/(?:strm|ott-stream)\.yandex\.(?:ru|net)\/[^\s"']+\.m3u8[^\s"']*)/i);
+      if (strmMatch && strmMatch[1]) {
+        reportMedia({
+          url: strmMatch[1],
+          quality: 'Auto HD',
+          type: 'HLS',
+          title: getPageTitle(),
+          source: 'Yandex HLS'
+        });
+      }
+
+      // Send detected embeds to background for full resolution
+      for (const embedUrl of embedsToResolve) {
+        if (!detectedUrls.has(embedUrl)) {
+          detectedUrls.add(embedUrl);
+          chrome.runtime.sendMessage({
+            action: 'RESOLVE_EMBED_MEDIA',
+            embedUrl: embedUrl,
+            pageUrl: window.location.href,
+            title: getPageTitle(),
+            poster: findVideoPoster()
+          }, () => {
+            if (chrome.runtime.lastError) {}
+          });
+        }
+      }
     } catch (e) {}
   }
 
@@ -549,6 +646,7 @@
   }
 
   function runScan() {
+    scanYandexVideoPlayer();
     scanInlinePlayerScripts();
     scanMetaTags();
     scanMediaElements();
@@ -872,6 +970,12 @@
         for (const el of elements) {
           if (el === floatingBtn || floatingBtn?.contains(el)) continue;
           if (el.tagName === 'VIDEO') return el;
+          if (el.tagName === 'IFRAME' && (el.classList.contains('VideoPlayer-Sandbox') || (el.className && typeof el.className === 'string' && el.className.includes('VideoPlayer')) || (el.src && (el.src.includes('video') || el.src.includes('embed'))))) {
+            return el;
+          }
+          if (el.classList && (el.classList.contains('VideoPlayer') || el.classList.contains('VideoViewer-EmbedPlayer') || el.classList.contains('video-player-container'))) {
+            return el;
+          }
           if (el.querySelector) {
             const v = el.querySelector('video');
             if (v) return v;
@@ -891,13 +995,30 @@
     // Pre-roll ads are usually short (< 30 seconds)
     if (v.duration && v.duration > 0 && v.duration < 30) return true;
     const src = (v.currentSrc || v.src || '').toLowerCase();
-    if (isAdOrAnnounceUrl(src)) return true;
+    if (isAdOrAnnounceUrl(src) || src.includes('video-preview.s3.yandex') || src.includes('.s3.yandex.net')) return true;
     return false;
   }
 
   function findMostVisibleVideo() {
+    // 1. Check for primary player iframe or container (Yandex, VK, and embedded players)
+    const playerContainers = Array.from(document.querySelectorAll(
+      'iframe.VideoPlayer-Sandbox, iframe[class*="VideoPlayer"], .VideoPlayer, .VideoViewer-EmbedPlayer, .video-player-container, [data-bem*="player"], iframe[src*="video-player"]'
+    ));
+    for (const el of playerContainers) {
+      const r = el.getBoundingClientRect();
+      if (r.width >= 300 && r.height >= 180 && r.top >= -50 && r.bottom <= window.innerHeight + 150) {
+        return el;
+      }
+    }
+
     const rawVideos = Array.from(document.querySelectorAll('video'));
-    let videos = rawVideos.filter(v => !isAdVideoElement(v));
+    // Filter out hover preview clips (e.g. s3.yandex.net/vo-*.mp4)
+    let videos = rawVideos.filter(v => {
+      if (isAdVideoElement(v)) return false;
+      const src = (v.currentSrc || v.src || '').toLowerCase();
+      if (src.includes('video-preview') || src.includes('.s3.yandex.net')) return false;
+      return true;
+    });
     if (videos.length === 0) videos = rawVideos;
     if (videos.length === 0) return null;
 
@@ -1002,6 +1123,9 @@
     setTimeout(updateTracker, 1500);
   }
 
-  const observer = new MutationObserver(() => scanMediaElements());
+  const observer = new MutationObserver(() => {
+    scanMediaElements();
+    scanYandexVideoPlayer();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 })();

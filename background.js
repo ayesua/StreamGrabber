@@ -201,7 +201,8 @@ const AD_URL_PATTERNS = [
   '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
   'vast', 'vpaid', 'popunder', 'ad_banner',
   'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
-  'interstitial', '/ads/video/', '/sponsor/'
+  'interstitial', '/ads/video/', '/sponsor/',
+  'video-preview.s3.yandex', 'video-preview'
 ];
 
 function isAdOrAnnounceUrl(url) {
@@ -344,6 +345,9 @@ function addMediaItem(tabId, item) {
 
   tabStore.set(item.url, item);
   updateBadge(tabId);
+  chrome.runtime.sendMessage({ action: 'MEDIA_UPDATED', tabId, item }, () => {
+    if (chrome.runtime.lastError) {}
+  });
 
   // Asynchronously inspect and parse HLS stream variants for master playlists
   if (item.type === 'HLS' && !item._variantsEnriched) {
@@ -369,6 +373,128 @@ async function enrichHlsVariants(item, tabId) {
       });
     }
   } catch (e) {}
+}
+
+async function resolveEmbedMedia(embedData, tabId) {
+  const embedUrl = embedData?.embedUrl || '';
+  if (!embedUrl || !tabId) return;
+
+  const pageTitle = embedData.title || tabTitles.get(tabId) || 'Video';
+  const pagePoster = embedData.poster || tabPosters.get(tabId) || null;
+
+  try {
+    // 1. Mail.ru Embeds (/video/embed/, /item/, etc.)
+    if (embedUrl.includes('mail.ru')) {
+      const idMatch = embedUrl.match(/(?:embed|meta|\/video\/|\/video\/embed\/|\/item\/)(\d{15,22})/i) ||
+                      embedUrl.match(/item(?:Id)?=(\d{15,22})/i);
+      if (idMatch && idMatch[1]) {
+        const metaUrl = `https://my.mail.ru/+/video/meta/${idMatch[1]}`;
+        const res = await fetch(metaUrl, {
+          headers: { 'Referer': embedUrl }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const title = json.meta?.title || pageTitle;
+          const poster = json.meta?.poster ? (json.meta.poster.startsWith('//') ? 'https:' + json.meta.poster : json.meta.poster) : pagePoster;
+          if (title && !isGenericOrTechnicalTitle(title)) {
+            tabTitles.set(tabId, title);
+          }
+          if (poster) tabPosters.set(tabId, poster);
+
+          const videos = json.videos || [];
+          for (const v of videos) {
+            if (v.url) {
+              const streamUrl = v.url.startsWith('//') ? 'https:' + v.url : v.url;
+              const qualityKey = (v.key || '').toLowerCase();
+              let quality = 'Auto HD';
+              if (qualityKey.includes('1080')) quality = '1080p Full HD';
+              else if (qualityKey.includes('720')) quality = '720p HD';
+              else if (qualityKey.includes('480')) quality = '480p SD';
+              else if (qualityKey.includes('360')) quality = '360p SD';
+              else if (qualityKey.includes('240')) quality = '240p SD';
+
+              addMediaItem(tabId, {
+                id: 'mailru_' + Math.random().toString(36).substr(2, 9),
+                url: streamUrl,
+                title: title,
+                type: 'MP4',
+                quality: quality,
+                poster: poster,
+                source: 'Mail.ru Player',
+                timestamp: Date.now()
+              });
+            }
+          }
+          return;
+        }
+      }
+    }
+
+    // 2. Yandex Video Hub (VH) JSON API
+    if (embedUrl.includes('frontend.vh.yandex.ru') || embedUrl.includes('ya-video')) {
+      const res = await fetch(embedUrl);
+      if (res.ok) {
+        const json = await res.json();
+        const title = json.title || pageTitle;
+        const poster = json.thumbnail || pagePoster;
+        if (title && !isGenericOrTechnicalTitle(title)) tabTitles.set(tabId, title);
+        if (poster) tabPosters.set(tabId, poster);
+
+        const streams = json.streams || [];
+        for (const s of streams) {
+          if (s.url) {
+            const isHls = s.stream_type === 'hls' || s.url.includes('.m3u8');
+            addMediaItem(tabId, {
+              id: 'yandex_vh_' + Math.random().toString(36).substr(2, 9),
+              url: s.url,
+              title: title,
+              type: isHls ? 'HLS' : 'MP4',
+              quality: s.quality || (isHls ? 'HD Stream' : 'Auto HD'),
+              isStream: isHls,
+              poster: poster,
+              source: 'Yandex VH',
+              timestamp: Date.now()
+            });
+          }
+        }
+        return;
+      }
+    }
+
+    // 3. Generic Embedded Players (nmcorp.video, embed-player.space, VK, Rutube, etc.)
+    const pageRes = await fetch(embedUrl, {
+      headers: { 'Referer': embedData.pageUrl || 'https://gs.yandex.com.tr/' }
+    });
+    if (pageRes.ok) {
+      const html = await pageRes.text();
+      const mediaUrls = html.match(/https?:\/\/[^"'`\s<>]+\.(?:mp4|m3u8)(?:\?[^"'`\s<>]*)?/gi) || [];
+      const seen = new Set();
+      for (const m of mediaUrls) {
+        if (seen.has(m) || isAdOrAnnounceUrl(m)) continue;
+        seen.add(m);
+        const isHls = m.includes('.m3u8');
+        const qualityMatch = m.match(/(\d{3,4})p/i);
+        let quality = isHls ? 'HD Stream' : 'Auto HD';
+        if (qualityMatch) {
+          const p = parseInt(qualityMatch[1], 10);
+          quality = `${p}p ${p >= 720 ? 'HD' : 'SD'}`;
+        }
+        addMediaItem(tabId, {
+          id: 'embed_' + Math.random().toString(36).substr(2, 9),
+          url: m,
+          title: pageTitle,
+          type: isHls ? 'HLS' : 'MP4',
+          quality: quality,
+          isStream: isHls,
+          poster: pagePoster,
+          source: 'Embedded Player',
+          timestamp: Date.now()
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[StreamGrabber] resolveEmbedMedia error:', err);
+  }
 }
 
 function updateBadge(tabId) {
@@ -572,6 +698,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       }
       addMediaItem(tabId, message.data);
+    }
+    return true;
+  }
+
+  if (message.action === 'RESOLVE_EMBED_MEDIA') {
+    const targetTabId = tabId || message.tabId;
+    if (targetTabId && message.embedUrl) {
+      resolveEmbedMedia(message, targetTabId);
     }
     return true;
   }
