@@ -148,6 +148,7 @@ Navega a máxima velocidad con privacidad absoluta. ExtremeShield combina las me
 | :--- | :--- |
 | **`declarativeNetRequest`** | Used to block known third-party tracking domains, ad telemetry pixels, and popup ad networks at the network layer with zero latency. |
 | **`declarativeNetRequestFeedback`** | Used in background debug telemetry to report the exact count and categories of blocked trackers to the user in the popup interface. |
+| **`alarms`** | Used to schedule lightweight periodic background garbage collection (every 10 minutes) to purge stale closed-tab tracking counters and prevent service worker memory leaks. |
 | **`storage`** | Used strictly to store user preferences, domain whitelist settings, and custom cosmetic CSS hiding selectors locally on the device. |
 | **`privacy`** | Used to enforce the `default_public_interface_only` WebRTC IP handling policy to prevent local and public IP disclosures over non-proxied connections. |
 | **`scripting`** | Used to inject the interactive Element Zapper laser HUD when triggered by the user via toolbar or hotkey (Alt+Shift+Z). |
