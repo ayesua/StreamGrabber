@@ -55,7 +55,7 @@
         const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
         if (url && typeof url === 'string') {
           const lower = url.toLowerCase();
-          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('get-video') || (lower.includes('.mp4') && !lower.includes('trailer'))) {
+          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('yandex') || lower.includes('strm') || lower.includes('video') || (lower.includes('.mp4') && !lower.includes('trailer'))) {
             broadcastStreamData({
               url: url,
               type: lower.includes('.m3u8') ? 'HLS' : 'MP4',
@@ -76,7 +76,7 @@
       XMLHttpRequest.prototype.open = function (method, url) {
         if (url && typeof url === 'string') {
           const lower = url.toLowerCase();
-          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('get-video') || (lower.includes('.mp4') && !lower.includes('trailer'))) {
+          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('yandex') || lower.includes('strm') || lower.includes('video') || (lower.includes('.mp4') && !lower.includes('trailer'))) {
             broadcastStreamData({
               url: url,
               type: lower.includes('.m3u8') ? 'HLS' : 'MP4',

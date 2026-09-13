@@ -901,24 +901,27 @@
     if (videos.length === 0) videos = rawVideos;
     if (videos.length === 0) return null;
 
-    const playing = videos.find(v => !v.paused && v.readyState >= 1);
+    // Filter out small side previews (width < 220px or height < 140px) if larger videos exist on page
+    const mainCandidateVideos = videos.filter(v => {
+      const r = v.getBoundingClientRect();
+      return r.width >= 220 && r.height >= 140;
+    });
+
+    const targetPool = mainCandidateVideos.length > 0 ? mainCandidateVideos : videos;
+
+    const playing = targetPool.find(v => !v.paused && v.readyState >= 1);
     if (playing) {
-      const r = playing.getBoundingClientRect();
-      if (r.width >= 80 && r.height >= 50) {
-        return playing;
-      }
+      return playing;
     }
 
     let best = null;
     let maxArea = 0;
-    for (const v of videos) {
+    for (const v of targetPool) {
       const r = v.getBoundingClientRect();
-      if (r.width >= 80 && r.height >= 50) {
-        const area = r.width * r.height;
-        if (area > maxArea) {
-          maxArea = area;
-          best = v;
-        }
+      const area = r.width * r.height;
+      if (area > maxArea) {
+        maxArea = area;
+        best = v;
       }
     }
     return best;
