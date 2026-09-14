@@ -1,6 +1,9 @@
-﻿node_modules/
+node_modules/
 dist/
 *.log
 .DS_Store
 Thumbs.db
 xh_response.html
+*_sample.*
+vk_extractor.py
+StreamGrabber-v3.3.0.zip

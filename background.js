@@ -461,13 +461,28 @@ async function resolveEmbedMedia(embedData, tabId) {
       }
     }
 
+function extractVkVideoId(url) {
+  if (!url || typeof url !== 'string') return null;
+  const directMatch = url.match(/video(-?\d+_\d+)/i);
+  if (directMatch) return directMatch[1];
+  const clipMatch = url.match(/clip(-?\d+_\d+)/i);
+  if (clipMatch) return clipMatch[1];
+  const zMatch = url.match(/[?&]z=video(-?\d+_\d+)/i);
+  if (zMatch) return zMatch[1];
+
+  const oidMatch = url.match(/[?&]oid=(-?\d+)/i);
+  const idMatch = url.match(/[?&]id=(-?\d+)/i);
+  if (oidMatch && idMatch) {
+    return `${oidMatch[1]}_${idMatch[1]}`;
+  }
+  return null;
+}
+
     // 3. VK Video Embeds (/video_ext.php, /video{oid}_{id}, etc.)
     if (embedUrl.includes('vk.com') || embedUrl.includes('vkvideo.ru')) {
-      const vkMatch = embedUrl.match(/video(-?\d+_\d+)/) ||
-                      embedUrl.match(/video_ext\.php\?.*oid=(-?\d+).*id=(-?\d+)/);
-      if (vkMatch) {
-        const videoId = vkMatch[1].includes('_') ? vkMatch[1] : `${vkMatch[1]}_${vkMatch[2]}`;
-        const domain = embedUrl.includes('vk.com') ? 'vk.com' : 'vkvideo.ru';
+      const videoId = extractVkVideoId(embedUrl);
+      if (videoId) {
+        const domain = embedUrl.includes('vkvideo.ru') ? 'vkvideo.ru' : 'vk.com';
         await resolveVkVideo({ videoId, domain, pageUrl: embedUrl, title: pageTitle, poster: pagePoster }, tabId);
         return;
       }

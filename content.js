@@ -37,12 +37,15 @@
     return false;
   }
 
-  // Filter out ad iframes from polluting detected media
+  // Filter out ad iframes and intermediary sandbox proxy wrappers
   if (window.self !== window.top) {
     const loc = (window.location.href || '').toLowerCase();
     const docTitle = (document.title || '').toLowerCase();
-    if (isAdOrAnnounceUrl(loc) || loc.includes('about:blank') || loc.includes('banner') || loc.includes('sponsor') || loc.includes('/ads/') || docTitle === 'ad' || docTitle.includes('advertisement') || docTitle.includes('anuncio')) {
-      return; // Do not run sniffer inside ad iframes
+    if (loc.includes('yastatic.net/video-player') || loc.includes('pages-common') ||
+        isAdOrAnnounceUrl(loc) || loc.includes('about:blank') || loc.includes('banner') ||
+        loc.includes('sponsor') || loc.includes('/ads/') || docTitle === 'ad' ||
+        docTitle.includes('advertisement') || docTitle.includes('anuncio')) {
+      return; // Do not run sniffer or floating button inside intermediary sandbox wrappers or ad frames
     }
   }
 
@@ -632,39 +635,39 @@
     } catch (e) {}
   }
 
+  function extractVkVideoId(url) {
+    if (!url || typeof url !== 'string') return null;
+    const directMatch = url.match(/video(-?\d+_\d+)/i);
+    if (directMatch) return directMatch[1];
+    const clipMatch = url.match(/clip(-?\d+_\d+)/i);
+    if (clipMatch) return clipMatch[1];
+    const zMatch = url.match(/[?&]z=video(-?\d+_\d+)/i);
+    if (zMatch) return zMatch[1];
+
+    const oidMatch = url.match(/[?&]oid=(-?\d+)/i);
+    const idMatch = url.match(/[?&]id=(-?\d+)/i);
+    if (oidMatch && idMatch) {
+      return `${oidMatch[1]}_${idMatch[1]}`;
+    }
+    return null;
+  }
+
   function scanVkVideoPlayer() {
     try {
       const host = (window.location.hostname || '').toLowerCase();
       const isVk = host.includes('vkvideo.ru') || host.includes('vk.com');
 
       // 1. Direct page URL on VK: vkvideo.ru/video{oid}_{id} or vk.com/video{oid}_{id} or vk.com/...z=video{oid}_{id}
-      let videoId = null;
-      if (isVk) {
-        const pathMatch = window.location.pathname.match(/video(-?\d+_\d+)/);
-        if (pathMatch) {
-          videoId = pathMatch[1];
-        } else {
-          const zMatch = window.location.search.match(/[?&]z=video(-?\d+_\d+)/);
-          if (zMatch) {
-            videoId = zMatch[1];
-          } else {
-            const clipMatch = window.location.pathname.match(/clip(-?\d+_\d+)/);
-            if (clipMatch) {
-              videoId = clipMatch[1];
-            }
-          }
-        }
-      }
+      let videoId = isVk ? extractVkVideoId(window.location.href) : null;
 
       // 2. Scan iframes or embed links on any page for VK embeds
       if (!videoId) {
         const vkIframes = document.querySelectorAll('iframe[src*="vk.com"], iframe[src*="vkvideo.ru"]');
         for (const ifr of vkIframes) {
           const src = ifr.getAttribute('src') || ifr.src || '';
-          const m = src.match(/video_ext\.php\?.*oid=(-?\d+).*id=(-?\d+)/i) ||
-                    src.match(/video(-?\d+_\d+)/i);
+          const m = extractVkVideoId(src);
           if (m) {
-            videoId = m[1].includes('_') ? m[1] : `${m[1]}_${m[2]}`;
+            videoId = m;
             break;
           }
         }
@@ -988,47 +991,64 @@
     btn.setAttribute('data-streamgrabber', 'true');
     btn.title = 'StreamGrabber - Click to download this video';
     btn.innerHTML = `
-      <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber" style="width: 24px; height: 24px; border-radius: 6px; display: block; flex-shrink: 0; pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,0.3);" />
-      <span class="streamgrabber-btn-text" style="font-weight: 700; font-size: 12px; color: #ffffff; pointer-events: none; white-space: nowrap; line-height: 1;">Download</span>
+      <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber" style="width: 24px !important; height: 24px !important; border-radius: 6px !important; display: block !important; flex-shrink: 0 !important; pointer-events: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;" />
+      <span class="streamgrabber-btn-text" style="font-weight: 700 !important; font-size: 12px !important; color: #ffffff !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Download</span>
     `;
 
-    Object.assign(btn.style, {
-      position: 'fixed',
-      zIndex: '2147483647',
-      display: 'none',
-      alignItems: 'center',
-      gap: '7px',
-      background: 'rgba(15, 23, 42, 0.94)',
-      color: '#ffffff',
-      border: '1.5px solid #0087cd',
-      borderRadius: '24px',
-      padding: '5px 12px 5px 6px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '12px',
-      fontWeight: '700',
-      cursor: 'pointer',
-      boxShadow: '0 4px 18px rgba(0, 135, 205, 0.45)',
-      backdropFilter: 'blur(8px)',
-      userSelect: 'none',
-      pointerEvents: 'auto',
-      transition: 'opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease',
-      opacity: '0.9'
-    });
+    // Apply strict styles via setProperty with 'important' to prevent any page CSS (e.g. body > * { width: 100%; height: 100% }) from hijacking the button!
+    const strictStyles = {
+      'position': 'fixed',
+      'z-index': '2147483647',
+      'display': 'none',
+      'align-items': 'center',
+      'gap': '7px',
+      'background': 'rgba(15, 23, 42, 0.94)',
+      'color': '#ffffff',
+      'border': '1.5px solid #0087cd',
+      'border-radius': '24px',
+      'padding': '5px 12px 5px 6px',
+      'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      'font-size': '12px',
+      'font-weight': '700',
+      'cursor': 'pointer',
+      'box-shadow': '0 4px 18px rgba(0, 135, 205, 0.45)',
+      'backdrop-filter': 'blur(8px)',
+      'user-select': 'none',
+      'pointer-events': 'auto',
+      'transition': 'opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease',
+      'opacity': '0.9',
+      'width': 'auto',
+      'height': 'auto',
+      'min-width': '100px',
+      'max-width': '160px',
+      'min-height': '32px',
+      'max-height': '40px',
+      'bottom': 'auto',
+      'right': 'auto',
+      'margin': '0',
+      'box-sizing': 'border-box',
+      'overflow': 'hidden',
+      'transform': 'none'
+    };
+
+    for (const [prop, val] of Object.entries(strictStyles)) {
+      btn.style.setProperty(prop, val, 'important');
+    }
 
     btn.addEventListener('mouseenter', () => {
       isMouseOverBtn = true;
-      btn.style.opacity = '1';
-      btn.style.transform = 'scale(1.06)';
-      btn.style.background = '#0087cd';
-      btn.style.borderColor = '#38bdf8';
+      btn.style.setProperty('opacity', '1', 'important');
+      btn.style.setProperty('transform', 'scale(1.06)', 'important');
+      btn.style.setProperty('background', '#0087cd', 'important');
+      btn.style.setProperty('border-color', '#38bdf8', 'important');
     });
 
     btn.addEventListener('mouseleave', () => {
       isMouseOverBtn = false;
-      btn.style.opacity = '0.9';
-      btn.style.transform = 'scale(1)';
-      btn.style.background = 'rgba(15, 23, 42, 0.94)';
-      btn.style.borderColor = '#0087cd';
+      btn.style.setProperty('opacity', '0.9', 'important');
+      btn.style.setProperty('transform', 'none', 'important');
+      btn.style.setProperty('background', 'rgba(15, 23, 42, 0.94)', 'important');
+      btn.style.setProperty('border-color', '#0087cd', 'important');
     });
 
     btn.addEventListener('click', (e) => {
@@ -1046,16 +1066,22 @@
 
   function positionFloatingButton(video) {
     if (!video || !isFloatingBtnEnabled) return;
+    // In subframes, only show button if target is an actual HTMLMediaElement (<video>), never over iframes!
+    if (window.self !== window.top && !(video instanceof HTMLMediaElement)) {
+      if (floatingBtn) floatingBtn.style.setProperty('display', 'none', 'important');
+      return;
+    }
+
     const btn = floatingBtn || createFloatingButton();
     const rect = video.getBoundingClientRect();
 
     if (rect.width < 140 || rect.height < 90) {
-      if (!isMouseOverBtn) btn.style.display = 'none';
+      if (!isMouseOverBtn) btn.style.setProperty('display', 'none', 'important');
       return;
     }
 
     if (rect.bottom < 40 || rect.top > window.innerHeight - 40 || rect.right < 40 || rect.left > window.innerWidth - 40) {
-      if (!isMouseOverBtn) btn.style.display = 'none';
+      if (!isMouseOverBtn) btn.style.setProperty('display', 'none', 'important');
       return;
     }
 
@@ -1065,9 +1091,15 @@
     const left = Math.max(10, Math.min(window.innerWidth - btnWidth - 10, rect.right - btnWidth - 12));
     const top = Math.max(10, Math.min(window.innerHeight - btnHeight - 10, rect.top + 12));
 
-    btn.style.left = `${Math.round(left)}px`;
-    btn.style.top = `${Math.round(top)}px`;
-    btn.style.display = 'flex';
+    btn.style.setProperty('left', `${Math.round(left)}px`, 'important');
+    btn.style.setProperty('top', `${Math.round(top)}px`, 'important');
+    btn.style.setProperty('width', 'auto', 'important');
+    btn.style.setProperty('height', 'auto', 'important');
+    btn.style.setProperty('bottom', 'auto', 'important');
+    btn.style.setProperty('right', 'auto', 'important');
+    btn.style.setProperty('max-width', '160px', 'important');
+    btn.style.setProperty('max-height', '40px', 'important');
+    btn.style.setProperty('display', 'flex', 'important');
 
     if (document.fullscreenElement && btn.parentElement !== document.fullscreenElement) {
       document.fullscreenElement.appendChild(btn);
@@ -1087,7 +1119,7 @@
           if (el.tagName === 'IFRAME' && (el.classList.contains('VideoPlayer-Sandbox') || (el.className && typeof el.className === 'string' && el.className.includes('VideoPlayer')) || (el.src && (el.src.includes('video') || el.src.includes('embed'))))) {
             return el;
           }
-          if (el.closest) {
+          if (el.closest && window.self === window.top) {
             const pc = el.closest(PLAYER_CONTAINER_SELECTORS);
             if (pc) {
               const innerVideo = pc.querySelector('video');
@@ -1121,17 +1153,19 @@
   }
 
   function findMostVisibleVideo() {
-    // 1. Check for primary player iframe or container (Yandex, VK, Mail.ru, and embedded players)
-    const playerContainers = Array.from(document.querySelectorAll(PLAYER_CONTAINER_SELECTORS));
-    for (const el of playerContainers) {
-      const r = el.getBoundingClientRect();
-      if (r.width >= 300 && r.height >= 180 && r.top >= -50 && r.bottom <= window.innerHeight + 150) {
-        const innerVideo = el.querySelector('video');
-        if (innerVideo && !isAdVideoElement(innerVideo)) {
-          const vr = innerVideo.getBoundingClientRect();
-          if (vr.width >= 300 && vr.height >= 180) return innerVideo;
+    // 1. In the top window only, check for primary player iframe or container (Yandex, VK, Mail.ru, and embedded players)
+    if (window.self === window.top) {
+      const playerContainers = Array.from(document.querySelectorAll(PLAYER_CONTAINER_SELECTORS));
+      for (const el of playerContainers) {
+        const r = el.getBoundingClientRect();
+        if (r.width >= 300 && r.height >= 180 && r.top >= -50 && r.bottom <= window.innerHeight + 150) {
+          const innerVideo = el.querySelector('video');
+          if (innerVideo && !isAdVideoElement(innerVideo)) {
+            const vr = innerVideo.getBoundingClientRect();
+            if (vr.width >= 300 && vr.height >= 180) return innerVideo;
+          }
+          return el;
         }
-        return el;
       }
     }
 
