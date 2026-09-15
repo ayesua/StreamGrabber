@@ -37,12 +37,75 @@ const DEFAULT_DONATION_SETTINGS = {
 const tabStats = new Map();
 const ALL_RULESETS = ['ruleset_trackers', 'ruleset_popups', 'ruleset_query_stripping', 'ruleset_annoyances'];
 
+const ICONS_ON = {
+  16: 'icon16.png',
+  48: 'icon48.png',
+  128: 'icon128.png'
+};
+
+const ICONS_OFF = {
+  16: 'icon16_off.png',
+  48: 'icon48_off.png',
+  128: 'icon128_off.png'
+};
+
 // In-memory runtime state for fast reactive defense decisions
 let isMasterEnabled = true;
 let pauseUntilTimestamp = 0;
 let currentSettings = { ...DEFAULT_SETTINGS };
 let currentWhitelistedDomains = [];
 const tabHostnames = new Map(); // tabId -> hostname
+
+function updateTabUI(tabId, url) {
+  if (!tabId) return;
+
+  const isPaused = Boolean(pauseUntilTimestamp && Date.now() < pauseUntilTimestamp);
+  const isGloballyOff = !isMasterEnabled || isPaused;
+
+  if (isGloballyOff) {
+    chrome.action.setIcon({ tabId, path: ICONS_OFF }, () => { if (chrome.runtime.lastError) {} });
+    return;
+  }
+
+  let hostname = '';
+  try {
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      hostname = new URL(url).hostname;
+    }
+  } catch (_) {}
+
+  const isWhitelisted = Boolean(hostname && currentWhitelistedDomains.some(d => hostname === d || hostname.endsWith('.' + d)));
+
+  if (isWhitelisted) {
+    chrome.action.setIcon({ tabId, path: ICONS_OFF }, () => { if (chrome.runtime.lastError) {} });
+    chrome.action.setBadgeText({ tabId, text: '' });
+  } else {
+    chrome.action.setIcon({ tabId, path: ICONS_ON }, () => { if (chrome.runtime.lastError) {} });
+    updateTabBadge(tabId);
+  }
+}
+
+function refreshExtensionIcons() {
+  const isPaused = Boolean(pauseUntilTimestamp && Date.now() < pauseUntilTimestamp);
+  const isGloballyOff = !isMasterEnabled || isPaused;
+
+  if (isGloballyOff) {
+    chrome.action.setIcon({ path: ICONS_OFF }, () => { if (chrome.runtime.lastError) {} });
+  } else {
+    chrome.action.setIcon({ path: ICONS_ON }, () => { if (chrome.runtime.lastError) {} });
+  }
+
+  try {
+    chrome.tabs.query({}, (tabs) => {
+      if (chrome.runtime.lastError || !tabs) return;
+      for (const tab of tabs) {
+        if (tab.id && tab.url) {
+          updateTabUI(tab.id, tab.url);
+        }
+      }
+    });
+  } catch (_) {}
+}
 
 async function initBackgroundState() {
   try {
@@ -56,6 +119,19 @@ async function initBackgroundState() {
     if (data.pauseUntil) pauseUntilTimestamp = data.pauseUntil;
     if (data.settings) currentSettings = { ...DEFAULT_SETTINGS, ...data.settings };
     if (data.whitelistedDomains) currentWhitelistedDomains = data.whitelistedDomains;
+
+    refreshExtensionIcons();
+
+    const isPaused = Boolean(pauseUntilTimestamp && Date.now() < pauseUntilTimestamp);
+    if (!isMasterEnabled || isPaused) {
+      if (isPaused) {
+        chrome.action.setBadgeText({ text: 'PAUSE' });
+        chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+      } else {
+        chrome.action.setBadgeText({ text: 'OFF' });
+        chrome.action.setBadgeBackgroundColor({ color: '#64748b' });
+      }
+    }
   } catch (_) {}
 }
 initBackgroundState();
@@ -66,6 +142,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (changes.pauseUntil !== undefined) pauseUntilTimestamp = changes.pauseUntil.newValue || 0;
     if (changes.settings !== undefined) currentSettings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
     if (changes.whitelistedDomains !== undefined) currentWhitelistedDomains = changes.whitelistedDomains.newValue || [];
+    refreshExtensionIcons();
   }
 });
 
@@ -429,6 +506,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     } catch (_) {}
   }
 
+  updateTabUI(tabId, currentUrl);
+
   if (isTabWatchdogActive(tab?.openerTabId) && isMaliciousAdUrl(currentUrl)) {
     console.warn('[ExtremeShield] Terminating malicious ad popup tab on navigation:', currentUrl);
     try {
@@ -447,6 +526,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     tabStats.set(tabId, { popups: 0, trackers: 0, annoyances: 0, items: [], lastUpdated: Date.now() });
     updateTabBadge(tabId);
   }
+});
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (tab && (tab.url || tab.pendingUrl)) {
+      updateTabUI(tab.id, tab.url || tab.pendingUrl);
+    }
+  } catch (_) {}
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -571,6 +659,7 @@ async function setGlobalProtection(enabled) {
     });
     applyWebRTCProtection(currentSettings.blockWebRTCLeaks !== false);
     chrome.action.setBadgeText({ text: '' });
+    refreshExtensionIcons();
     console.log('[ExtremeShield] Global protection: ENABLED');
   } else {
     await chrome.declarativeNetRequest.updateEnabledRulesets({
@@ -579,6 +668,7 @@ async function setGlobalProtection(enabled) {
     applyWebRTCProtection(false);
     chrome.action.setBadgeText({ text: 'OFF' });
     chrome.action.setBadgeBackgroundColor({ color: '#64748b' });
+    refreshExtensionIcons();
     console.log('[ExtremeShield] Global protection: DISABLED');
   }
 }
@@ -592,6 +682,7 @@ async function pauseProtectionForMinutes(minutes) {
   applyWebRTCProtection(false);
   chrome.action.setBadgeText({ text: 'PAUSE' });
   chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+  refreshExtensionIcons();
 
   // Schedule auto-reactivation
   setTimeout(async () => {
@@ -609,7 +700,9 @@ async function whitelistDomain(domain) {
   if (!list.includes(domain)) {
     list.push(domain);
     await chrome.storage.local.set({ whitelistedDomains: list });
-    console.log(`[PureShield] Whitelisted domain: ${domain}`);
+    currentWhitelistedDomains = list;
+    refreshExtensionIcons();
+    console.log(`[ExtremeShield] Whitelisted domain: ${domain}`);
   }
 }
 
@@ -619,7 +712,9 @@ async function removeWhitelistedDomain(domain) {
   let list = data.whitelistedDomains || [];
   list = list.filter(d => d !== domain);
   await chrome.storage.local.set({ whitelistedDomains: list });
-  console.log(`[PureShield] Removed whitelist for domain: ${domain}`);
+  currentWhitelistedDomains = list;
+  refreshExtensionIcons();
+  console.log(`[ExtremeShield] Removed whitelist for domain: ${domain}`);
 }
 
 /* ==========================================================================
