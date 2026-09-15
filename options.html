@@ -43,10 +43,10 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-title">
-              Aggressive Popup & Popunder Blocker
-              <button class="info-btn" data-info="popups" title="Información detallada">ℹ</button>
+              Aggressive Popup &amp; Popunder Blocker
+              <button class="info-btn" data-info="popups" title="Detailed Information">ℹ</button>
             </span>
-            <span class="setting-desc">Traps unrequested window spawns, synthetic anchor clicks, popunders, and deceptive fullscreen browser hijacks.</span>
+            <span class="setting-desc">Traps unrequested window spawns, synthetic anchor clicks, popunders, and zero-click redirects.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="opt-blockPopups" checked>
@@ -58,9 +58,9 @@
           <div class="setting-info">
             <span class="setting-title">
               Anti-Redirect &amp; Tab-Under Hijack Shield
-              <button class="info-btn" data-info="redirect" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="redirect" title="Detailed Information">ℹ</button>
             </span>
-            <span class="setting-desc">Neutralizes timer-based redirects, tab-unders, and history.pushState loops trapping your browser's back button.</span>
+            <span class="setting-desc">Neutralizes timer-based redirects, tab-unders, and location assignment hijacks.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="opt-blockRedirects" checked>
@@ -71,10 +71,52 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-title">
-              Tracking & Telemetry Armor
-              <button class="info-btn" data-info="trackers" title="Información detallada">ℹ</button>
+              Anti-History Trapping &amp; Back-Button Hijack Defense
+              <button class="info-btn" data-info="history-trap" title="Detailed Information">ℹ</button>
             </span>
-            <span class="setting-desc">Blocks cross-site trackers, ad telemetry pixels, analytics beacons, and deep Shadow DOM trackers.</span>
+            <span class="setting-desc">Rate-limits rapid history.pushState and replaceState loops preventing sites from freezing the Back button.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-historyTrapDefense" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
+              Deceptive Fullscreen Hijack Defense
+              <button class="info-btn" data-info="fullscreen" title="Detailed Information">ℹ</button>
+            </span>
+            <span class="setting-desc">Suppresses unauthorized requestFullscreen calls outside explicit video interactions to prevent lockout phishing.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-fullscreenDefense" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
+              Background Ad Tab Watchdog
+              <button class="info-btn" data-info="tab-watchdog" title="Detailed Information">ℹ</button>
+            </span>
+            <span class="setting-desc">Instantly terminates newly spawned background popunder and ad network tabs before they execute malicious scripts.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-tabWatchdog" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
+              Tracking &amp; Telemetry Armor
+              <button class="info-btn" data-info="trackers" title="Detailed Information">ℹ</button>
+            </span>
+            <span class="setting-desc">Blocks cross-site trackers, ad telemetry pixels, analytics beacons, and behavioral profiling scripts.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="opt-blockTrackers" checked>
@@ -85,8 +127,22 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-title">
+              Deep Shadow DOM Tracker Scanner
+              <button class="info-btn" data-info="shadow-dom" title="Detailed Information">ℹ</button>
+            </span>
+            <span class="setting-desc">Recursively traverses open Shadow DOM trees to discover and neutralize stealth advertising trackers and hidden banners.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-shadowDomScanner" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
               URL Tracking Parameter Stripper
-              <button class="info-btn" data-info="url-params" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="url-params" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Automatically cleans query tracking tokens (utm_*, fbclid, gclid, mc_cid, etc.) from clicked links and URLs.</span>
           </div>
@@ -99,8 +155,8 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-title">
-              Canvas & Audio Fingerprint Randomizer
-              <button class="info-btn" data-info="fingerprint" title="Información detallada">ℹ</button>
+              Canvas &amp; Audio Fingerprint Randomizer
+              <button class="info-btn" data-info="fingerprint" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Injects imperceptible deterministic noise into canvas and AudioContext APIs to defeat device fingerprinting.</span>
           </div>
@@ -114,9 +170,9 @@
           <div class="setting-info">
             <span class="setting-title">
               WebRTC IP Leak Defense
-              <button class="info-btn" data-info="webrtc" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="webrtc" title="Detailed Information">ℹ</button>
             </span>
-            <span class="setting-desc">Eliminates WebRTC local/public IP address disclosure on non-proxied UDP connections.</span>
+            <span class="setting-desc">Eliminates WebRTC local and public IP address disclosure on non-proxied UDP connections.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="opt-blockWebRTCLeaks" checked>
@@ -128,7 +184,7 @@
           <div class="setting-info">
             <span class="setting-title">
               Cookie Consent Banner Auto-Dismissal
-              <button class="info-btn" data-info="cookies" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="cookies" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Automatically dismisses or hides intrusive GDPR/CCPA cookie consent banners without accepting tracking.</span>
           </div>
@@ -141,8 +197,22 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-title">
+              Overlay, Backdrop &amp; Scroll Lock Defense
+              <button class="info-btn" data-info="overlays" title="Detailed Information">ℹ</button>
+            </span>
+            <span class="setting-desc">Vaporizes transparent click-jack backdrops and automatically restores page scrolling when websites freeze overflow.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-removeOverlays" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">
               Anti-Adblock Defuser
-              <button class="info-btn" data-info="adblock-defuse" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="adblock-defuse" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Neutralizes anti-adblock traps and provides safe dummy variables to prevent page breakage.</span>
           </div>
@@ -155,8 +225,8 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-title">
-              Video Pre-roll & VAST Defuser (Fix Error 224003)
-              <button class="info-btn" data-info="media-prerolls" title="Información detallada">ℹ</button>
+              Video Pre-roll &amp; VAST Defuser (Fix Error 224003)
+              <button class="info-btn" data-info="media-prerolls" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Neutralizes broken video prerolls, skips VAST ad crashes (Error Code 224003), and ensures smooth playback on JWPlayer and HTML5 players.</span>
           </div>
@@ -170,7 +240,7 @@
           <div class="setting-info">
             <span class="setting-title">
               Popup Blocked Toast Notifications
-              <button class="info-btn" data-info="toasts" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="toasts" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Displays a subtle floating badge at the bottom corner when a popup is intercepted with 1-click allow/whitelist.</span>
           </div>
@@ -189,7 +259,7 @@
           <div class="setting-info">
             <span class="setting-title">
               Hyperlink Auditing Stripper (&lt;a ping="..."&gt;)
-              <button class="info-btn" data-info="ping-audit" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="ping-audit" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Removes stealth click-tracking ping beacons embedded in links by search engines and social platforms.</span>
           </div>
@@ -203,7 +273,7 @@
           <div class="setting-info">
             <span class="setting-title">
               Strict Referrer Policy Enforcement
-              <button class="info-btn" data-info="referrer" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="referrer" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Limits the HTTP Referer header on cross-origin navigations so destination sites cannot see exact page URLs.</span>
           </div>
@@ -217,7 +287,7 @@
           <div class="setting-info">
             <span class="setting-title">
               Unlock Right-Click &amp; Text Selection
-              <button class="info-btn" data-info="unlock-rightclick" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="unlock-rightclick" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Re-enables right-click context menu, text highlighting, and clipboard copy on sites attempting to disable them.</span>
           </div>
@@ -231,7 +301,7 @@
           <div class="setting-info">
             <span class="setting-title">
               Anti-Autoplay Video Shield
-              <button class="info-btn" data-info="autoplay" title="Información detallada">ℹ</button>
+              <button class="info-btn" data-info="autoplay" title="Detailed Information">ℹ</button>
             </span>
             <span class="setting-desc">Prevents background floating video players from auto-playing loud media without your explicit click.</span>
           </div>

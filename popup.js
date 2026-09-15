@@ -70,13 +70,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadState() {
     const data = await chrome.storage.local.get([
       'masterEnabled',
+      'pauseUntil',
       'settings',
       'whitelistedDomains',
       'stats',
       'donationSettings'
     ]);
 
-    masterEnabled = data.masterEnabled !== false;
+    const isPaused = Boolean(data.pauseUntil && Date.now() < data.pauseUntil);
+    masterEnabled = data.masterEnabled !== false && !isPaused;
     if (masterPowerToggle) {
       masterPowerToggle.checked = masterEnabled;
     }
@@ -86,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     isWhitelisted = whitelist.some(d => currentHostname === d || currentHostname.endsWith('.' + d));
 
     // Update Shield Status
-    updateShieldUI();
+    updateShieldUI(isPaused);
 
     // Update Lifetime Stats
     const stats = data.stats || {};
@@ -139,13 +141,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function updateShieldUI() {
+  function updateShieldUI(isPaused = false) {
     const isProtected = masterEnabled && !isWhitelisted && !currentTab?.url?.startsWith('chrome://');
     
     if (isProtected) {
       heroSection.classList.add('shield-active');
       statusPill.className = 'status-indicator';
       statusText.textContent = 'Protected';
+    } else if (isPaused) {
+      heroSection.classList.remove('shield-active');
+      statusPill.className = 'status-indicator paused';
+      statusText.textContent = 'Paused (15m)';
     } else if (isWhitelisted) {
       heroSection.classList.remove('shield-active');
       statusPill.className = 'status-indicator paused';

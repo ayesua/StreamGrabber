@@ -24,11 +24,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toggles = {
     blockPopups: document.getElementById('opt-blockPopups'),
     blockRedirects: document.getElementById('opt-blockRedirects'),
+    historyTrapDefense: document.getElementById('opt-historyTrapDefense'),
+    fullscreenDefense: document.getElementById('opt-fullscreenDefense'),
+    tabWatchdog: document.getElementById('opt-tabWatchdog'),
     blockTrackers: document.getElementById('opt-blockTrackers'),
+    shadowDomScanner: document.getElementById('opt-shadowDomScanner'),
     stripParams: document.getElementById('opt-stripParams'),
     blockFingerprinting: document.getElementById('opt-blockFingerprinting'),
     blockWebRTCLeaks: document.getElementById('opt-blockWebRTCLeaks'),
     dismissCookieBanners: document.getElementById('opt-dismissCookieBanners'),
+    removeOverlays: document.getElementById('opt-removeOverlays'),
     defuseAntiAdblock: document.getElementById('opt-defuseAntiAdblock'),
     blockMediaPrerolls: document.getElementById('opt-blockMediaPrerolls'),
     showToastNotifications: document.getElementById('opt-showToastNotifications'),
@@ -69,88 +74,118 @@ document.addEventListener('DOMContentLoaded', async () => {
      ========================================================================== */
   const FEATURE_DESCRIPTIONS = {
     'popups': {
-      title: '🚫 Bloqueador Agresivo de Popups, Popunders y Secuestro Fullscreen',
-      whatItDoes: 'Interviene la función `window.open` y `requestFullscreen` a nivel de navegador para interceptar ventanas emergentes no solicitadas, clics trampa sintéticos en enlaces ocultos, tácticas de "popunder" y secuestro engañoso de pantalla completa.',
-      benefit: 'Elimina el 100% de la publicidad engañosa, redirecciones automáticas a sitios de apuestas/virus, falsos avisos de pantalla completa y páginas molestas.',
-      compat: 'Las ventanas legítimas que tú abras conscientemente (como iniciar sesión con Google o reproducir video en pantalla completa) siguen funcionando normalmente.'
+      title: '🚫 Aggressive Popup & Popunder Blocker',
+      whatItDoes: 'Intercepts window.open, synthetic anchor click triggers, popunders, and zero-click background spawn attempts before new browser contexts can open.',
+      benefit: 'Eliminates 100% of deceptive ads, malicious casino/scam spawns, and unwanted browser tab storms.',
+      compat: 'Legitimate user-intended popups (such as "Sign in with Google" or OAuth authorization dialogs) are permitted seamlessly.'
     },
     'redirect': {
-      title: '🔀 Escudo Anti-Redirecciones, Tab-Under y Trampas de Historial',
-      whatItDoes: 'Intercepta y neutraliza scripts maliciosos que intentan redirigir tu pestaña actual mediante temporizadores invisibles (`location.replace`, `location.href`), manipulación masiva del historial (`history.pushState` loops que atrapan el botón Atrás) o etiquetas `meta refresh`.',
-      benefit: 'Impide que páginas de descarga o streaming secuestren tu navegación, te atrapen en la pestaña o te lleven a portales de phishing.',
-      compat: 'Las navegaciones normales, SPAs (YouTube, Twitter) y clics directos del usuario funcionan con total fluidez.'
+      title: '🔀 Anti-Redirect & Tab-Under Hijack Shield',
+      whatItDoes: 'Intercepts timer-based location changes (location.replace, location.href, and location.assign) and cross-domain navigations triggered without trusted user interaction.',
+      benefit: 'Prevents download, tube, and streaming sites from stealthily navigating your active tab away to phishing or ad networks.',
+      compat: 'Standard web browsing, Single Page Applications (YouTube, GitHub, X), and direct link clicks work with zero lag.'
+    },
+    'history-trap': {
+      title: '⏪ Anti-History Trapping & Back-Button Hijack Defense',
+      whatItDoes: 'Enforces strict rate-limiting on rapid history.pushState and replaceState bursts that abuse the HTML5 History API to flood browser history.',
+      benefit: 'Ensures clicking the browser\'s "Back" button always returns you to the previous page instead of trapping you in an endless ad loop.',
+      compat: 'Legitimate client-side routers (React, Vue, Next.js) continue functioning normally without interruption.'
+    },
+    'fullscreen': {
+      title: '🖥️ Deceptive Fullscreen Hijack Defense',
+      whatItDoes: 'Blocks unauthorized requestFullscreen calls on fake system warnings or page overlays that lack genuine user video interaction gestures.',
+      benefit: 'Protects against tech-support lockout scams, fake browser update screens, and fullscreen phishing overlays.',
+      compat: 'Full-screen video playback on YouTube, Netflix, and HTML5 video players works smoothly upon clicking full-screen controls.'
+    },
+    'tab-watchdog': {
+      title: '🐕 Background Ad Tab Watchdog',
+      whatItDoes: 'Monitors browser tab creation and navigation events in the service worker, immediately terminating ad networks and popunder destinations.',
+      benefit: 'Instantly destroys unwanted tabs before they consume system memory, download payloads, or execute tracking scripts.',
+      compat: 'Bypassed when protection is disabled, paused, or when initiated from whitelisted domains.'
     },
     'trackers': {
-      title: '🛡️ Escudo Contra Rastreadores, Telemetría y Shadow DOM',
-      whatItDoes: 'Bloquea solicitudes de red e inspecciona elementos en el DOM y árboles de Shadow DOM abierto contra más de 50 servidores de perfilamiento, píxeles de seguimiento (Meta, TikTok, Criteo, Google) y mapas de calor.',
-      benefit: 'Impide que las empresas creen un perfil publicitario con tu historial y acelera la carga de las páginas hasta un 40%.',
-      compat: 'Recomendado mantener SIEMPRE activo.'
+      title: '🛡️ Tracking & Telemetry Armor',
+      whatItDoes: 'Blocks network requests and DOM elements associated with cross-site tracking pixels, analytics beacons, heatmaps, and advertising profiling scripts.',
+      benefit: 'Stops corporations from harvesting your browsing history and speeds up page load times by up to 40%.',
+      compat: 'Recommended to keep permanently enabled.'
+    },
+    'shadow-dom': {
+      title: '🔍 Deep Shadow DOM Tracker Scanner',
+      whatItDoes: 'Recursively traverses open Web Component Shadow DOM roots to uncover and remove tracking scripts, tracking pixels, and stealth ad banners.',
+      benefit: 'Extends ad and tracking neutralization into modern modular web applications that hide ad elements within isolated Shadow DOM boundaries.',
+      compat: 'Optimized with node caching to ensure zero CPU overhead during page scrolling.'
     },
     'url-params': {
-      title: '🧹 Limpiador de Parámetros de Rastreo en URLs',
-      whatItDoes: 'Elimina automáticamente tokens publicitarios como `utm_source`, `fbclid`, `gclid`, `mc_cid` y `msclkid` de los enlaces cuando navegas.',
-      benefit: 'Mantiene tus enlaces limpios, protege tu privacidad al compartir URLs con amigos y evita el rastreo cruzado entre sitios.',
-      compat: 'No altera el funcionamiento de las páginas de destino.'
+      title: '🧹 URL Tracking Parameter Stripper',
+      whatItDoes: 'Automatically cleans query tracking tokens (such as utm_source, fbclid, gclid, mc_cid, and msclkid) from clicked links and web addresses.',
+      benefit: 'Prevents cross-site behavioral correlation, preserves your privacy when sharing links with friends, and keeps URLs clean.',
+      compat: 'Does not alter essential parameters required for site navigation or checkout processes.'
     },
     'fingerprint': {
-      title: '🕵️ Máscara Contra Huella Digital (Canvas & Audio)',
-      whatItDoes: 'Las empresas usan el procesador gráfico y de audio de tu computadora para generar una "huella única" que te identifica sin cookies. ExtremeShield inyecta una variación minúscula e invisible en las funciones de Canvas 2D y AudioContext.',
-      benefit: 'Hace que tu computadora parezca un dispositivo completamente nuevo en cada sitio web, frustrando el rastreo avanzado.',
-      compat: 'Totalmente invisible, no afecta cómo se ven las imágenes o juegos.'
+      title: '🕵️ Canvas & Audio Fingerprint Randomizer',
+      whatItDoes: 'Injects imperceptible deterministic microscopic noise into HTML5 Canvas 2D and Web Audio API buffer calculations.',
+      benefit: 'Frustrates device fingerprinting scripts by ensuring your browser presents a distinct, untrackable hardware signature on each session.',
+      compat: 'Completely imperceptible to human senses; does not distort images, games, or audio playback.'
     },
     'webrtc': {
-      title: '🔒 Protección Contra Fugas de IP por WebRTC',
-      whatItDoes: 'WebRTC es una tecnología para videollamadas que puede revelar tu dirección IP pública real incluso si usas una VPN o proxy. Este escudo fuerza a WebRTC a usar solo las interfaces de red públicas seguras.',
-      benefit: 'Oculta tu IP local y previene fugas de identidad de red.',
-      compat: 'Compatible con Google Meet, Zoom y Discord en el navegador.'
+      title: '🔒 WebRTC IP Leak Defense',
+      whatItDoes: 'Restricts WebRTC media routing to default public internet interfaces, preventing local private IP address disclosure on non-proxied UDP connections.',
+      benefit: 'Keeps your real internal and VPN-shielded IP addresses concealed from snooping websites.',
+      compat: 'Fully compatible with Google Meet, Zoom, Discord, and browser video conferencing tools.'
     },
     'cookies': {
-      title: '🍪 Auto-Cierre de Banners de Cookies (GDPR/CCPA)',
-      whatItDoes: 'Detecta los molestos avisos de consentimiento de cookies (OneTrust, Cookiebot, Didomi, etc.) y los oculta o rechaza automáticamente sin que tengas que darles clic.',
-      benefit: 'Navegación limpia sin tener que aceptar cookies invasivas en cada sitio que visitas.',
-      compat: 'Restaura el scroll de la página si el banner la bloqueaba.'
+      title: '🍪 Cookie Consent Banner Auto-Dismissal',
+      whatItDoes: 'Detects intrusive GDPR and CCPA cookie consent banners (OneTrust, Cookiebot, Didomi, etc.) and auto-dismisses or rejects them without accepting tracking.',
+      benefit: 'Clean, unobstructed browsing experience without clicking through annoying consent popups on every site.',
+      compat: 'Automatically restores page scrolling if a cookie overlay had locked the document body.'
+    },
+    'overlays': {
+      title: '🪟 Overlay, Backdrop & Scroll Lock Defense',
+      whatItDoes: 'Detects transparent click-trap overlays, deceptive paywall backdrops, and restores scrolling when websites freeze overflow.',
+      benefit: 'Allows seamless reading and navigation on pages that attempt to lock content behind intrusive sign-up or paywall modals.',
+      compat: 'Safe for standard dialogs; only unlocks pages when scrolling has been artificially frozen.'
     },
     'adblock-defuse': {
-      title: '🛠️ Desactivador de Trampas Anti-Adblock',
-      whatItDoes: 'Neutraliza los scripts que intentan detectar si estás usando un bloqueador y les entrega respuestas simuladas inofensivas.',
-      benefit: 'Evita los mensajes de "Desactiva tu bloqueador para continuar" en páginas de noticias y descargas.',
-      compat: 'Recomendado activo.'
+      title: '🛠️ Anti-Adblock Defuser',
+      whatItDoes: 'Neutralizes scripts designed to detect ad blockers and provides safe dummy variables to avert page breakage.',
+      benefit: 'Bypasses "Disable your ad blocker to continue" paywalls and nag screens on news and utility portals.',
+      compat: 'Recommended to keep enabled for uninterrupted browsing.'
     },
     'media-prerolls': {
-      title: '🎬 Desactivador de Anuncios Pre-roll y Error 224003 en Videos',
-      whatItDoes: 'Neutraliza las peticiones de anuncios VAST/VPAID y salta los anuncios previos ("pre-rolls") en reproductores como JWPlayer, Video.js y KVS. Entrega respuestas VAST simuladas para evitar bloqueos.',
-      benefit: 'Elimina el molesto error "This video file cannot be played. (Error Code: 224003)" en sitios de video (como bdsmx-porn.com) y permite que los videos comiencen a reproducirse inmediatamente sin anuncios.',
-      compat: 'Recomendado activo para ver videos sin interrupciones ni fallos de reproducción.'
+      title: '🎬 Video Pre-roll & VAST Defuser (Fix Error 224003)',
+      whatItDoes: 'Neutralizes broken video prerolls, skips VAST ad crashes (Error Code 224003), and provides empty compliant VAST XML to video players.',
+      benefit: 'Eliminates "This video file cannot be played (Error Code: 224003)" failures and allows immediate video playback without commercials.',
+      compat: 'Highly recommended for JWPlayer, Video.js, and HTML5 video streaming websites.'
     },
     'toasts': {
-      title: '💬 Alertas Flotantes de Popups Bloqueados',
-      whatItDoes: 'Muestra una pequeña tarjeta en la esquina inferior derecha cuando se neutraliza un popup, dándote la opción de "Permitir una vez" o "Poner en lista blanca".',
-      benefit: 'Te da control total y visibilidad de lo que ExtremeShield está bloqueando en tiempo real.',
-      compat: 'Puedes desactivarlo si prefieres un bloqueo 100% silencioso.'
+      title: '💬 Popup Blocked Toast Notifications',
+      whatItDoes: 'Displays a sleek, discrete floating notification at the bottom corner of the viewport whenever a popup is neutralized, offering 1-click allow or whitelist.',
+      benefit: 'Provides transparent real-time feedback on what ExtremeShield is blocking, with instant unblock controls.',
+      compat: 'Can be toggled off if you prefer completely silent, background-only blocking.'
     },
     'ping-audit': {
-      title: '🔗 Eliminador de Auditoría de Enlaces (<a ping>)',
-      whatItDoes: 'Google y Facebook añaden el atributo `ping="https://..."` a los enlaces. Cuando haces clic en un resultado, tu navegador envía silenciosamente un informe a sus servidores avisando exactamente qué enlace tocaste y a qué hora.',
-      benefit: 'Elimina ese atributo de todos los enlaces de la web, impidiendo el rastreo de tus clics.',
-      compat: 'Opcional. Altamente recomendado para máxima privacidad.'
+      title: '🔗 Hyperlink Auditing Stripper (<a ping>)',
+      whatItDoes: 'Strips ping attributes from HTML hyperlinks embedded by search engines and social networks.',
+      benefit: 'Prevents background telemetry beacons from dispatching click-telemetry payloads to analytics servers when you click a search result.',
+      compat: 'Optional. Highly recommended for users prioritizing maximum click privacy.'
     },
     'referrer': {
-      title: '🌐 Política Estricta de Referrer (Referrer Trimming)',
-      whatItDoes: 'Al hacer clic en un enlace de `sitioA.com/articulo/secreto` hacia `sitioB.com`, normalmente el segundo sitio ve la URL completa previa. Esta opción recorta la cabecera para que solo vean `sitioA.com` o nada.',
-      benefit: 'Evita que sitios externos conozcan las búsquedas o artículos específicos que estabas leyendo antes de visitarlos.',
-      compat: 'Opcional. En muy raras ocasiones algunos sitios de inicio de sesión antiguos requieren ver la URL de origen completa.'
+      title: '🌐 Strict Referrer Policy Enforcement',
+      whatItDoes: 'Trims cross-origin HTTP Referer headers so external destination websites cannot inspect the exact article or query path you arrived from.',
+      benefit: 'Prevents destination servers from learning your specific search queries or internal browsing paths.',
+      compat: 'Optional. In rare instances, legacy authentication gateways may require full referrer URLs.'
     },
     'unlock-rightclick': {
-      title: '🔓 Desbloqueador de Clic Derecho y Selección de Texto',
-      whatItDoes: 'Algunas páginas web usan scripts para deshabilitar el clic derecho, bloquear la copia de texto o impedir que uses el menú contextual de tu navegador.',
-      benefit: 'Devuelve el control a tu navegador permitiéndote copiar texto, abrir enlaces en nuevas pestañas y usar el menú contextual con libertad.',
-      compat: 'Opcional. Actívalo si visitas frecuentemente sitios que bloquean la copia de información.'
+      title: '🔓 Unlock Right-Click & Text Selection',
+      whatItDoes: 'Restores the browser context menu, text highlighting, and clipboard copy operations on websites that attempt to disable them with event listeners.',
+      benefit: 'Restores complete browser control, allowing you to freely copy text, inspect elements, and open links in new tabs.',
+      compat: 'Optional. Useful when visiting recipe, academic, or news sites that restrict selection.'
     },
     'autoplay': {
-      title: '🔇 Escudo Anti-Reproducción Automática de Videos',
-      whatItDoes: 'Detiene automáticamente los reproductores de video flotantes que empiezan a reproducirse con sonido o consumir datos sin tu permiso al cargar una página.',
-      benefit: 'Ahorra ancho de banda, batería en portátiles y evita ruidos inesperados.',
-      compat: 'Opcional. Los videos que tú presiones manualmente ("Play") se reproducirán con normalidad.'
+      title: '🔇 Anti-Autoplay Video Shield',
+      whatItDoes: 'Prevents unprompted floating or background video players from starting playback with audio upon page load.',
+      benefit: 'Saves laptop battery life, reduces network bandwidth consumption, and prevents unexpected loud noise.',
+      compat: 'Optional. Media you explicitly start via play buttons will play normally.'
     }
   };
 
@@ -161,15 +196,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     infoModalTitle.textContent = info.title;
     infoModalContent.innerHTML = `
       <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 4px;">
-        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">🔍 ¿Qué hace?</div>
+        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">🔍 What it does</div>
         <div>${info.whatItDoes}</div>
       </div>
       <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 12px; margin-bottom: 4px;">
-        <div style="font-weight: 700; color: var(--accent-emerald); margin-bottom: 4px;">🛡️ Beneficio de Privacidad</div>
+        <div style="font-weight: 700; color: var(--accent-emerald); margin-bottom: 4px;">🛡️ Privacy &amp; Security Benefit</div>
         <div>${info.benefit}</div>
       </div>
       <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-md); padding: 12px;">
-        <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 4px;">⚙️ Compatibilidad</div>
+        <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 4px;">⚙️ Compatibility &amp; Experience</div>
         <div>${info.compat}</div>
       </div>
     `;

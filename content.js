@@ -28,7 +28,14 @@
     defuseAntiAdblock: true,
     dismissCookieBanners: true,
     removeOverlays: true,
+    stripParams: true,
     showToastNotifications: true,
+    blockWebRTCLeaks: true,
+    blockMediaPrerolls: true,
+    historyTrapDefense: true,
+    fullscreenDefense: true,
+    shadowDomScanner: true,
+    tabWatchdog: true,
     // Advanced Optional Shields
     stripPingAttributes: false,
     trimReferrers: false,
@@ -74,17 +81,27 @@
      2. SYNC SETTINGS & WHITELIST STATUS
      ========================================================================== */
   function syncSettings() {
-    chrome.storage.local.get(['settings', 'whitelistedDomains', 'customCosmeticRules'], (data) => {
+    chrome.storage.local.get(['masterEnabled', 'pauseUntil', 'settings', 'whitelistedDomains', 'customCosmeticRules'], (data) => {
+      if (chrome.runtime.lastError) return;
       if (data.settings) {
         settings = { ...settings, ...data.settings };
       }
+      const isMasterOff = data.masterEnabled === false;
+      const isPaused = Boolean(data.pauseUntil && Date.now() < data.pauseUntil);
       const whitelist = data.whitelistedDomains || [];
-      isWhitelisted = isProtectedDomain || whitelist.some(domain => hostname === domain || hostname.endsWith('.' + domain));
+      const isDomainWhitelisted = whitelist.some(domain => hostname === domain || hostname.endsWith('.' + domain));
+
+      isWhitelisted = isProtectedDomain || isMasterOff || isPaused || isDomainWhitelisted;
 
       if (isWhitelisted) {
-        document.documentElement.setAttribute('data-extremeshield-whitelisted', 'true');
+        document.documentElement?.setAttribute('data-extremeshield-whitelisted', 'true');
+        // Dismiss any existing toast notifications immediately
+        if (toastContainer) {
+          toastContainer.remove();
+          toastContainer = null;
+        }
       } else {
-        document.documentElement.removeAttribute('data-extremeshield-whitelisted');
+        document.documentElement?.removeAttribute('data-extremeshield-whitelisted');
       }
 
       // Broadcast config to injected.js
@@ -96,15 +113,20 @@
           blockFingerprinting: settings.blockFingerprinting,
           defuseAntiAdblock: settings.defuseAntiAdblock,
           blockMediaPrerolls: settings.blockMediaPrerolls !== false,
+          historyTrapDefense: settings.historyTrapDefense !== false,
+          fullscreenDefense: settings.fullscreenDefense !== false,
           whitelisted: isWhitelisted
         }
       }));
 
       // Apply custom cosmetic hiding rules
-      applyCustomCosmeticRules(data.customCosmeticRules || {});
-
-      // Apply Advanced Optional Features
-      applyAdvancedFeatures();
+      if (!isWhitelisted) {
+        applyCustomCosmeticRules(data.customCosmeticRules || {});
+        applyAdvancedFeatures();
+      } else {
+        const el = document.getElementById('ps-custom-cosmetic-styles');
+        if (el) el.remove();
+      }
     });
   }
   syncSettings();
@@ -250,7 +272,7 @@
 
   ['click', 'auxclick', 'mousedown'].forEach(eventType => {
     window.addEventListener(eventType, (e) => {
-      if (isWhitelisted) return;
+      if (isWhitelisted || !settings.blockPopups) return;
       let target = e.target;
 
       // 1. Check if clicking on an overlay placed directly above a media element
@@ -268,7 +290,7 @@
               action: 'recordBlockedEvent',
               data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
             });
-            if (settings.showToastNotifications) {
+            if (settings.showToastNotifications && !isWhitelisted && settings.blockPopups) {
               showBlockedPopupToast(href);
             }
             return;
@@ -289,7 +311,7 @@
               action: 'recordBlockedEvent',
               data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
             });
-            if (settings.showToastNotifications) {
+            if (settings.showToastNotifications && !isWhitelisted && settings.blockPopups) {
               showBlockedPopupToast(href);
             }
             return;
@@ -307,6 +329,7 @@
     if (!e.detail || isWhitelisted) return;
 
     const { type, url } = e.detail;
+    if (type === 'popup' && !settings.blockPopups) return;
 
     safeSendMessage({
       action: 'recordBlockedEvent',
@@ -318,7 +341,7 @@
       }
     });
 
-    if (type === 'popup' && settings.showToastNotifications) {
+    if (type === 'popup' && settings.showToastNotifications && settings.blockPopups && !isWhitelisted) {
       showBlockedPopupToast(url);
     }
   });
@@ -495,7 +518,9 @@
       } catch (_) {}
     }
 
-    scanShadowRoots(targetRoot, 0);
+    if (settings.shadowDomScanner !== false) {
+      scanShadowRoots(targetRoot, 0);
+    }
 
     // 4. Scroll Lock Recovery (Unlocks html and body overflow)
     unlockScroll();
@@ -687,6 +712,7 @@
   }
 
   function showBlockedPopupToast(popupUrl) {
+    if (isWhitelisted || !settings.blockPopups || !settings.showToastNotifications) return;
     if (!document.body) return;
     const container = ensureToastContainer();
 

@@ -15,6 +15,7 @@
   }
 
   // Active configuration received from content script
+  const isInitialWhitelisted = document.documentElement?.getAttribute('data-extremeshield-whitelisted') === 'true';
   const config = {
     blockPopups: true,
     blockTrackers: true,
@@ -23,7 +24,9 @@
     defuseAntiAdblock: true,
     blockMediaPrerolls: true,
     stripParams: true,
-    whitelisted: false
+    historyTrapDefense: true,
+    fullscreenDefense: true,
+    whitelisted: isInitialWhitelisted
   };
 
   // Known tracker and malicious redirect signatures
@@ -235,6 +238,9 @@
 
   // Helper to notify content script
   function notifyBlocked(type, detail) {
+    if (config.whitelisted) return;
+    if (type === 'popup' && !config.blockPopups) return;
+    if (type === 'tracker' && !config.blockTrackers) return;
     window.dispatchEvent(new CustomEvent('pureshield-event', {
       detail: { type, ...detail, timestamp: Date.now() }
     }));
@@ -398,7 +404,7 @@
       Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
         get: function () {
           const win = origGet.call(this);
-          if (win && win.open && win.open !== window.open) {
+          if (!config.whitelisted && config.blockPopups && win && win.open && win.open !== window.open) {
             try {
               win.open = window.open;
             } catch (_) {}
@@ -1135,7 +1141,7 @@
     let pushHistoryTimestamps = [];
 
     history.pushState = function (state, title, url) {
-      if (!config.whitelisted && config.blockRedirects) {
+      if (!config.whitelisted && config.blockRedirects && config.historyTrapDefense !== false) {
         const now = Date.now();
         pushHistoryTimestamps = pushHistoryTimestamps.filter(t => (now - t) < 1000);
 
@@ -1158,7 +1164,7 @@
     };
 
     history.replaceState = function (state, title, url) {
-      if (!config.whitelisted && config.blockRedirects) {
+      if (!config.whitelisted && config.blockRedirects && config.historyTrapDefense !== false) {
         if (url && typeof url === 'string' && isTrackerOrRedirectUrl(url)) {
           console.warn('[ExtremeShield] Blocked suspicious history.replaceState URL:', url);
           notifyBlocked('popup', { url: String(url), detail: 'Malicious history state replace blocked' });
@@ -1180,7 +1186,7 @@
 
     if (typeof origRequestFullscreen === 'function') {
       const wrappedRequestFullscreen = function () {
-        if (!config.whitelisted && config.blockPopups) {
+        if (!config.whitelisted && config.blockPopups && config.fullscreenDefense !== false) {
           const isVideoOrEmbed = this.tagName === 'VIDEO' ||
                                  this.tagName === 'IFRAME' ||
                                  isMediaElement(this) ||

@@ -16,6 +16,10 @@ const DEFAULT_SETTINGS = {
   showToastNotifications: true,
   blockWebRTCLeaks: true,
   blockMediaPrerolls: true,
+  historyTrapDefense: true,
+  fullscreenDefense: true,
+  shadowDomScanner: true,
+  tabWatchdog: true,
   // Advanced Optional Features
   stripPingAttributes: false,
   trimReferrers: false,
@@ -32,6 +36,52 @@ const DEFAULT_DONATION_SETTINGS = {
 // In-memory per-tab stats with last active timestamps for GC
 const tabStats = new Map();
 const ALL_RULESETS = ['ruleset_trackers', 'ruleset_popups', 'ruleset_query_stripping', 'ruleset_annoyances'];
+
+// In-memory runtime state for fast reactive defense decisions
+let isMasterEnabled = true;
+let pauseUntilTimestamp = 0;
+let currentSettings = { ...DEFAULT_SETTINGS };
+let currentWhitelistedDomains = [];
+const tabHostnames = new Map(); // tabId -> hostname
+
+async function initBackgroundState() {
+  try {
+    const data = await chrome.storage.local.get([
+      'masterEnabled',
+      'pauseUntil',
+      'settings',
+      'whitelistedDomains'
+    ]);
+    if (data.masterEnabled !== undefined) isMasterEnabled = data.masterEnabled !== false;
+    if (data.pauseUntil) pauseUntilTimestamp = data.pauseUntil;
+    if (data.settings) currentSettings = { ...DEFAULT_SETTINGS, ...data.settings };
+    if (data.whitelistedDomains) currentWhitelistedDomains = data.whitelistedDomains;
+  } catch (_) {}
+}
+initBackgroundState();
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local') {
+    if (changes.masterEnabled !== undefined) isMasterEnabled = changes.masterEnabled.newValue !== false;
+    if (changes.pauseUntil !== undefined) pauseUntilTimestamp = changes.pauseUntil.newValue || 0;
+    if (changes.settings !== undefined) currentSettings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
+    if (changes.whitelistedDomains !== undefined) currentWhitelistedDomains = changes.whitelistedDomains.newValue || [];
+  }
+});
+
+function isTabWatchdogActive(openerTabId) {
+  if (!isMasterEnabled) return false;
+  if (pauseUntilTimestamp && Date.now() < pauseUntilTimestamp) return false;
+  if (currentSettings.blockPopups === false || currentSettings.tabWatchdog === false) return false;
+
+  if (openerTabId && tabHostnames.has(openerTabId)) {
+    const openerHost = tabHostnames.get(openerTabId);
+    if (currentWhitelistedDomains.some(d => openerHost === d || openerHost.endsWith('.' + d))) {
+      return false;
+    }
+  }
+  return true;
+}
 
 /* ==========================================================================
    1. EXTENSION INITIALIZATION & LIFECYCLE
@@ -353,6 +403,7 @@ function isMaliciousAdUrl(url) {
 
 // 1. Watchdog for new tabs created (instant termination of ad popups/popunders)
 chrome.tabs.onCreated.addListener((tab) => {
+  if (!isTabWatchdogActive(tab.openerTabId)) return;
   const url = tab.pendingUrl || tab.url || '';
   if (isMaliciousAdUrl(url)) {
     console.warn('[ExtremeShield] Terminating malicious ad popup tab on creation:', url);
@@ -370,15 +421,22 @@ chrome.tabs.onCreated.addListener((tab) => {
 
 // 2. Watchdog for tab navigations and updates (catches delayed about:blank navigations to ad networks)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  const url = changeInfo.url || tab?.url || tab?.pendingUrl || '';
-  if (isMaliciousAdUrl(url)) {
-    console.warn('[ExtremeShield] Terminating malicious ad popup tab on navigation:', url);
+  const currentUrl = changeInfo.url || tab?.url || tab?.pendingUrl || '';
+  if (currentUrl) {
+    try {
+      const u = new URL(currentUrl);
+      if (u.hostname) tabHostnames.set(tabId, u.hostname);
+    } catch (_) {}
+  }
+
+  if (isTabWatchdogActive(tab?.openerTabId) && isMaliciousAdUrl(currentUrl)) {
+    console.warn('[ExtremeShield] Terminating malicious ad popup tab on navigation:', currentUrl);
     try {
       chrome.tabs.remove(tabId, () => { if (chrome.runtime.lastError) {} });
     } catch (_) {}
     recordBlockedItem(tab?.openerTabId || null, {
       type: 'popup',
-      url,
+      url: currentUrl,
       domain: 'Ad Popup Shield',
       timestamp: Date.now()
     });
@@ -393,6 +451,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabStats.delete(tabId);
+  tabHostnames.delete(tabId);
 });
 
 /* ==========================================================================
@@ -502,14 +561,17 @@ function categorizeTracker(url) {
    9. GLOBAL PROTECTION & TIMED PAUSES
    ========================================================================== */
 async function setGlobalProtection(enabled) {
+  isMasterEnabled = enabled;
+  pauseUntilTimestamp = 0;
   await chrome.storage.local.set({ masterEnabled: enabled, pauseUntil: 0 });
 
   if (enabled) {
     await chrome.declarativeNetRequest.updateEnabledRulesets({
       enableRulesetIds: ALL_RULESETS
     });
-    applyWebRTCProtection(true);
-    console.log('[PureShield] Global protection: ENABLED');
+    applyWebRTCProtection(currentSettings.blockWebRTCLeaks !== false);
+    chrome.action.setBadgeText({ text: '' });
+    console.log('[ExtremeShield] Global protection: ENABLED');
   } else {
     await chrome.declarativeNetRequest.updateEnabledRulesets({
       disableRulesetIds: ALL_RULESETS
@@ -517,14 +579,17 @@ async function setGlobalProtection(enabled) {
     applyWebRTCProtection(false);
     chrome.action.setBadgeText({ text: 'OFF' });
     chrome.action.setBadgeBackgroundColor({ color: '#64748b' });
-    console.log('[PureShield] Global protection: DISABLED');
+    console.log('[ExtremeShield] Global protection: DISABLED');
   }
 }
 
 async function pauseProtectionForMinutes(minutes) {
   const pauseUntil = Date.now() + (minutes * 60 * 1000);
+  isMasterEnabled = false;
+  pauseUntilTimestamp = pauseUntil;
   await chrome.storage.local.set({ masterEnabled: false, pauseUntil });
   await chrome.declarativeNetRequest.updateEnabledRulesets({ disableRulesetIds: ALL_RULESETS });
+  applyWebRTCProtection(false);
   chrome.action.setBadgeText({ text: 'PAUSE' });
   chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
 
