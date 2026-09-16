@@ -1136,3 +1136,86 @@ input:checked + .slider:before {
 .btn-delete:hover {
   background: rgba(244, 63, 94, 0.15);
 }
+
+/* ==========================================================================
+   STREAMGRABBER 2 AD BANNER (POPUP)
+   ========================================================================== */
+.streamgrabber-ad-banner {
+  padding: 0 16px 14px;
+}
+
+.sg-ad-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(6, 182, 212, 0.14));
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.18);
+  cursor: pointer;
+}
+
+.sg-ad-card:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.28), rgba(6, 182, 212, 0.22));
+  border-color: rgba(96, 165, 250, 0.75);
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.sg-ad-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.sg-ad-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.16);
+  padding: 1px 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  margin-bottom: 2px;
+}
+
+.sg-ad-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sg-ad-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.sg-ad-btn {
+  background: linear-gradient(135deg, #2563eb, #0284c7);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.sg-ad-card:hover .sg-ad-btn {
+  background: linear-gradient(135deg, #1d4ed8, #0369a1);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.6);
+}
