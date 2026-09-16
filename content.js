@@ -989,9 +989,9 @@
     btn.id = 'streamgrabber-floating-btn';
     btn.className = 'streamgrabber-floating-btn';
     btn.setAttribute('data-streamgrabber', 'true');
-    btn.title = 'StreamGrabber - Click to download this video';
+    btn.title = 'StreamGrabber 2 - Click to download this video';
     btn.innerHTML = `
-      <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber" style="width: 24px !important; height: 24px !important; border-radius: 6px !important; display: block !important; flex-shrink: 0 !important; pointer-events: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;" />
+      <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber 2" style="width: 24px !important; height: 24px !important; border-radius: 6px !important; display: block !important; flex-shrink: 0 !important; pointer-events: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;" />
       <span class="streamgrabber-btn-text" style="font-weight: 700 !important; font-size: 12px !important; color: #ffffff !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Download</span>
     `;
 

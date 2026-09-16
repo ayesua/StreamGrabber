@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings - StreamGrabber</title>
+  <title data-i18n="settingsTitle">Settings - Video Downloader - StreamGrabber 2</title>
   <link rel="stylesheet" href="styles.css">
   <style>
     body {
@@ -66,6 +66,10 @@
       font-size: 14px;
       cursor: pointer;
       width: 100%;
+      transition: background 0.2s ease;
+    }
+    .btn-save:hover {
+      background: #0087cd;
     }
     .toast {
       display: none;
@@ -133,21 +137,40 @@
     input:checked + .slider:before {
       transform: translateX(20px);
     }
+    .btn-check-updates:hover {
+      background: #0284c7;
+      opacity: 0.92;
+    }
   </style>
 </head>
 <body>
 
   <div class="options-card">
     <div class="options-title">
-      <span>StreamGrabber Settings</span>
+      <span data-i18n="optionsHeading">StreamGrabber 2 Settings</span>
+      <span style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.0</span>
+    </div>
+
+    <!-- Language Selector at the Top of Configuration -->
+    <div class="form-group" style="background: #f0f9ff; padding: 14px 16px; border-radius: 8px; border: 1.5px solid #bae6fd; margin-bottom: 22px;">
+      <label for="languageSelector" style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0369a1; margin-bottom: 8px;">
+        <span style="font-size: 16px;">🌐</span>
+        <span data-i18n="languageSelectorLabel">Language / Idioma / 语言 / Язык</span>
+      </label>
+      <select id="languageSelector" style="font-weight: 600; cursor: pointer; background: #ffffff; border-color: #7dd3fc;">
+        <option value="en">English (United States)</option>
+        <option value="es">Español (Spanish)</option>
+        <option value="zh_CN">简体中文 (Chinese - China)</option>
+        <option value="ru">Русский (Russian)</option>
+      </select>
     </div>
 
     <form id="optionsForm">
       <!-- Ask File Name Toggle Option -->
       <div class="form-group toggle-group">
         <div class="toggle-label-wrap">
-          <label for="askFilename" style="margin-bottom: 2px;">Ask for file name before downloading</label>
-          <div class="form-help">When enabled, you will be prompted to enter or customize the file name before saving.</div>
+          <label for="askFilename" style="margin-bottom: 2px;" data-i18n="askFilenameLabel">Ask for file name before downloading</label>
+          <div class="form-help" data-i18n="askFilenameHelp">When enabled, you will be prompted to enter or customize the file name before saving.</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="askFilename">
@@ -158,8 +181,8 @@
       <!-- Floating Download Button on Video Players Toggle Option -->
       <div class="form-group toggle-group">
         <div class="toggle-label-wrap">
-          <label for="showFloatingBtn" style="margin-bottom: 2px;">Show floating download button on video players</label>
-          <div class="form-help">Displays a discreet hover button on HTML5 video players on websites to download with one click.</div>
+          <label for="showFloatingBtn" style="margin-bottom: 2px;" data-i18n="showFloatingBtnLabel">Show floating download button on video players</label>
+          <div class="form-help" data-i18n="showFloatingBtnHelp">Displays a discreet hover button on HTML5 video players on websites to download with one click.</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="showFloatingBtn" checked>
@@ -168,58 +191,78 @@
       </div>
 
       <div class="form-group">
-        <label for="minSize">Minimum File Size Filter (KB)</label>
+        <label for="minSize" data-i18n="minSizeLabel">Minimum File Size Filter (KB)</label>
         <input type="number" id="minSize" value="100" min="0" step="50">
-        <div class="form-help">Ignore small video clips, ads, or audio effects below this size threshold.</div>
+        <div class="form-help" data-i18n="minSizeHelp">Ignore small video clips, ads, or audio effects below this size threshold.</div>
       </div>
 
       <div class="form-group">
-        <label for="maxThreads">Simultaneous HLS Connections (.m3u8)</label>
+        <label for="maxThreads" data-i18n="maxThreadsLabel">Simultaneous HLS Connections (.m3u8)</label>
         <select id="maxThreads">
-          <option value="3">3 Connections (Standard)</option>
-          <option value="5" selected>5 Connections (Fast - Recommended)</option>
-          <option value="8">8 Connections (Ultra Fast)</option>
+          <option value="3" data-i18n="maxThreadsStandard">3 Connections (Standard)</option>
+          <option value="5" selected data-i18n="maxThreadsFast">5 Connections (Fast - Recommended)</option>
+          <option value="8" data-i18n="maxThreadsUltra">8 Connections (Ultra Fast)</option>
         </select>
-        <div class="form-help">Number of streaming segments downloaded concurrently.</div>
+        <div class="form-help" data-i18n="maxThreadsHelp">Number of streaming segments downloaded concurrently.</div>
       </div>
 
       <div class="form-group">
-        <label for="defaultFormat">Default Download Format</label>
+        <label for="defaultFormat" data-i18n="defaultFormatLabel">Default Download Format</label>
         <select id="defaultFormat">
-          <option value="mp4" selected>MP4 (Universal - High Compatibility)</option>
-          <option value="mkv">MKV (Matroska)</option>
-          <option value="ts">TS (Transport Stream)</option>
+          <option value="mp4" selected data-i18n="formatMp4">MP4 (Universal - High Compatibility)</option>
+          <option value="mkv" data-i18n="formatMkv">MKV (Matroska)</option>
+          <option value="ts" data-i18n="formatTs">TS (Transport Stream)</option>
         </select>
-        <div class="form-help">Preferred format for saving video streams. The highest available resolution will always be selected.</div>
+        <div class="form-help" data-i18n="defaultFormatHelp">Preferred format for saving video streams. The highest available resolution will always be selected.</div>
       </div>
 
       <div class="form-group">
-        <label for="autoDetect">Automatic Network Detection</label>
+        <label for="autoDetect" data-i18n="autoDetectLabel">Automatic Network Detection</label>
         <select id="autoDetect">
-          <option value="true" selected>Enabled (Recommended)</option>
-          <option value="false">Disabled</option>
+          <option value="true" selected data-i18n="autoDetectEnabled">Enabled (Recommended)</option>
+          <option value="false" data-i18n="autoDetectDisabled">Disabled</option>
         </select>
       </div>
 
-      <button type="submit" class="btn-save">Save Preferences</button>
-      <div id="toast" class="toast">Preferences saved successfully!</div>
+      <button type="submit" class="btn-save" data-i18n="btnSave">Save Preferences</button>
+      <div id="toast" class="toast" data-i18n="toastSaved">Preferences saved successfully!</div>
     </form>
+  </div>
+
+  <!-- Updates & Version Card -->
+  <div class="options-card" style="margin-top: 24px; border-left: 4px solid var(--vdh-blue);">
+    <div class="options-title" style="border-bottom: 1px solid var(--vdh-border);">
+      <span style="display: flex; align-items: center; gap: 8px;">
+        <span>🔄</span> <span data-i18n="updatesCardTitle">Updates & Version</span>
+      </span>
+      <span class="version-badge" id="optionsVersionLabel" style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 12px;">v3.5.0</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+      <div style="font-size: 13px; color: var(--vdh-text-muted);" id="updateStatusText" data-i18n="currentVersionLabel">
+        Current Version: v3.5.0
+      </div>
+      <button type="button" id="btnCheckUpdates" class="btn-check-updates" style="background: #0284c7; color: #ffffff; padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+        <span id="updateSpinner" style="display:none;">⏳</span>
+        <span data-i18n="btnCheckUpdates">Check for Updates</span>
+      </button>
+    </div>
+    <div id="updateResultAlert" style="display:none; margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;"></div>
   </div>
 
   <!-- Cross-Recommendation for ExtremeShield Armor -->
   <div class="options-card" style="margin-top: 24px; border-left: 4px solid #ef4444; background: #fff5f5;">
     <div class="options-title" style="border-bottom-color: #ef4444;">
-      <span style="display: flex; align-items: center; gap: 8px; color: #dc2626;">
+      <span style="display: flex; align-items: center; gap: 8px; color: #dc2626;" data-i18n="extremeShieldTitle">
         🛡️ Try ExtremeShield: Ultimate Tracker & Popup Blocker
       </span>
-      <span style="font-size: 11px; font-weight: 700; color: #dc2626; background: #fee2e2; padding: 3px 8px; border-radius: 12px;">Recommended Partner Extension</span>
+      <span style="font-size: 11px; font-weight: 700; color: #dc2626; background: #fee2e2; padding: 3px 8px; border-radius: 12px;" data-i18n="extremeShieldBadge">Recommended Partner Extension</span>
     </div>
-    <p style="font-size: 13px; color: #4b5563; line-height: 1.5; margin-bottom: 14px;">
-      Tired of malicious redirects, popups, and aggressive trackers interfering with video streaming? Try <strong>ExtremeShield</strong> to block annoying ads, popunders, and telemetry automatically with zero performance impact.
+    <p style="font-size: 13px; color: #4b5563; line-height: 1.5; margin-bottom: 14px;" data-i18n="extremeShieldDesc">
+      Tired of malicious redirects, popups, and aggressive trackers interfering with video streaming? Try ExtremeShield to block annoying ads, popunders, and telemetry automatically with zero performance impact.
     </p>
-    <a href="https://chromewebstore.google.com/search/ExtremeShield" target="_blank" style="text-decoration: none; inline-block;">
+    <a href="https://chromewebstore.google.com/search/ExtremeShield" target="_blank" style="text-decoration: none; display: inline-block;">
       <div style="background: linear-gradient(135deg, #dc2626, #ef4444); color: #ffffff; padding: 10px 18px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);">
-        <span>🚀 Try ExtremeShield Free</span>
+        <span data-i18n="extremeShieldBtn">🚀 Try ExtremeShield Free</span>
         <span>&rarr;</span>
       </div>
     </a>
@@ -228,17 +271,17 @@
   <!-- Support & Donations Card -->
   <div class="options-card" style="margin-top: 24px;">
     <div class="options-title" style="border-bottom-color: #f43f5e;">
-      <span style="display: flex; align-items: center; gap: 8px;">💖 Support StreamGrabber</span>
-      <span style="font-size: 11px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 3px 8px; border-radius: 12px;">100% Free • Open Model</span>
+      <span style="display: flex; align-items: center; gap: 8px;" data-i18n="supportTitle">💖 Support StreamGrabber 2</span>
+      <span style="font-size: 11px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 3px 8px; border-radius: 12px;" data-i18n="supportBadge">100% Free • Open Model</span>
     </div>
-    <p style="font-size: 13px; color: var(--vdh-text-muted); line-height: 1.5; margin-bottom: 16px;">
-      StreamGrabber is completely free, zero-log, and has zero paywalls. Your donations support development, keep HLS sniffers updated, and ensure uninterrupted high-speed video downloads!
+    <p style="font-size: 13px; color: var(--vdh-text-muted); line-height: 1.5; margin-bottom: 16px;" data-i18n="supportDesc">
+      StreamGrabber 2 is completely free, zero-log, and has zero paywalls. Your donations support development, keep HLS sniffers updated, and ensure uninterrupted high-speed video downloads!
     </p>
 
     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; max-width: 480px;">
       <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" style="text-decoration: none;">
         <div style="background: #72a4f2; color: #ffffff; padding: 12px 18px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; box-shadow: 0 2px 10px rgba(114, 164, 242, 0.35); transition: transform 0.15s;">
-          <span style="display: flex; align-items: center; gap: 8px;">
+          <span style="display: flex; align-items: center; gap: 8px;" data-i18n="kofiBtn">
             ☕ Support me on Ko-fi
           </span>
           <span>&rarr;</span>
@@ -251,30 +294,31 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
               <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
             </svg>
-            Donate via PayPal (paypal.me/yesarts)
+            <span data-i18n="paypalBtn">Donate via PayPal</span> (paypal.me/yesarts)
           </span>
           <span>&rarr;</span>
         </div>
       </a>
     </div>
 
-    <div style="font-size: 11px; font-weight: 700; color: var(--vdh-text-muted); margin-bottom: 6px;">CRYPTO TIPS (INSTANT &amp; ANONYMOUS)</div>
+    <div style="font-size: 11px; font-weight: 700; color: var(--vdh-text-muted); margin-bottom: 6px;" data-i18n="cryptoTitle">CRYPTO TIPS (INSTANT &amp; ANONYMOUS)</div>
     
     <div style="display: flex; flex-direction: column; gap: 8px; max-width: 480px;">
       <div class="sg-crypto-box">
         <span style="font-weight: 700; font-size: 12px; color: #f59e0b; flex-shrink: 0;">Bitcoin (BTC)</span>
         <span class="sg-crypto-addr" id="optAddrBtc">bc1qc92qpkma6k5yvypa9xs6dy8g8ah34ceu83nger</span>
-        <button type="button" class="btn-copy-crypto" data-target="optAddrBtc">Copy</button>
+        <button type="button" class="btn-copy-crypto" data-target="optAddrBtc" data-i18n="copyBtn">Copy</button>
       </div>
 
       <div class="sg-crypto-box">
         <span style="font-weight: 700; font-size: 12px; color: #06b6d4; flex-shrink: 0;">BNB / USDT (BEP20)</span>
         <span class="sg-crypto-addr" id="optAddrBsc">0x1466a8eD548A9e39829e142431fff185b0C15dF4</span>
-        <button type="button" class="btn-copy-crypto" data-target="optAddrBsc">Copy</button>
+        <button type="button" class="btn-copy-crypto" data-target="optAddrBsc" data-i18n="copyBtn">Copy</button>
       </div>
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

@@ -27,6 +27,7 @@ $runtimeFiles = @(
     "popup.js",
     "options.html",
     "options.js",
+    "i18n.js",
     "premium.html",
     "success.html",
     "styles.css",

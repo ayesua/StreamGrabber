@@ -1,7 +1,7 @@
 {
-  "name": "streamgrabber",
-  "version": "3.2.1",
-  "description": "StreamGrabber - Fast Media, Audio and HLS Stream Downloader Chrome Extension (Manifest V3)",
+  "name": "streamgrabber-2",
+  "version": "3.5.0",
+  "description": "Video Downloader - StreamGrabber 2 - Fast Media, Audio and HLS Stream Downloader Chrome Extension (Manifest V3)",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 0"
   },

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StreamGrabber</title>
+  <title data-i18n="appName">Video Downloader - StreamGrabber 2</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,33 +13,33 @@
     <div class="vdh-brand">
       <img src="icon48.png" class="vdh-logo-img" alt="StreamGrabber Icon" />
       <div>
-        <div class="vdh-title">StreamGrabber</div>
+        <div class="vdh-title" data-i18n="appShortName">StreamGrabber 2</div>
       </div>
     </div>
 
     <!-- Top Donation Block: Support & Donate button -->
     <div class="top-donation-block">
-      <button id="btnHeaderDonate" class="btn-donate-top" title="Support StreamGrabber (Ko-fi, PayPal, Crypto)">
+      <button id="btnHeaderDonate" class="btn-donate-top" title="Support StreamGrabber 2" data-i18n-title="topDonate">
         <span>💖</span>
-        <span>Donate</span>
+        <span data-i18n="topDonate">Donate</span>
       </button>
     </div>
 
     <div class="vdh-nav-actions">
-      <button id="btnToggleVideoControls" class="icon-btn" title="Toggle / Force Native Video Controls on Page (Play/Pause, Seekbar, Volume)">
+      <button id="btnToggleVideoControls" class="icon-btn" title="Toggle / Force Native Video Controls on Page (Play/Pause, Seekbar, Volume)" data-i18n-title="btnToggleControls">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="5 3 19 12 5 21 5 3"></polygon>
           <line x1="19" y1="5" x2="19" y2="19" stroke-width="2"></line>
         </svg>
       </button>
-      <button id="btnRescan" class="icon-btn" title="Rescan videos and media frames">
+      <button id="btnRescan" class="icon-btn" title="Rescan videos and media frames" data-i18n-title="btnRescan">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M23 4v6h-6"/>
           <path d="M1 20v-6h6"/>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
       </button>
-      <button id="btnOpenOptions" class="icon-btn" title="Settings">
+      <button id="btnOpenOptions" class="icon-btn" title="Settings" data-i18n-title="btnSettings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -50,15 +50,27 @@
 
   <!-- Subbar with Active Tab Info -->
   <div class="vdh-subbar">
-    <div class="vdh-tab-title" id="currentTabTitle">Loading tab...</div>
+    <div class="vdh-tab-title" id="currentTabTitle" data-i18n="loadingTab">Loading tab...</div>
     <div class="vdh-media-count" id="mediaCount">0 detected</div>
   </div>
 
   <!-- Filter Pills Bar (All | Videos | Audio Only) -->
   <div class="filter-pills-bar">
-    <button class="pill-btn active" id="pillAll" data-filter="all">All (<span id="countAll">0</span>)</button>
-    <button class="pill-btn" id="pillVideos" data-filter="video">Videos (<span id="countVideos">0</span>)</button>
-    <button class="pill-btn" id="pillAudios" data-filter="audio">Audio (<span id="countAudios">0</span>)</button>
+    <button class="pill-btn active" id="pillAll" data-filter="all"><span data-i18n="pillAll">All</span> (<span id="countAll">0</span>)</button>
+    <button class="pill-btn" id="pillVideos" data-filter="video"><span data-i18n="pillVideos">Videos</span> (<span id="countVideos">0</span>)</button>
+    <button class="pill-btn" id="pillAudios" data-filter="audio"><span data-i18n="pillAudios">Audio</span> (<span id="countAudios">0</span>)</button>
+  </div>
+
+  <!-- ExtremeShield Recommendation Banner -->
+  <div class="sg-promo-banner" id="promoExtremeShield">
+    <div class="sg-promo-left">
+      <span class="sg-promo-shield">🛡️</span>
+      <div class="sg-promo-text">
+        <strong data-i18n="promoShieldTitle">Block Video Ads &amp; Popups:</strong>
+        <span data-i18n="promoShieldDesc">Try ExtremeShield Free!</span>
+      </div>
+    </div>
+    <a href="https://chromewebstore.google.com/search/ExtremeShield" target="_blank" class="sg-promo-btn" data-i18n="promoShieldBtn">Get ↗</a>
   </div>
 
   <!-- Content Section -->
@@ -66,7 +78,7 @@
     
     <!-- Active Downloads Progress Section -->
     <div id="activeDownloadsContainer" class="active-downloads-section" style="display: none;">
-      <div class="section-title">⚡ Active Downloads</div>
+      <div class="section-title" data-i18n="activeDownloads">⚡ Active Downloads</div>
       <div id="activeDownloadsList"></div>
     </div>
 
@@ -81,8 +93,8 @@
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
         </svg>
       </div>
-      <div class="vdh-empty-title">No videos detected yet</div>
-      <div class="vdh-empty-text">Start playing the video on the web page so the sniffer can capture the complete stream and video frame.</div>
+      <div class="vdh-empty-title" data-i18n="emptyTitle">No videos detected yet</div>
+      <div class="vdh-empty-text" data-i18n="emptyText">Start playing the video on the web page so the sniffer can capture the complete stream and video frame.</div>
     </div>
 
   </div>
@@ -91,15 +103,15 @@
   <footer class="vdh-footer">
     <div class="footer-actions">
       <button id="btnFeedback" class="btn-feedback" title="Send suggestions or report an issue">
-        <span>💬</span> <span>Feedback</span>
+        <span>💬</span> <span data-i18n="btnFeedback">Feedback</span>
       </button>
-      <button id="btnFooterDonate" class="btn-feedback" title="Support StreamGrabber" style="color: #e11d48; font-weight: 700;">
-        <span>💖</span> <span>Donate</span>
+      <button id="btnFooterDonate" class="btn-feedback" title="Support StreamGrabber 2" style="color: #e11d48; font-weight: 700;">
+        <span>💖</span> <span data-i18n="topDonate">Donate</span>
       </button>
     </div>
 
     <div class="footer-info">
-      <span class="version-label">v3.4.8</span>
+      <span class="version-label">v3.5.0</span>
     </div>
   </footer>
 
@@ -107,7 +119,7 @@
   <div id="modalPreview" class="modal-overlay" style="display: none;">
     <div class="modal-dialog preview-dialog">
       <div class="preview-header">
-        <div class="modal-title preview-title" id="previewTitle">Video Preview</div>
+        <div class="modal-title preview-title" id="previewTitle" data-i18n="previewModalTitle">Video Preview</div>
         <button id="modalPreviewBtnClose" class="btn-close-modal" title="Close Preview">✕</button>
       </div>
       <div class="preview-player-container">
@@ -196,18 +208,18 @@
   <div id="modalDonations" class="modal-overlay" style="display: none;">
     <div class="modal-dialog" style="max-width: 360px;">
       <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-        <div class="modal-title" style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">💖 Support StreamGrabber</div>
+        <div class="modal-title" style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;" data-i18n="supportTitle">💖 Support StreamGrabber 2</div>
         <button id="modalDonationsBtnClose" class="btn-close-modal" title="Close" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #64748b;">✕</button>
       </div>
-      <div class="modal-desc" style="font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 14px;">
-        StreamGrabber is 100% free with no limits and no ads. Your tips keep updates active and servers running!
+      <div class="modal-desc" style="font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 14px;" data-i18n="supportDesc">
+        StreamGrabber 2 is 100% free with no limits and no ads. Your tips keep updates active and servers running!
       </div>
       
       <!-- Direct Payment Links -->
       <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
         <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" style="text-decoration: none;">
           <div style="background: #72a4f2; color: #ffffff; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 13px; box-shadow: 0 2px 8px rgba(114, 164, 242, 0.35); transition: transform 0.15s;">
-            <span style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: flex; align-items: center; gap: 8px;" data-i18n="kofiBtn">
               ☕ Support me on Ko-fi
             </span>
             <span>&rarr;</span>
@@ -220,35 +232,36 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.009.488 5.367.18 5.784.18h7.009c3.615 0 6.096 1.838 5.54 5.992-.472 3.518-2.618 5.518-5.975 5.518H9.37l-1.42 8.907a.807.807 0 0 1-.874.74z"/>
               </svg>
-              Donate via PayPal
+              <span data-i18n="paypalBtn">Donate via PayPal</span>
             </span>
             <span>&rarr;</span>
           </div>
         </a>
       </div>
 
-      <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 6px; letter-spacing: 0.3px;">CRYPTO TIPS (INSTANT &amp; ANONYMOUS)</div>
+      <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 6px; letter-spacing: 0.3px;" data-i18n="cryptoTitle">CRYPTO TIPS (INSTANT &amp; ANONYMOUS)</div>
       
       <!-- Crypto Box: BTC -->
       <div class="sg-crypto-box" style="margin-bottom: 6px;">
         <span style="font-weight: 700; font-size: 11px; color: #f59e0b; flex-shrink: 0;">BTC</span>
         <span class="sg-crypto-addr" id="addrBtc">bc1qc92qpkma6k5yvypa9xs6dy8g8ah34ceu83nger</span>
-        <button class="btn-copy-crypto" data-target="addrBtc">Copy</button>
+        <button class="btn-copy-crypto" data-target="addrBtc" data-i18n="copyBtn">Copy</button>
       </div>
 
       <!-- Crypto Box: BNB / USDT -->
       <div class="sg-crypto-box">
         <span style="font-weight: 700; font-size: 11px; color: #06b6d4; flex-shrink: 0;">BNB/USDT</span>
         <span class="sg-crypto-addr" id="addrEth">0x1466a8eD548A9e39829e142431fff185b0C15dF4</span>
-        <button class="btn-copy-crypto" data-target="addrEth">Copy</button>
+        <button class="btn-copy-crypto" data-target="addrEth" data-i18n="copyBtn">Copy</button>
       </div>
 
       <div class="modal-actions" style="margin-top: 14px;">
-        <button id="modalDonationsBtnDone" class="btn-secondary" style="width: 100%;">Close</button>
+        <button id="modalDonationsBtnDone" class="btn-secondary" style="width: 100%;" data-i18n="closeModal">Close</button>
       </div>
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="hls.light.min.js"></script>
   <script src="popup.js" type="module"></script>
 </body>

@@ -8,6 +8,7 @@ let currentTabUrl = '';
 let currentTabTitle = '';
 let allDetectedMedia = [];
 let currentFilter = 'all'; // 'all' | 'video' | 'audio'
+let currentLang = 'en';
 
 function formatSpeed(bps) {
   if (!bps || bps <= 0) return '0 KB/s';
@@ -45,6 +46,14 @@ function isGenericOrTechnicalTitle(title) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // 0. Initialize Internationalization (i18n)
+  if (typeof getStoredLanguage === 'function') {
+    getStoredLanguage((lang) => {
+      currentLang = lang;
+      if (typeof applyI18n === 'function') applyI18n(lang);
+    });
+  }
+
   // 1. Get Active Tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
@@ -169,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const addrText = targetEl.textContent.trim();
         navigator.clipboard.writeText(addrText).then(() => {
           const originalText = btn.textContent;
-          btn.textContent = 'Copied! ✓';
+          btn.textContent = typeof t === 'function' ? t('copiedBtn', currentLang) : 'Copied! ✓';
           btn.classList.add('copied');
           setTimeout(() => {
             btn.textContent = originalText;
@@ -527,7 +536,8 @@ function renderMediaList(mediaList) {
   // Deduplicate identical videos into resolution dropdown & sort largest to smallest
   filtered = groupAndSortMediaList(filtered);
 
-  countBadge.textContent = `${filtered.length} available`;
+  const countText = typeof t === 'function' ? t('detectedCount', currentLang) : 'detected';
+  countBadge.textContent = `${filtered.length} ${countText}`;
 
   if (filtered.length === 0) {
     container.innerHTML = '';
@@ -706,7 +716,7 @@ function createMediaCardHTML(item) {
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           </div>
-          <span class="thumb-preview-label">Preview / Rotate</span>
+          <span class="thumb-preview-label">${typeof t === 'function' ? t('btnPreview', currentLang) : 'Preview'} / ${typeof t === 'function' ? t('btnRotate', currentLang) : 'Rotate'}</span>
         </div>
         <span class="thumbnail-badge-type tag ${typeClass}">${item.type}</span>
         <span class="thumbnail-badge-res">★ ${qualityText}</span>
@@ -741,28 +751,28 @@ function createMediaCardHTML(item) {
             <option value="ts">TS</option>
           </select>
 
-          <button class="btn-primary btn-download" title="Download in selected quality">
+          <button class="btn-primary btn-download" title="${typeof t === 'function' ? t('btnDownload', currentLang) : 'Download'}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Download
+            ${typeof t === 'function' ? t('btnDownload', currentLang) : 'Download'}
           </button>
 
-          <button class="btn-secondary btn-preview" title="Preview and rotate video orientation before downloading">
+          <button class="btn-secondary btn-preview" title="${typeof t === 'function' ? t('btnPreview', currentLang) : 'Preview'}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
             </svg>
-            <span>Preview / Rotate</span>
+            <span>${typeof t === 'function' ? t('btnPreview', currentLang) : 'Preview'}</span>
           </button>
 
           <button class="btn-secondary btn-audio" title="Download as MP3 audio">
             🎵 MP3
           </button>
           
-          <button class="btn-secondary btn-copy" title="Copy direct link">
-            Copy
+          <button class="btn-secondary btn-copy" title="${typeof t === 'function' ? t('btnCopyUrl', currentLang) : 'Copy direct link'}">
+            ${typeof t === 'function' ? t('btnCopyUrl', currentLang) : 'Copy'}
           </button>
         </div>
       </div>

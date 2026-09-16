@@ -1552,7 +1552,7 @@ function notifyDownloadComplete(title, filename) {
     chrome.notifications.create('dl_' + Date.now(), {
       type: 'basic',
       iconUrl: 'icon128.png',
-      title: 'StreamGrabber - Download Complete ⚡',
+      title: 'StreamGrabber 2 - Download Complete ⚡',
       message: `"${cleanTitle}" was successfully saved as ${cleanFile}. Click to open folder.`,
       priority: 2
     });

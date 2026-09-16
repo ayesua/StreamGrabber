@@ -1,12 +1,12 @@
-# StreamGrabber: Chrome Web Store Submission & Metadata Guide (v3.4.7)
+﻿# Video Downloader - StreamGrabber 2: Chrome Web Store Submission & Metadata Guide (v3.5.0)
 
 ---
 
 ## 📌 1. Essential Store Metadata
 
-* **Extension Title:** `StreamGrabber: Video, Audio & HLS Downloader`
+* **Extension Title:** `Video Downloader - StreamGrabber 2`
 * **Short Description (Summary, max 132 chars):**  
-  `Fast video, audio, and HLS (.m3u8) stream detector and downloader with live player preview, rotation, and quality selector.`
+  `Fast video, audio, and HLS (.m3u8) stream detector and downloader with live player preview, rotation, and multi-language support.`
 * **Category:** `Productivity` *(Alternative: Photos & Media / Tools)*
 * **Pricing:** Free (No subscriptions, no paywalls, no locked tiers)
 * **Website / Support URL:** `https://ko-fi.com/K5I126GJJZ`
@@ -14,18 +14,28 @@
 
 ---
 
-## 📝 2. Full Store Description (English & Spanish)
+## 📝 2. Full Store Description (English, Spanish, Chinese, Russian)
 
 ### 🇺🇸 English Listing Description
 
 ```markdown
-⚡ StreamGrabber: Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation & Quality Selector
+⚡ Video Downloader - StreamGrabber 2: Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation & Quality Selector
 
-StreamGrabber is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, and multi-resolution quality selection.
+Video Downloader - StreamGrabber 2 is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, multi-resolution quality selection, and complete multi-language support.
 
 ---
 
 ### 🚀 KEY FEATURES & CAPABILITIES
+
+🌐 Multi-Language Support (NEW in v3.5)
+• Complete native internationalization for English (United States), Spanish (Español), Chinese (简体中文), and Russian (Русский).
+• Switch languages with 1 click from the language selector at the top of Settings.
+
+🔄 In-Settings "Check for Updates" Button (NEW in v3.5)
+• Instantly verify if you are running the latest version with one click directly from the Settings page.
+
+🛡️ ExtremeShield Companion Integration (NEW in v3.5)
+• Recommended pairing with ExtremeShield to eliminate intrusive video ads, popups, and malicious redirects before they interfere with stream playback.
 
 🎬 Live In-Popup Preview & Orientation Rotation
 • Watch and verify video streams directly inside the popup player before downloading.
@@ -39,22 +49,17 @@ StreamGrabber is a powerful, lightweight, and ultra-fast media sniffer and strea
 
 🎯 In-Page Floating Download Button
 • Sleek on-hover download button docked directly over HTML5 players and embedded web containers for instant 1-click downloads.
-• Docks seamlessly even on complex players with age-restriction disclaimers or overlay screens.
+• Compact, neatly docked pill design that never obstructs video controls or click-to-play.
 • Fully customizable in Settings (can be toggled on or off at any time).
 
-📊 Smart Quality Dropdown & Size Ordering (NEW in v3.4)
-• Automatic Resolution Grouping: When a video is available in multiple resolutions, StreamGrabber neatly consolidates them into a single video card with an intuitive quality dropdown selector instead of cluttering your list.
+📊 Smart Quality Dropdown & Size Ordering
+• Automatic Resolution Grouping: When a video is available in multiple resolutions, StreamGrabber 2 neatly consolidates them into a single video card with an intuitive quality dropdown selector.
 • Ordered from Largest to Smallest: Detected media items are automatically arranged from highest quality / largest file size to lowest for quick access.
 • Main Video Prioritization: Intelligently identifies and highlights the primary viewport player, discarding side thumbnails and hover preview clips.
 
-🌐 Advanced Portal & Embed Resolver (NEW in v3.4.7)
+🌐 Advanced Portal & Embed Resolver
 • Full VK Video (vkvideo.ru & vk.com) support with dynamic stream resolution across React SPAs, age-restricted disclaimer overlays, HLS master playlists, and direct MP4 qualities (1080p, 720p, 480p, 360p, 240p).
 • Seamless support for Yandex Video preview players, Mail.ru embeds, and complex iframe video wrappers.
-• Dynamic SPA navigation tracking automatically detects new video streams as you browse without needing page reloads.
-
-🛡️ Smart Ad & Announcement Defense
-• Intelligent content filter removes promotional clips, teasers, and pre-roll announcement ads without false positives on legitimate player containers.
-• Always focuses on the authentic, full-length media stream.
 
 🎵 Audio MP3 Extractor & Direct Media Capture
 • Extract audio from any video stream and download as high-fidelity MP3 with a single click.
@@ -67,73 +72,41 @@ StreamGrabber is a powerful, lightweight, and ultra-fast media sniffer and strea
 
 ---
 
-### 🔒 100% FREE & PRIVACY FOCUSED
-
-• Zero Data Collection: We do not track, collect, store, or sell your browsing history, personal data, or downloaded files.
-• Local Processing: All media sniffing, segment decryption, rotation, and file assembly are performed 100% locally on your computer.
-• Zero Paywalls: Every single feature is unlocked for everyone with no subscriptions. Supported by voluntary community donations (Ko-fi, PayPal & Crypto).
-
-*Note: In compliance with Google Chrome Web Store Developer Policies, downloading from YouTube is strictly not supported.*
+### 🛡️ PRIVACY & SECURITY FIRST
+• 100% Free & Open Model.
+• Zero telemetry, zero user tracking, zero remote logging.
+• All stream processing and MP4 rotation happens locally in your browser sandbox.
+• Strict compliance with Chrome Web Store policies (YouTube downloads are strictly excluded).
 ```
 
 ---
 
-### 🇪🇸 Spanish Listing Description (Español)
+### 🇪🇸 Descripción en Español (Spanish)
 
 ```markdown
-⚡ StreamGrabber: Descargador Rápido de Videos, Audio y Streams HLS (.m3u8) con Previsualización, Rotación y Selector de Calidad
+⚡ Video Downloader - StreamGrabber 2: Descargador rápido de video, audio y transmisiones HLS (.m3u8) con vista previa, rotación y selector de calidad
 
-StreamGrabber es una extensión potente, ligera y ultrarrápida para detectar y descargar videos, audios y transmisiones HLS (.m3u8) y DASH (.mpd) en Google Chrome a máxima velocidad. Incluye reproductor de vista previa en vivo, rotación de orientación sin pérdida de calidad y selector inteligente de resolución.
+Video Downloader - StreamGrabber 2 es un potente, ligero y ultra rápido detector y descargador de contenido multimedia para Google Chrome. Captura fácilmente transmisiones completas HLS (.m3u8), DASH (.mpd), MP4, WebM y pistas de audio con vista previa en vivo, rotación sin pérdida de calidad y soporte multilingüe completo.
 
 ---
 
 ### 🚀 CARACTERÍSTICAS PRINCIPALES
 
-🎬 Previsualización en Vivo y Rotación de Orientación
-• Comprueba y reproduce el video directamente en la ventana emergente antes de iniciar la descarga.
-• Controles de Rotación en Vivo: Gira la orientación (+90°, 180°, 270°, 0°) con un solo clic en el icono giratorio o en la barra de herramientas.
-• Rotación MP4 Sin Pérdida: Aplica la orientación elegida directamente en los metadatos del archivo MP4 sin recodificar ni perder calidad de imagen.
+🌐 Soporte Multi-Idioma (NUEVO en v3.5)
+• Interfaz completamente traducida al Español, Inglés, Chino y Ruso con selector en la parte superior de Configuración.
 
-⚡ Motor Multi-Hilo HLS (.m3u8) y DASH
-• Descarga segmentos de video en paralelo con conexiones optimizadas para exprimir al máximo tu ancho de banda.
-• Descifrado criptográfico AES-128 y ensamblado intacto en formatos MP4, MKV o TS.
-• Detección de Listas Maestras con selección de resoluciones (4K, 1080p Full HD, 720p HD, 480p SD).
+🔄 Botón "Buscar actualizaciones" en Configuración (NUEVO en v3.5)
+• Comprueba al instante con un solo clic si estás en la versión más reciente.
 
-🎯 Botón Flotante en Reproductores Web
-• Botón elegante integrado sobre los reproductores HTML5 y contenedores web para descargar en 1 solo clic.
-• Se acopla perfectamente incluso en reproductores con avisos de advertencia o pantallas de confirmación de edad.
-• Totalmente configurable en Opciones (puedes activarlo o desactivarlo cuando desees).
+🛡️ Integración con ExtremeShield (NUEVO en v3.5)
+• Recomendación integrada para bloquear ventanas emergentes, redirecciones y anuncios molestos en reproductores.
 
-📊 Menú Desplegable de Calidades y Orden por Tamaño (NUEVO en v3.4)
-• Agrupación Inteligente: Si un video ofrece múltiples resoluciones, StreamGrabber las agrupa en una sola tarjeta con un práctico menú desplegable para elegir la calidad deseada en lugar de duplicar elementos en la lista.
-• Ordenado de Mayor a Menor: Los videos detectados se organizan automáticamente desde el tamaño más grande / mayor calidad hasta el menor.
-• Prioridad al Video Principal: Identifica el video central en pantalla y descarta previsualizaciones laterales y clips secundarios al pasar el ratón.
+🎬 Vista previa y rotación de video sin pérdidas
+• Comprueba el video antes de descargarlo y gira la orientación (+90°, 180°, 270°) sin pérdida de calidad.
 
-🌐 Soporte Avanzado de Portales y Reproductores Embebidos (NUEVO en v3.4.7)
-• Compatibilidad total con VK Video (vkvideo.ru y vk.com) con resolución dinámica para aplicaciones React SPA, pantallas de advertencia de edad, listas HLS y calidades directas MP4 (1080p, 720p, 480p, 360p, 240p).
-• Soporte integrado para reproductores de Yandex Video, Mail.ru y reproductores embebidos en iframes.
-• Detección automática al navegar en plataformas SPA sin necesidad de recargar la página.
+⚡ Motor HLS Multihilo Ultra Rápido
+• Descargas paralelas de segmentos para máxima velocidad, con desencriptación AES-128 integrada.
 
-🛡️ Filtro Inteligente de Anuncios y Pre-rolls
-• Omite automáticamente clips promocionales y anuncios pre-roll sin generar falsos positivos en los controles del reproductor original.
-• Captura exclusivamente la transmisión completa auténtica.
-
-🎵 Extractor de Audio MP3 y Formatos Directos
-• Extrae el audio de cualquier video y guárdalo como MP3 de alta calidad con un solo clic.
-• Compatible con archivos directos MP4, WebM, FLV, AAC y OGG.
-
-✏️ Renombrado Personalizado y Ajustes Avanzados
-• Edita el nombre del archivo directamente en las tarjetas de la lista.
-• Ventana de confirmación opcional "Preguntar nombre antes de descargar" sincronizada al instante.
-• Ajusta conexiones simultáneas, filtros de tamaño mínimo y formato de guardado predeterminado en Opciones.
-
----
-
-### 🔒 100% GRATIS Y CON TOTAL PRIVACIDAD
-
-• Cero Recopilación de Datos: No rastreamos, guardamos ni vendemos tu historial de navegación ni tus descargas.
-• Procesamiento 100% Local: Todo el análisis, descifrado, rotación y ensamblado se realiza localmente en tu ordenador.
-• Sin Muros de Pago: Todas las funciones están desbloqueadas para todos los usuarios. Proyecto apoyado voluntariamente por la comunidad (Ko-fi, PayPal y Cripto).
-
-*Nota: Por cumplimiento de las políticas de Chrome Web Store, la descarga desde YouTube no está soportada.*
+🎯 Botón flotante de descarga integrado
+• Botón discreto que aparece sobre reproductores HTML5 para descargar en un clic sin tapar los controles.
 ```
