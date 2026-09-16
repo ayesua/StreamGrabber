@@ -1,4 +1,4 @@
-﻿# Video Downloader - StreamGrabber 2: Chrome Web Store Submission & Metadata Guide (v3.5.0)
+# Video Downloader - StreamGrabber 2: Chrome Web Store Submission & Metadata Guide (v3.5.0)
 
 ---
 
@@ -22,6 +22,13 @@
 ⚡ Video Downloader - StreamGrabber 2: Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation & Quality Selector
 
 Video Downloader - StreamGrabber 2 is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, multi-resolution quality selection, and complete multi-language support.
+
+---
+
+### ⚠️ IMPORTANT NOTICE: OFFICIAL STREAMGRABBER 2 RELEASE
+Please be aware that an unauthorized Chinese rip-off / copycat clone of our original StreamGrabber has recently surfaced on the Chrome Web Store. To safeguard our users against unverified code, adware, and clones, we have officially moved to "Video Downloader - StreamGrabber 2".
+
+This is the genuine, 100% free, zero-log, and actively maintained official release by the original author. If you come across any fake copies or rip-offs impersonating StreamGrabber on the Chrome Web Store, please help our community by clicking "Report abuse" to have Google take them down!
 
 ---
 
