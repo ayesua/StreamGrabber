@@ -1,7 +1,8 @@
 /**
- * ExtremeShield - Options & Control Center Controller
+ * ExtremeShield - Options & Control Center Controller (v1.0.30)
  * Manages protection toggles, advanced optional shields, interactive info modals,
- * domain whitelists, custom cosmetic filters, activity logs, and backup/restore.
+ * domain whitelists, custom cosmetic filters, activity logs, backup/restore,
+ * multi-language localization (EN, ES, ZH, RU), and extension update checks.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -19,6 +20,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById(target)?.classList.add('active');
     });
   });
+
+  // Language & Update Elements
+  const languageSelector = document.getElementById('language-selector');
+  const btnUpdateNow = document.getElementById('btn-update-now');
+  const updateBtnIcon = document.getElementById('update-btn-icon');
+  const updateBtnText = document.getElementById('update-btn-text');
 
   // Checkbox Elements
   const toggles = {
@@ -70,142 +77,172 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnInfoModalOk = document.getElementById('btn-info-modal-ok');
 
   /* ==========================================================================
-     1. DETAILED EXPLANATION DICTIONARY FOR INFO BUTTONS (ℹ️)
+     1. INTERNATIONALIZATION & LOCALIZATION CONTROLLER
      ========================================================================== */
-  const FEATURE_DESCRIPTIONS = {
-    'popups': {
-      title: '🚫 Aggressive Popup & Popunder Blocker',
-      whatItDoes: 'Intercepts window.open, synthetic anchor click triggers, popunders, and zero-click background spawn attempts before new browser contexts can open.',
-      benefit: 'Eliminates 100% of deceptive ads, malicious casino/scam spawns, and unwanted browser tab storms.',
-      compat: 'Legitimate user-intended popups (such as "Sign in with Google" or OAuth authorization dialogs) are permitted seamlessly.'
-    },
-    'redirect': {
-      title: '🔀 Anti-Redirect & Tab-Under Hijack Shield',
-      whatItDoes: 'Intercepts timer-based location changes (location.replace, location.href, and location.assign) and cross-domain navigations triggered without trusted user interaction.',
-      benefit: 'Prevents download, tube, and streaming sites from stealthily navigating your active tab away to phishing or ad networks.',
-      compat: 'Standard web browsing, Single Page Applications (YouTube, GitHub, X), and direct link clicks work with zero lag.'
-    },
-    'history-trap': {
-      title: '⏪ Anti-History Trapping & Back-Button Hijack Defense',
-      whatItDoes: 'Enforces strict rate-limiting on rapid history.pushState and replaceState bursts that abuse the HTML5 History API to flood browser history.',
-      benefit: 'Ensures clicking the browser\'s "Back" button always returns you to the previous page instead of trapping you in an endless ad loop.',
-      compat: 'Legitimate client-side routers (React, Vue, Next.js) continue functioning normally without interruption.'
-    },
-    'fullscreen': {
-      title: '🖥️ Deceptive Fullscreen Hijack Defense',
-      whatItDoes: 'Blocks unauthorized requestFullscreen calls on fake system warnings or page overlays that lack genuine user video interaction gestures.',
-      benefit: 'Protects against tech-support lockout scams, fake browser update screens, and fullscreen phishing overlays.',
-      compat: 'Full-screen video playback on YouTube, Netflix, and HTML5 video players works smoothly upon clicking full-screen controls.'
-    },
-    'tab-watchdog': {
-      title: '🐕 Background Ad Tab Watchdog',
-      whatItDoes: 'Monitors browser tab creation and navigation events in the service worker, immediately terminating ad networks and popunder destinations.',
-      benefit: 'Instantly destroys unwanted tabs before they consume system memory, download payloads, or execute tracking scripts.',
-      compat: 'Bypassed when protection is disabled, paused, or when initiated from whitelisted domains.'
-    },
-    'trackers': {
-      title: '🛡️ Tracking & Telemetry Armor',
-      whatItDoes: 'Blocks network requests and DOM elements associated with cross-site tracking pixels, analytics beacons, heatmaps, and advertising profiling scripts.',
-      benefit: 'Stops corporations from harvesting your browsing history and speeds up page load times by up to 40%.',
-      compat: 'Recommended to keep permanently enabled.'
-    },
-    'shadow-dom': {
-      title: '🔍 Deep Shadow DOM Tracker Scanner',
-      whatItDoes: 'Recursively traverses open Web Component Shadow DOM roots to uncover and remove tracking scripts, tracking pixels, and stealth ad banners.',
-      benefit: 'Extends ad and tracking neutralization into modern modular web applications that hide ad elements within isolated Shadow DOM boundaries.',
-      compat: 'Optimized with node caching to ensure zero CPU overhead during page scrolling.'
-    },
-    'url-params': {
-      title: '🧹 URL Tracking Parameter Stripper',
-      whatItDoes: 'Automatically cleans query tracking tokens (such as utm_source, fbclid, gclid, mc_cid, and msclkid) from clicked links and web addresses.',
-      benefit: 'Prevents cross-site behavioral correlation, preserves your privacy when sharing links with friends, and keeps URLs clean.',
-      compat: 'Does not alter essential parameters required for site navigation or checkout processes.'
-    },
-    'fingerprint': {
-      title: '🕵️ Canvas & Audio Fingerprint Randomizer',
-      whatItDoes: 'Injects imperceptible deterministic microscopic noise into HTML5 Canvas 2D and Web Audio API buffer calculations.',
-      benefit: 'Frustrates device fingerprinting scripts by ensuring your browser presents a distinct, untrackable hardware signature on each session.',
-      compat: 'Completely imperceptible to human senses; does not distort images, games, or audio playback.'
-    },
-    'webrtc': {
-      title: '🔒 WebRTC IP Leak Defense',
-      whatItDoes: 'Restricts WebRTC media routing to default public internet interfaces, preventing local private IP address disclosure on non-proxied UDP connections.',
-      benefit: 'Keeps your real internal and VPN-shielded IP addresses concealed from snooping websites.',
-      compat: 'Fully compatible with Google Meet, Zoom, Discord, and browser video conferencing tools.'
-    },
-    'cookies': {
-      title: '🍪 Cookie Consent Banner Auto-Dismissal',
-      whatItDoes: 'Detects intrusive GDPR and CCPA cookie consent banners (OneTrust, Cookiebot, Didomi, etc.) and auto-dismisses or rejects them without accepting tracking.',
-      benefit: 'Clean, unobstructed browsing experience without clicking through annoying consent popups on every site.',
-      compat: 'Automatically restores page scrolling if a cookie overlay had locked the document body.'
-    },
-    'overlays': {
-      title: '🪟 Overlay, Backdrop & Scroll Lock Defense',
-      whatItDoes: 'Detects transparent click-trap overlays, deceptive paywall backdrops, and restores scrolling when websites freeze overflow.',
-      benefit: 'Allows seamless reading and navigation on pages that attempt to lock content behind intrusive sign-up or paywall modals.',
-      compat: 'Safe for standard dialogs; only unlocks pages when scrolling has been artificially frozen.'
-    },
-    'adblock-defuse': {
-      title: '🛠️ Anti-Adblock Defuser',
-      whatItDoes: 'Neutralizes scripts designed to detect ad blockers and provides safe dummy variables to avert page breakage.',
-      benefit: 'Bypasses "Disable your ad blocker to continue" paywalls and nag screens on news and utility portals.',
-      compat: 'Recommended to keep enabled for uninterrupted browsing.'
-    },
-    'media-prerolls': {
-      title: '🎬 Video Pre-roll & VAST Defuser (Fix Error 224003)',
-      whatItDoes: 'Neutralizes broken video prerolls, skips VAST ad crashes (Error Code 224003), and provides empty compliant VAST XML to video players.',
-      benefit: 'Eliminates "This video file cannot be played (Error Code: 224003)" failures and allows immediate video playback without commercials.',
-      compat: 'Highly recommended for JWPlayer, Video.js, and HTML5 video streaming websites.'
-    },
-    'toasts': {
-      title: '💬 Popup Blocked Toast Notifications',
-      whatItDoes: 'Displays a sleek, discrete floating notification at the bottom corner of the viewport whenever a popup is neutralized, offering 1-click allow or whitelist.',
-      benefit: 'Provides transparent real-time feedback on what ExtremeShield is blocking, with instant unblock controls.',
-      compat: 'Can be toggled off if you prefer completely silent, background-only blocking.'
-    },
-    'ping-audit': {
-      title: '🔗 Hyperlink Auditing Stripper (<a ping>)',
-      whatItDoes: 'Strips ping attributes from HTML hyperlinks embedded by search engines and social networks.',
-      benefit: 'Prevents background telemetry beacons from dispatching click-telemetry payloads to analytics servers when you click a search result.',
-      compat: 'Optional. Highly recommended for users prioritizing maximum click privacy.'
-    },
-    'referrer': {
-      title: '🌐 Strict Referrer Policy Enforcement',
-      whatItDoes: 'Trims cross-origin HTTP Referer headers so external destination websites cannot inspect the exact article or query path you arrived from.',
-      benefit: 'Prevents destination servers from learning your specific search queries or internal browsing paths.',
-      compat: 'Optional. In rare instances, legacy authentication gateways may require full referrer URLs.'
-    },
-    'unlock-rightclick': {
-      title: '🔓 Unlock Right-Click & Text Selection',
-      whatItDoes: 'Restores the browser context menu, text highlighting, and clipboard copy operations on websites that attempt to disable them with event listeners.',
-      benefit: 'Restores complete browser control, allowing you to freely copy text, inspect elements, and open links in new tabs.',
-      compat: 'Optional. Useful when visiting recipe, academic, or news sites that restrict selection.'
-    },
-    'autoplay': {
-      title: '🔇 Anti-Autoplay Video Shield',
-      whatItDoes: 'Prevents unprompted floating or background video players from starting playback with audio upon page load.',
-      benefit: 'Saves laptop battery life, reduces network bandwidth consumption, and prevents unexpected loud noise.',
-      compat: 'Optional. Media you explicitly start via play buttons will play normally.'
+  let currentLanguage = 'en';
+
+  function getTranslation(key) {
+    const dict = window.TRANSLATIONS?.[currentLanguage] || window.TRANSLATIONS?.['en'] || {};
+    return dict[key] || window.TRANSLATIONS?.['en']?.[key] || key;
+  }
+
+  function applyLanguage(lang) {
+    if (!window.TRANSLATIONS || !window.TRANSLATIONS[lang]) lang = 'en';
+    currentLanguage = lang;
+    const dict = window.TRANSLATIONS[lang];
+
+    // Update document language
+    document.documentElement.lang = lang;
+
+    // Update static data-i18n elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (dict[key]) {
+        if (dict[key].includes('<') && dict[key].includes('>')) {
+          el.innerHTML = dict[key];
+        } else {
+          el.textContent = dict[key];
+        }
+      }
+    });
+
+    // Update placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (dict[key]) {
+        el.placeholder = dict[key];
+      }
+    });
+
+    // Update all 19 feature toggles' titles and descriptions
+    Object.keys(toggles).forEach(key => {
+      const el = toggles[key];
+      if (!el) return;
+      const row = el.closest('.setting-row');
+      if (!row) return;
+
+      const titleSpan = row.querySelector('.setting-title');
+      const descSpan = row.querySelector('.setting-desc');
+
+      if (titleSpan && dict.features?.[key]?.title) {
+        const infoBtn = titleSpan.querySelector('.info-btn');
+        if (titleSpan.firstChild && titleSpan.firstChild !== infoBtn) {
+          titleSpan.firstChild.textContent = dict.features[key].title + ' ';
+        } else {
+          titleSpan.insertBefore(document.createTextNode(dict.features[key].title + ' '), infoBtn);
+        }
+        if (infoBtn) {
+          infoBtn.title = dict.info_button_title || 'Detailed Information';
+        }
+      }
+
+      if (descSpan && dict.features?.[key]?.desc) {
+        descSpan.textContent = dict.features[key].desc;
+      }
+    });
+
+    // Re-render empty states if containers are empty
+    const currentEmptyWhitelist = whitelistContainer.querySelector('[data-i18n="whitelist_empty"]');
+    if (currentEmptyWhitelist) {
+      currentEmptyWhitelist.textContent = dict.whitelist_empty;
     }
-  };
 
+    const currentEmptyCosmetic = cosmeticContainer.querySelector('[data-i18n="zapped_empty"]');
+    if (currentEmptyCosmetic) {
+      currentEmptyCosmetic.textContent = dict.zapped_empty;
+    }
+
+    const currentEmptyLogs = logsContainer.querySelector('[data-i18n="logs_empty"]');
+    if (currentEmptyLogs) {
+      currentEmptyLogs.textContent = dict.logs_empty;
+    }
+  }
+
+  // Language selector listener
+  languageSelector?.addEventListener('change', async (e) => {
+    const selected = e.target.value;
+    applyLanguage(selected);
+    await chrome.storage.local.set({ language: selected });
+  });
+
+  /* ==========================================================================
+     2. UPDATE NOW BUTTON (Live Chrome Web Store / Extension Check)
+     ========================================================================== */
+  let isCheckingUpdate = false;
+
+  btnUpdateNow?.addEventListener('click', () => {
+    if (isCheckingUpdate) return;
+    isCheckingUpdate = true;
+    btnUpdateNow.classList.add('is-checking');
+    updateBtnIcon?.classList.add('spin');
+    if (updateBtnText) updateBtnText.textContent = getTranslation('checking_update');
+
+    try {
+      if (typeof chrome.runtime.requestUpdateCheck === 'function') {
+        chrome.runtime.requestUpdateCheck((status, details) => {
+          updateBtnIcon?.classList.remove('spin');
+          btnUpdateNow.classList.remove('is-checking');
+
+          if (status === 'update_available') {
+            btnUpdateNow.classList.add('is-success');
+            if (updateBtnText) updateBtnText.textContent = getTranslation('update_available');
+            setTimeout(() => {
+              chrome.runtime.reload();
+            }, 1200);
+          } else if (status === 'throttled') {
+            if (updateBtnText) updateBtnText.textContent = getTranslation('update_throttled');
+            setTimeout(() => {
+              if (updateBtnText) updateBtnText.textContent = getTranslation('btn_update_now');
+              isCheckingUpdate = false;
+            }, 2500);
+          } else {
+            // 'no_update'
+            btnUpdateNow.classList.add('is-success');
+            const ver = chrome.runtime.getManifest().version;
+            if (updateBtnText) updateBtnText.textContent = getTranslation('update_latest') + ' (v' + ver + ')';
+            setTimeout(() => {
+              btnUpdateNow.classList.remove('is-success');
+              if (updateBtnText) updateBtnText.textContent = getTranslation('btn_update_now');
+              isCheckingUpdate = false;
+            }, 3000);
+          }
+        });
+      } else {
+        throw new Error('requestUpdateCheck not supported');
+      }
+    } catch (err) {
+      updateBtnIcon?.classList.remove('spin');
+      btnUpdateNow.classList.remove('is-checking');
+      const ver = chrome.runtime.getManifest().version;
+      if (updateBtnText) updateBtnText.textContent = getTranslation('update_latest') + ' (v' + ver + ')';
+      setTimeout(() => {
+        if (updateBtnText) updateBtnText.textContent = getTranslation('btn_update_now');
+        isCheckingUpdate = false;
+      }, 2500);
+    }
+  });
+
+  /* ==========================================================================
+     3. DETAILED EXPLANATION MODAL FOR INFO BUTTONS (ℹ️)
+     ========================================================================== */
   function showFeatureInfo(key) {
-    const info = FEATURE_DESCRIPTIONS[key];
-    if (!info) return;
+    const langDict = window.TRANSLATIONS?.[currentLanguage] || window.TRANSLATIONS?.['en'] || {};
+    const details = langDict.feature_details?.[key] || window.TRANSLATIONS?.['en']?.feature_details?.[key];
+    if (!details) return;
 
-    infoModalTitle.textContent = info.title;
+    infoModalTitle.textContent = details.title;
     infoModalContent.innerHTML = `
       <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 4px;">
-        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">🔍 What it does</div>
-        <div>${info.whatItDoes}</div>
+        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${langDict.modal_what || '🔍 What it does'}</div>
+        <div>${details.whatItDoes}</div>
       </div>
       <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 12px; margin-bottom: 4px;">
-        <div style="font-weight: 700; color: var(--accent-emerald); margin-bottom: 4px;">🛡️ Privacy &amp; Security Benefit</div>
-        <div>${info.benefit}</div>
+        <div style="font-weight: 700; color: var(--accent-emerald); margin-bottom: 4px;">${langDict.modal_benefit || '🛡️ Privacy & Security Benefit'}</div>
+        <div>${details.benefit}</div>
       </div>
       <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-md); padding: 12px;">
-        <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 4px;">⚙️ Compatibility &amp; Experience</div>
-        <div>${info.compat}</div>
+        <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 4px;">${langDict.modal_compat || '⚙️ Compatibility & Experience'}</div>
+        <div>${details.compat}</div>
       </div>
     `;
 
@@ -229,15 +266,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   /* ==========================================================================
-     2. LOAD SETTINGS & INITIALIZE UI
+     4. LOAD SETTINGS & INITIALIZE UI
      ========================================================================== */
   async function loadAllSettings() {
     const data = await chrome.storage.local.get([
+      'language',
       'settings',
       'whitelistedDomains',
       'customCosmeticRules',
       'trackerLogs'
     ]);
+
+    // Determine initial language
+    let lang = data.language;
+    if (!lang) {
+      const navLang = (navigator.language || '').toLowerCase();
+      if (navLang.startsWith('es')) lang = 'es';
+      else if (navLang.startsWith('zh')) lang = 'zh';
+      else if (navLang.startsWith('ru')) lang = 'ru';
+      else lang = 'en';
+    }
+    if (languageSelector) languageSelector.value = lang;
+    applyLanguage(lang);
 
     const settings = data.settings || {};
 
@@ -259,7 +309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ==========================================================================
-     3. TOGGLE EVENT LISTENERS
+     5. TOGGLE EVENT LISTENERS
      ========================================================================== */
   Object.keys(toggles).forEach(key => {
     const el = toggles[key];
@@ -278,18 +328,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   /* ==========================================================================
-     4. WHITELIST MANAGER
+     6. WHITELIST MANAGER
      ========================================================================== */
   function renderWhitelist(list) {
+    const dict = window.TRANSLATIONS?.[currentLanguage] || window.TRANSLATIONS?.['en'] || {};
     if (list.length === 0) {
-      whitelistContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 12px;">No whitelisted domains yet.</div>`;
+      whitelistContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 12px;" data-i18n="whitelist_empty">${dict.whitelist_empty || 'No whitelisted domains yet.'}</div>`;
       return;
     }
 
+    const removeText = dict.btn_remove || 'Remove';
     whitelistContainer.innerHTML = list.map(domain => `
       <div class="list-item">
         <span>${domain}</span>
-        <button class="btn-delete" data-domain="${domain}" title="Remove domain">&times; Remove</button>
+        <button class="btn-delete" data-domain="${domain}" title="Remove domain">&times; ${removeText}</button>
       </div>
     `).join('');
 
@@ -303,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  btnAddWhitelist.addEventListener('click', async () => {
+  btnAddWhitelist?.addEventListener('click', async () => {
     let domain = inputWhitelist.value.trim().toLowerCase();
     if (!domain) return;
 
@@ -320,15 +372,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   /* ==========================================================================
-     5. CUSTOM COSMETIC RULES MANAGER
+     7. CUSTOM COSMETIC RULES MANAGER
      ========================================================================== */
   function renderCosmeticRules(rulesMap) {
+    const dict = window.TRANSLATIONS?.[currentLanguage] || window.TRANSLATIONS?.['en'] || {};
     const domains = Object.keys(rulesMap);
     if (domains.length === 0) {
-      cosmeticContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 12px;">No custom hidden elements saved yet.</div>`;
+      cosmeticContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 12px;" data-i18n="zapped_empty">${dict.zapped_empty || 'No custom hidden elements saved yet.'}</div>`;
       return;
     }
 
+    const removeText = dict.btn_remove || 'Remove';
     let html = '';
     domains.forEach(domain => {
       const selectors = rulesMap[domain] || [];
@@ -339,7 +393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span style="color: var(--accent-emerald); font-weight: 600;">${domain}</span>
               <span style="color: var(--text-secondary); margin-left: 8px;">${sel}</span>
             </div>
-            <button class="btn-delete" data-cosmetic-domain="${domain}" data-cosmetic-sel="${sel}">&times; Remove</button>
+            <button class="btn-delete" data-cosmetic-domain="${domain}" data-cosmetic-sel="${sel}">&times; ${removeText}</button>
           </div>
         `;
       });
@@ -365,11 +419,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ==========================================================================
-     6. ACTIVITY LOGS
+     8. ACTIVITY LOGS
      ========================================================================== */
   function renderLogs(logs) {
+    const dict = window.TRANSLATIONS?.[currentLanguage] || window.TRANSLATIONS?.['en'] || {};
     if (logs.length === 0) {
-      logsContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">No events recorded in this session.</div>`;
+      logsContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;" data-i18n="logs_empty">${dict.logs_empty || 'No events recorded in this session.'}</div>`;
       return;
     }
 
@@ -390,16 +445,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).join('');
   }
 
-  btnClearLogs.addEventListener('click', async () => {
+  btnClearLogs?.addEventListener('click', async () => {
     await chrome.storage.local.set({ trackerLogs: [] });
     renderLogs([]);
   });
 
   /* ==========================================================================
-     7. BACKUP & RESTORE
+     9. BACKUP & RESTORE
      ========================================================================== */
-  btnExportJson.addEventListener('click', async () => {
+  btnExportJson?.addEventListener('click', async () => {
     const data = await chrome.storage.local.get([
+      'language',
       'settings',
       'whitelistedDomains',
       'customCosmeticRules',
@@ -410,16 +466,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pureshield_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = 'extremeshield_backup_' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
     URL.revokeObjectURL(url);
   });
 
-  btnImportTrigger.addEventListener('click', () => {
-    fileImportJson.click();
+  btnImportTrigger?.addEventListener('click', () => {
+    fileImportJson?.click();
   });
 
-  fileImportJson.addEventListener('change', (e) => {
+  fileImportJson?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -429,18 +485,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const imported = JSON.parse(evt.target.result);
         if (typeof imported === 'object') {
           await chrome.storage.local.set(imported);
-          alert('PureShield configuration successfully imported!');
+          alert(getTranslation('import_success'));
           loadAllSettings();
         }
       } catch (err) {
-        alert('Invalid JSON file format.');
+        alert(getTranslation('import_error'));
       }
     };
     reader.readAsText(file);
   });
 
-  btnResetDefaults.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to reset all PureShield settings to defaults? This will clear custom rules and whitelists.')) {
+  btnResetDefaults?.addEventListener('click', async () => {
+    if (confirm(getTranslation('reset_confirm'))) {
       await chrome.storage.local.clear();
       chrome.runtime.reload();
     }
@@ -454,7 +510,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (text) {
         navigator.clipboard.writeText(text);
         const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
+        btn.textContent = getTranslation('copied');
         btn.style.background = '#10b981';
         btn.style.color = '#000';
         setTimeout(() => {

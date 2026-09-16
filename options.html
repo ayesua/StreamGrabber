@@ -20,25 +20,41 @@
           </svg>
         </div>
         <div>
-          <h1 style="font-size: 20px; font-weight: 700; color: #fff;">ExtremeShield Settings</h1>
-          <p style="font-size: 12px; color: var(--text-secondary);">Manifest V3 Extreme High-Performance Popup & Tracker Armor</p>
+          <h1 style="font-size: 20px; font-weight: 700; color: #fff;" data-i18n="header_title">ExtremeShield Settings</h1>
+          <p style="font-size: 12px; color: var(--text-secondary);" data-i18n="header_subtitle">Manifest V3 Extreme High-Performance Popup & Tracker Armor</p>
         </div>
+      </div>
+
+      <!-- Top Header Actions: Language Selector & Update Button -->
+      <div class="header-actions">
+        <div class="lang-select-wrapper">
+          <select id="language-selector" class="lang-select" aria-label="Select Language">
+            <option value="en">English (United States)</option>
+            <option value="es">Español</option>
+            <option value="zh">中文 (中国)</option>
+            <option value="ru">Русский</option>
+          </select>
+        </div>
+        <button id="btn-update-now" class="btn-update-now" title="Check for extension updates">
+          <span class="update-icon" id="update-btn-icon">🔄</span>
+          <span id="update-btn-text" data-i18n="btn_update_now">Update Now</span>
+        </button>
       </div>
     </header>
 
     <!-- Navigation Tabs -->
     <nav class="tabs-nav">
-      <button class="tab-btn active" data-tab="tab-filters">🛡️ Protections</button>
-      <button class="tab-btn" data-tab="tab-whitelist">🌐 Whitelist & Custom</button>
-      <button class="tab-btn" data-tab="tab-logs">📜 Live Activity Log</button>
-      <button class="tab-btn" data-tab="tab-backup">💾 Backup & Restore</button>
-      <button class="tab-btn" data-tab="tab-donations">💖 Support & Donations</button>
+      <button class="tab-btn active" data-tab="tab-filters" data-i18n="tab_protections">🛡️ Protections</button>
+      <button class="tab-btn" data-tab="tab-whitelist" data-i18n="tab_whitelist">🌐 Whitelist & Custom</button>
+      <button class="tab-btn" data-tab="tab-logs" data-i18n="tab_logs">📜 Live Activity Log</button>
+      <button class="tab-btn" data-tab="tab-backup" data-i18n="tab_backup">💾 Backup & Restore</button>
+      <button class="tab-btn" data-tab="tab-donations" data-i18n="tab_donations">💖 Support & Donations</button>
     </nav>
 
     <!-- TAB 1: PROTECTIONS & FILTERS -->
     <div class="tab-panel active" id="tab-filters">
       <div class="setting-card">
-        <h2 style="font-size: 16px; margin-bottom: 14px; color: var(--accent-emerald);">Core Defense Engines</h2>
+        <h2 style="font-size: 16px; margin-bottom: 14px; color: var(--accent-emerald);" data-i18n="core_engines_title">Core Defense Engines</h2>
         
         <div class="setting-row">
           <div class="setting-info">
@@ -253,7 +269,7 @@
 
       <!-- Advanced Optional Shields -->
       <div class="setting-card">
-        <h2 style="font-size: 16px; margin-bottom: 14px; color: var(--accent-cyan);">Advanced Experimental Shields (Optional)</h2>
+        <h2 style="font-size: 16px; margin-bottom: 14px; color: var(--accent-cyan);" data-i18n="advanced_shields_title">Advanced Experimental Shields (Optional)</h2>
 
         <div class="setting-row">
           <div class="setting-info">
@@ -322,15 +338,15 @@
             <div>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">StreamGrabber</h3>
-                <span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.3);">COMPANION EXTENSION</span>
+                <span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; border: 1px solid rgba(59, 130, 246, 0.3);" data-i18n="companion_badge">COMPANION EXTENSION</span>
               </div>
               <p style="margin: 4px 0 0; font-size: 12px; color: #94a3b8; line-height: 1.4;">
-                From the creators of ExtremeShield: Download streaming videos, m3u8 playlists, and audio streams directly at maximum speed.
+                <span data-i18n="companion_desc">From the creators of ExtremeShield: Download streaming videos, m3u8 playlists, and audio streams directly at maximum speed.</span>
               </p>
             </div>
           </div>
           <a href="https://github.com/ayesua/StreamGrabber" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
-            <span>Try StreamGrabber</span>
+            <span data-i18n="companion_btn">Try StreamGrabber</span>
             <span style="font-size: 14px;">&nearr;</span>
           </a>
         </div>
@@ -340,25 +356,25 @@
     <!-- TAB 2: WHITELIST & CUSTOM COSMETIC RULES -->
     <div class="tab-panel" id="tab-whitelist">
       <div class="setting-card">
-        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);">Trusted Whitelisted Domains</h2>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">ExtremeShield will remain completely disabled on these websites.</p>
+        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);" data-i18n="whitelist_title">Trusted Whitelisted Domains</h2>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;" data-i18n="whitelist_desc">ExtremeShield will remain completely disabled on these websites.</p>
         
         <div class="input-group">
-          <input type="text" id="input-whitelist" class="text-input" placeholder="e.g. internal.company.com or example.org">
-          <button class="btn-primary" id="btn-add-whitelist">Add Domain</button>
+          <input type="text" id="input-whitelist" class="text-input" placeholder="e.g. internal.company.com or example.org" data-i18n-placeholder="whitelist_placeholder">
+          <button class="btn-primary" id="btn-add-whitelist" data-i18n="btn_add_domain">Add Domain</button>
         </div>
 
         <div class="items-list" id="whitelist-container">
-          <div style="color: var(--text-muted); font-size: 12px;">No whitelisted domains yet.</div>
+          <div style="color: var(--text-muted); font-size: 12px;" data-i18n="whitelist_empty">No whitelisted domains yet.</div>
         </div>
       </div>
 
       <div class="setting-card">
-        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);">Zapped Elements (Custom Cosmetic Filters)</h2>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">Selectors hidden permanently using the Element Zapper tool.</p>
+        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);" data-i18n="zapped_title">Zapped Elements (Custom Cosmetic Filters)</h2>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;" data-i18n="zapped_desc">Selectors hidden permanently using the Element Zapper tool.</p>
 
         <div class="items-list" id="cosmetic-container">
-          <div style="color: var(--text-muted); font-size: 12px;">No custom hidden elements saved yet.</div>
+          <div style="color: var(--text-muted); font-size: 12px;" data-i18n="zapped_empty">No custom hidden elements saved yet.</div>
         </div>
       </div>
     </div>
@@ -368,14 +384,14 @@
       <div class="setting-card">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
           <div>
-            <h2 style="font-size: 16px; color: var(--accent-emerald);">Recent Blocked Events</h2>
-            <p style="font-size: 12px; color: var(--text-secondary);">Real-time stream of intercepted popups, blocked trackers, and stripped URLs.</p>
+            <h2 style="font-size: 16px; color: var(--accent-emerald);" data-i18n="logs_title">Recent Blocked Events</h2>
+            <p style="font-size: 12px; color: var(--text-secondary);" data-i18n="logs_desc">Real-time stream of intercepted popups, blocked trackers, and stripped URLs.</p>
           </div>
-          <button class="btn-primary" id="btn-clear-logs" style="background: #334155; color: #fff;">Clear Log</button>
+          <button class="btn-primary" id="btn-clear-logs" style="background: #334155; color: #fff;" data-i18n="btn_clear_logs">Clear Log</button>
         </div>
 
         <div class="items-list" id="logs-container" style="max-height: 400px;">
-          <div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">No events recorded in this session.</div>
+          <div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;" data-i18n="logs_empty">No events recorded in this session.</div>
         </div>
       </div>
     </div>
@@ -383,34 +399,34 @@
     <!-- TAB 4: BACKUP & RESTORE -->
     <div class="tab-panel" id="tab-backup">
       <div class="setting-card">
-        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);">Export & Import Configuration</h2>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 18px;">Easily transfer your custom rules, whitelist, and settings across devices.</p>
+        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);" data-i18n="backup_title">Export & Import Configuration</h2>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 18px;" data-i18n="backup_desc">Easily transfer your custom rules, whitelist, and settings across devices.</p>
 
         <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-          <button class="btn-primary" id="btn-export-json">📥 Export Settings JSON</button>
-          <button class="btn-primary" id="btn-import-json-trigger" style="background: #334155; color: #fff;">📤 Import Settings JSON</button>
+          <button class="btn-primary" id="btn-export-json" data-i18n="btn_export_json">📥 Export Settings JSON</button>
+          <button class="btn-primary" id="btn-import-json-trigger" style="background: #334155; color: #fff;" data-i18n="btn_import_json">📤 Import Settings JSON</button>
           <input type="file" id="file-import-json" accept=".json" style="display: none;">
         </div>
 
         <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
-        <h3 style="font-size: 14px; color: var(--accent-rose); margin-bottom: 6px;">Reset to Factory Defaults</h3>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Wipes all custom rules, whitelists, and restores original recommended protection settings.</p>
-        <button class="btn-primary" id="btn-reset-defaults" style="background: var(--accent-rose); color: #fff;">Reset All Settings</button>
+        <h3 style="font-size: 14px; color: var(--accent-rose); margin-bottom: 6px;" data-i18n="reset_title">Reset to Factory Defaults</h3>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;" data-i18n="reset_desc">Wipes all custom rules, whitelists, and restores original recommended protection settings.</p>
+        <button class="btn-primary" id="btn-reset-defaults" style="background: var(--accent-rose); color: #fff;" data-i18n="btn_reset_defaults">Reset All Settings</button>
       </div>
     </div>
 
     <!-- TAB 4B: RECOMMENDED TOOLS -->
     <div class="setting-card" style="border-left: 4px solid #0087cd; background: rgba(0, 135, 205, 0.08);">
       <h2 style="font-size: 16px; margin-bottom: 8px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
-        🎬 Recommended Extension: StreamGrabber
+        <span data-i18n="rec_tool_title">🎬 Recommended Extension: StreamGrabber</span>
       </h2>
       <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px;">
         Need to download videos, audio streams, or HLS (.m3u8) clips for offline playback? Try <strong>StreamGrabber</strong>, our high-speed video sniffer and downloader extension.
       </p>
       <a href="https://chromewebstore.google.com/search/StreamGrabber" target="_blank" style="text-decoration: none; display: inline-block;">
         <div style="background: linear-gradient(135deg, #0284c7, #38bdf8); color: #ffffff; padding: 10px 18px; border-radius: var(--radius-md); font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
-          <span>🚀 Try StreamGrabber Free</span>
+          <span data-i18n="rec_tool_btn">🚀 Try StreamGrabber Free</span>
           <span>&rarr;</span>
         </div>
       </a>
@@ -419,24 +435,24 @@
     <!-- TAB 5: SUPPORT & DONATIONS -->
     <div class="tab-panel" id="tab-donations">
       <div class="setting-card">
-        <h2 style="font-size: 18px; margin-bottom: 8px; color: var(--accent-emerald);">💖 100% Free & Open Privacy Model</h2>
+        <h2 style="font-size: 18px; margin-bottom: 8px; color: var(--accent-emerald);" data-i18n="donations_title">💖 100% Free & Open Privacy Model</h2>
         <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px;">
           Unlike commercial adblockers that sell user telemetry or charge monthly subscriptions for "premium" features, <strong>ExtremeShield is 100% free, forever, with zero paywalls</strong>. We rely strictly on voluntary community donations from users who value high-speed, private browsing.
         </p>
 
-        <h3 style="font-size: 14px; color: var(--text-primary); margin-bottom: 14px;">Ways to Support ExtremeShield</h3>
+        <h3 style="font-size: 14px; color: var(--text-primary); margin-bottom: 14px;" data-i18n="donations_ways">Ways to Support ExtremeShield</h3>
         
         <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; max-width: 480px;">
           <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" style="text-decoration: none;">
             <div style="background: #72a4f2; color: #ffffff; padding: 12px 20px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; font-weight: 700; box-shadow: 0 4px 14px rgba(114, 164, 242, 0.35); transition: transform 0.2s;">
               <span style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-                ☕ Support me on Ko-fi
+                <span data-i18n="donations_kofi">☕ Support me on Ko-fi</span>
               </span>
               <span>&rarr;</span>
             </div>
           </a>
 
-          <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">CRYPTO DONATIONS</div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;" data-i18n="donations_crypto">CRYPTO DONATIONS</div>
           
           <div class="crypto-box">
             <span style="font-weight: 600; font-size: 12px; color: #f59e0b;">Bitcoin (BTC)</span>
@@ -458,18 +474,19 @@
   <div class="modal-overlay" id="feature-info-modal">
     <div class="modal-card" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title" id="info-modal-title">Feature Information</h3>
+        <h3 class="modal-title" id="info-modal-title" data-i18n="modal_title">Feature Information</h3>
         <button class="icon-btn" id="btn-close-info-modal">&times;</button>
       </div>
       <div id="info-modal-content" style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
         <!-- Injected dynamically by options.js -->
       </div>
       <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-        <button class="btn-primary" id="btn-info-modal-ok">Entendido</button>
+        <button class="btn-primary" id="btn-info-modal-ok" data-i18n="modal_ok">Got it</button>
       </div>
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

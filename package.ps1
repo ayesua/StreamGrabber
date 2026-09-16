@@ -28,6 +28,7 @@ $runtimeFiles = @(
     "popup.js",
     "options.html",
     "options.js",
+    "i18n.js",
     "styles.css",
     "icon16.png",
     "icon48.png",
