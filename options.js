@@ -1,9 +1,10 @@
-﻿/**
- * Video Downloader - StreamGrabber 2 - Options Page Logic
+/**
+ * Video Downloader - XtremeGrbr - Options Page Logic
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   const languageSelector = document.getElementById('languageSelector');
+  const themeSelector = document.getElementById('themeSelector');
   const askFilenameInput = document.getElementById('askFilename');
   const showFloatingBtnInput = document.getElementById('showFloatingBtn');
   const minSizeInput = document.getElementById('minSize');
@@ -32,6 +33,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof setStoredLanguage === 'function') {
         setStoredLanguage(selectedLang, (lang) => {
           if (typeof applyI18n === 'function') applyI18n(lang);
+        });
+      }
+    });
+  }
+
+  // 1b. Theme Initialization & Real-Time Switching
+  if (typeof getStoredTheme === 'function') {
+    getStoredTheme((theme) => {
+      if (themeSelector) themeSelector.value = theme;
+      if (typeof applyTheme === 'function') applyTheme(theme);
+    });
+  }
+
+  if (themeSelector) {
+    themeSelector.addEventListener('change', (e) => {
+      const selectedTheme = e.target.value;
+      if (typeof setStoredTheme === 'function') {
+        setStoredTheme(selectedTheme, (theme) => {
+          if (typeof applyTheme === 'function') applyTheme(theme);
         });
       }
     });

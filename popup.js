@@ -46,11 +46,39 @@ function isGenericOrTechnicalTitle(title) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 0. Initialize Internationalization (i18n)
+  // 0. Initialize Internationalization (i18n) & Theme
   if (typeof getStoredLanguage === 'function') {
     getStoredLanguage((lang) => {
       currentLang = lang;
       if (typeof applyI18n === 'function') applyI18n(lang);
+    });
+  }
+
+  function updateThemeButtonIcon(theme) {
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeIcon) {
+      themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+  }
+
+  if (typeof getStoredTheme === 'function') {
+    getStoredTheme((theme) => {
+      if (typeof applyTheme === 'function') applyTheme(theme);
+      updateThemeButtonIcon(theme);
+    });
+  }
+
+  const btnToggleTheme = document.getElementById('btnToggleTheme');
+  if (btnToggleTheme) {
+    btnToggleTheme.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const newTheme = isDark ? 'light' : 'dark';
+      if (typeof setStoredTheme === 'function') {
+        setStoredTheme(newTheme, (theme) => {
+          if (typeof applyTheme === 'function') applyTheme(theme);
+          updateThemeButtonIcon(theme);
+        });
+      }
     });
   }
 

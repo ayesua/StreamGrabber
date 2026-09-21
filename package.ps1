@@ -1,4 +1,4 @@
-# StreamGrabber - Chrome Web Store Production Packaging Script
+# XtremeGrbr - Chrome Web Store Production Packaging Script
 $ErrorActionPreference = "Stop"
 
 $workspace = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -7,11 +7,11 @@ Set-Location $workspace
 
 $manifestJson = Get-Content -Raw "manifest.json" | ConvertFrom-Json
 $version = $manifestJson.version
-$zipFileName = "StreamGrabber-v$version.zip"
+$zipFileName = "XtremeGrbr-v$version.zip"
 $zipPath = Join-Path $workspace $zipFileName
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host " Packing StreamGrabber v$version for CWS" -ForegroundColor Cyan
+Write-Host " Packing XtremeGrbr v$version for CWS" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 $runtimeFiles = @(

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -147,22 +147,35 @@
 
   <div class="options-card">
     <div class="options-title">
-      <span data-i18n="optionsHeading">StreamGrabber 2 Settings</span>
-      <span style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.0</span>
+      <span data-i18n="optionsHeading">XtremeGrbr Settings</span>
+      <span style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.1</span>
     </div>
 
-    <!-- Language Selector at the Top of Configuration -->
-    <div class="form-group" style="background: #f0f9ff; padding: 14px 16px; border-radius: 8px; border: 1.5px solid #bae6fd; margin-bottom: 22px;">
-      <label for="languageSelector" style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0369a1; margin-bottom: 8px;">
-        <span style="font-size: 16px;">🌐</span>
-        <span data-i18n="languageSelectorLabel">Language / Idioma / 语言 / Язык</span>
-      </label>
-      <select id="languageSelector" style="font-weight: 600; cursor: pointer; background: #ffffff; border-color: #7dd3fc;">
-        <option value="en">English (United States)</option>
-        <option value="es">Español (Spanish)</option>
-        <option value="zh_CN">简体中文 (Chinese - China)</option>
-        <option value="ru">Русский (Russian)</option>
-      </select>
+    <!-- Language & Theme Selectors at the Top of Configuration -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px;">
+      <div class="form-group" style="background: #f0f9ff; padding: 14px 16px; border-radius: 8px; border: 1.5px solid #bae6fd; margin-bottom: 0;">
+        <label for="languageSelector" style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0369a1; margin-bottom: 8px;">
+          <span style="font-size: 16px;">🌐</span>
+          <span data-i18n="languageSelectorLabel">Language / Idioma / 语言 / Язык</span>
+        </label>
+        <select id="languageSelector" style="font-weight: 600; cursor: pointer; background: #ffffff; border-color: #7dd3fc;">
+          <option value="en">English (United States)</option>
+          <option value="es">Español (Spanish)</option>
+          <option value="zh_CN">简体中文 (Chinese - China)</option>
+          <option value="ru">Русский (Russian)</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="background: #f0f9ff; padding: 14px 16px; border-radius: 8px; border: 1.5px solid #bae6fd; margin-bottom: 0;">
+        <label for="themeSelector" style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0369a1; margin-bottom: 8px;">
+          <span style="font-size: 16px;">🌓</span>
+          <span data-i18n="themeSelectorLabel">Theme (Light / Dark)</span>
+        </label>
+        <select id="themeSelector" style="font-weight: 600; cursor: pointer; background: #ffffff; border-color: #7dd3fc;">
+          <option value="light" data-i18n="themeLight">☀️ Light Theme</option>
+          <option value="dark" data-i18n="themeDark">🌙 Dark Theme</option>
+        </select>
+      </div>
     </div>
 
     <form id="optionsForm">
@@ -235,11 +248,11 @@
       <span style="display: flex; align-items: center; gap: 8px;">
         <span>🔄</span> <span data-i18n="updatesCardTitle">Updates & Version</span>
       </span>
-      <span class="version-badge" id="optionsVersionLabel" style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 12px;">v3.5.0</span>
+      <span class="version-badge" id="optionsVersionLabel" style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 12px;">v3.5.1</span>
     </div>
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
       <div style="font-size: 13px; color: var(--vdh-text-muted);" id="updateStatusText" data-i18n="currentVersionLabel">
-        Current Version: v3.5.0
+        Current Version: v3.5.1
       </div>
       <button type="button" id="btnCheckUpdates" class="btn-check-updates" style="background: #0284c7; color: #ffffff; padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
         <span id="updateSpinner" style="display:none;">⏳</span>
@@ -271,11 +284,11 @@
   <!-- Support & Donations Card -->
   <div class="options-card" style="margin-top: 24px;">
     <div class="options-title" style="border-bottom-color: #f43f5e;">
-      <span style="display: flex; align-items: center; gap: 8px;" data-i18n="supportTitle">💖 Support StreamGrabber 2</span>
+      <span style="display: flex; align-items: center; gap: 8px;" data-i18n="supportTitle">💖 Support XtremeGrbr</span>
       <span style="font-size: 11px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 3px 8px; border-radius: 12px;" data-i18n="supportBadge">100% Free • Open Model</span>
     </div>
     <p style="font-size: 13px; color: var(--vdh-text-muted); line-height: 1.5; margin-bottom: 16px;" data-i18n="supportDesc">
-      StreamGrabber 2 is completely free, zero-log, and has zero paywalls. Your donations support development, keep HLS sniffers updated, and ensure uninterrupted high-speed video downloads!
+      XtremeGrbr is completely free, zero-log, and has zero paywalls. Your donations support development, keep HLS sniffers updated, and ensure uninterrupted high-speed video downloads!
     </p>
 
     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; max-width: 480px;">

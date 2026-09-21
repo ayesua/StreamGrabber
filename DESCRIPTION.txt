@@ -1,33 +1,38 @@
 ================================================================================
-Video Downloader - StreamGrabber 2 (v3.5.0) - Chrome Web Store Metadata & Description
+Video Downloader - XtremeGrbr (v3.5.1) - Chrome Web Store Metadata & Description
 ================================================================================
 
 TITLE:
-Video Downloader - StreamGrabber 2
+Video Downloader - XtremeGrbr
 
 SHORT DESCRIPTION (Max 132 characters):
-Fast video, audio, and HLS (.m3u8) stream detector and downloader with live player preview, rotation, and multi-language support.
+Fast video, audio, and HLS (.m3u8) stream detector and downloader with player preview, dark/light theme, and multi-language support.
 
 --------------------------------------------------------------------------------
 ENGLISH DESCRIPTION
 --------------------------------------------------------------------------------
 
-⚡ Video Downloader - StreamGrabber 2: Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation & Quality Selector
+⚡ Video Downloader - XtremeGrbr: Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation, Theme Switcher & Quality Selector
 
-Video Downloader - StreamGrabber 2 is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, and multi-resolution quality selection.
+Video Downloader - XtremeGrbr is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, dark & light theme modes, and multi-resolution quality selection.
 
 --------------------------------------------------------------------------------
-⚠️ IMPORTANT NOTICE — OFFICIAL STREAMGRABBER 2 RELEASE
+⚠️ IMPORTANT NOTICE — OFFICIAL XTREMEGRBR RELEASE
 --------------------------------------------------------------------------------
-Please be aware that an unauthorized Chinese rip-off / copycat clone of our original StreamGrabber has recently surfaced on the Chrome Web Store. To safeguard our users against unverified code, adware, and clones, we have officially moved to "Video Downloader - StreamGrabber 2".
+Please be aware that an unauthorized Chinese rip-off / copycat clone of our original extension recently surfaced on the Chrome Web Store. To protect our community from unverified code, adware, and clones, we have officially rebranded to "Video Downloader - XtremeGrbr" (v3.5.1).
 
-This is the genuine, 100% free, zero-log, and actively maintained official release by the original author. If you come across any fake copies or rip-offs impersonating StreamGrabber on the Chrome Web Store, please help our community by clicking "Report abuse" to have Google take them down!
+This is the genuine, 100% free, zero-log, and actively maintained official release by the original author. If you come across any unauthorized copies or rip-offs on the Chrome Web Store, please help our community by clicking "Report abuse" to have Google take them down!
 
 --------------------------------------------------------------------------------
 🚀 KEY FEATURES & CAPABILITIES
 --------------------------------------------------------------------------------
 
-🌐 Multi-Language Support (NEW in v3.5)
+🌓 Dark & Light Mode Theme Switcher (NEW in v3.5.1)
+• Seamlessly switch between modern Dark and Light themes.
+• 1-Click quick toggle (☀️ / 🌙) directly in the popup navbar.
+• Dedicated theme selector in the Settings page with real-time sync.
+
+🌐 Multi-Language Support
 • Full native internationalization supporting:
   - English (United States)
   - Spanish (Español)
@@ -35,11 +40,11 @@ This is the genuine, 100% free, zero-log, and actively maintained official relea
   - Russian (Русский)
 • Easily toggle your preferred language at the top of the Settings configuration.
 
-🔄 In-Settings "Check for Updates" Button (NEW in v3.5)
+🔄 In-Settings "Check for Updates" Button
 • Verify your extension version and check for new releases directly from Settings.
 
-🛡️ ExtremeShield Ad & Popup Blocker Recommendation (NEW in v3.5)
-• Pair StreamGrabber 2 with ExtremeShield to eliminate intrusive video ads, popunders, and malicious redirects without slowing down video streaming.
+🛡️ ExtremeShield Ad & Popup Blocker Recommendation
+• Pair XtremeGrbr with ExtremeShield to eliminate intrusive video ads, popunders, and malicious redirects without slowing down video streaming.
 
 🎬 Live In-Popup Preview & Orientation Rotation
 • Watch and verify video streams directly inside the popup player before downloading.

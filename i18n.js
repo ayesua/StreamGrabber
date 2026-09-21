@@ -1,5 +1,5 @@
 ﻿/**
- * Video Downloader - StreamGrabber 2
+ * Video Downloader - XtremeGrbr
  * Internationalization (i18n) Module
  * Supported Languages:
  *  - en: English (United States)
@@ -12,12 +12,16 @@ const SG_I18N = {
   // English (United States) - Default
   en: {
     // General / Branding
-    appName: 'Video Downloader - StreamGrabber 2',
-    appShortName: 'StreamGrabber 2',
-    appVersion: 'v3.5.0',
-    settingsTitle: 'Settings - Video Downloader - StreamGrabber 2',
-    optionsHeading: 'StreamGrabber 2 Settings',
+    appName: 'Video Downloader - XtremeGrbr',
+    appShortName: 'XtremeGrbr',
+    appVersion: 'v3.5.1',
+    settingsTitle: 'Settings - Video Downloader - XtremeGrbr',
+    optionsHeading: 'XtremeGrbr Settings',
     languageSelectorLabel: 'Language / Idioma / 语言 / Язык',
+    themeSelectorLabel: 'Interface Theme (Light / Dark)',
+    themeLight: '☀️ Light Tone',
+    themeDark: '🌙 Dark Tone',
+    btnToggleTheme: 'Toggle Light / Dark Theme',
 
     // Options Form
     askFilenameLabel: 'Ask for file name before downloading',
@@ -44,12 +48,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: 'Updates & Version',
-    currentVersionLabel: 'Current Version: v3.5.0',
+    currentVersionLabel: 'Current Version: v3.5.1',
     btnCheckUpdates: 'Check for Updates',
     checkingUpdates: 'Checking for updates...',
-    upToDate: 'StreamGrabber 2 is up to date! (v3.5.0)',
+    upToDate: 'XtremeGrbr is up to date! (v3.5.1)',
     updateAvailable: 'A new update is available! Updating...',
-    updateThrottled: 'Checked recently. You are on the latest version (v3.5.0).',
+    updateThrottled: 'Checked recently. You are on the latest version (v3.5.1).',
     updateError: 'Unable to check at this moment. Please check the Web Store.',
 
     // ExtremeShield Promo
@@ -59,9 +63,9 @@ const SG_I18N = {
     extremeShieldBtn: '🚀 Try ExtremeShield Free',
 
     // Support & Donations
-    supportTitle: '💖 Support StreamGrabber 2',
+    supportTitle: '💖 Support XtremeGrbr',
     supportBadge: '100% Free • Open Model',
-    supportDesc: 'StreamGrabber 2 is completely free, zero-log, and has zero paywalls. Your donations support development, keep HLS sniffers updated, and ensure uninterrupted high-speed video downloads!',
+    supportDesc: 'XtremeGrbr is completely free, zero-log, and has zero paywalls. Your donations support development, keep HLS sniffers updated, and ensure uninterrupted high-speed video downloads!',
     kofiBtn: '☕ Support me on Ko-fi',
     paypalBtn: '🅿️ Support me on PayPal',
     cryptoTitle: 'Cryptocurrency Tips',
@@ -98,12 +102,16 @@ const SG_I18N = {
   // Spanish (Español)
   es: {
     // General / Branding
-    appName: 'Video Downloader - StreamGrabber 2',
-    appShortName: 'StreamGrabber 2',
-    appVersion: 'v3.5.0',
-    settingsTitle: 'Configuración - Video Downloader - StreamGrabber 2',
-    optionsHeading: 'Configuración de StreamGrabber 2',
+    appName: 'Video Downloader - XtremeGrbr',
+    appShortName: 'XtremeGrbr',
+    appVersion: 'v3.5.1',
+    settingsTitle: 'Configuración - Video Downloader - XtremeGrbr',
+    optionsHeading: 'Configuración de XtremeGrbr',
     languageSelectorLabel: 'Idioma / Language / 语言 / Язык',
+    themeSelectorLabel: 'Tema de la interfaz (Claro / Oscuro)',
+    themeLight: '☀️ Tono Claro',
+    themeDark: '🌙 Tono Oscuro',
+    btnToggleTheme: 'Cambiar entre Tema Claro / Oscuro',
 
     // Options Form
     askFilenameLabel: 'Preguntar el nombre del archivo antes de descargar',
@@ -130,12 +138,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: 'Actualizaciones y Versión',
-    currentVersionLabel: 'Versión actual: v3.5.0',
+    currentVersionLabel: 'Versión actual: v3.5.1',
     btnCheckUpdates: 'Buscar actualizaciones',
     checkingUpdates: 'Buscando actualizaciones...',
-    upToDate: '¡StreamGrabber 2 está actualizado! (v3.5.0)',
+    upToDate: '¡XtremeGrbr está actualizado! (v3.5.1)',
     updateAvailable: '¡Hay una nueva versión disponible! Actualizando...',
-    updateThrottled: 'Comprobado recientemente. Tienes la última versión (v3.5.0).',
+    updateThrottled: 'Comprobado recientemente. Tienes la última versión (v3.5.1).',
     updateError: 'No se pudo comprobar en este momento. Revisa la Chrome Web Store.',
 
     // ExtremeShield Promo
@@ -145,9 +153,9 @@ const SG_I18N = {
     extremeShieldBtn: '🚀 Probar ExtremeShield Gratis',
 
     // Support & Donations
-    supportTitle: '💖 Apoyar a StreamGrabber 2',
+    supportTitle: '💖 Apoyar a XtremeGrbr',
     supportBadge: '100% Gratis • Modelo Abierto',
-    supportDesc: 'StreamGrabber 2 es completamente gratuito, sin registros ni muros de pago. ¡Tus donaciones impulsan el desarrollo continuo y descargas de alta velocidad sin interrupciones!',
+    supportDesc: 'XtremeGrbr es completamente gratuito, sin registros ni muros de pago. ¡Tus donaciones impulsan el desarrollo continuo y descargas de alta velocidad sin interrupciones!',
     kofiBtn: '☕ Apóyame en Ko-fi',
     paypalBtn: '🅿️ Apóyame en PayPal',
     cryptoTitle: 'Propinas en Criptomonedas',
@@ -184,12 +192,16 @@ const SG_I18N = {
   // Chinese (China) - 简体中文
   zh_CN: {
     // General / Branding
-    appName: 'Video Downloader - StreamGrabber 2',
-    appShortName: 'StreamGrabber 2',
-    appVersion: 'v3.5.0',
-    settingsTitle: '设置 - Video Downloader - StreamGrabber 2',
-    optionsHeading: 'StreamGrabber 2 设置',
+    appName: 'Video Downloader - XtremeGrbr',
+    appShortName: 'XtremeGrbr',
+    appVersion: 'v3.5.1',
+    settingsTitle: '设置 - Video Downloader - XtremeGrbr',
+    optionsHeading: 'XtremeGrbr 设置',
     languageSelectorLabel: '语言 / Language / Idioma / Язык',
+    themeSelectorLabel: '界面主题 (浅色 / 深色)',
+    themeLight: '☀️ 浅色模式',
+    themeDark: '🌙 深色模式',
+    btnToggleTheme: '切换浅色/深色主题',
 
     // Options Form
     askFilenameLabel: '下载前询问文件名',
@@ -216,12 +228,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: '更新与版本信息',
-    currentVersionLabel: '当前版本：v3.5.0',
+    currentVersionLabel: '当前版本：v3.5.1',
     btnCheckUpdates: '检查更新',
     checkingUpdates: '正在检查更新...',
-    upToDate: 'StreamGrabber 2 已是最新版本！(v3.5.0)',
+    upToDate: 'XtremeGrbr 已是最新版本！(v3.5.1)',
     updateAvailable: '发现新版本！正在更新...',
-    updateThrottled: '最近已检查。您当前使用的是最新版本 (v3.5.0)。',
+    updateThrottled: '最近已检查。您当前使用的是最新版本 (v3.5.1)。',
     updateError: '当前无法检查更新，请前往 Chrome 网上应用店查看。',
 
     // ExtremeShield Promo
@@ -231,9 +243,9 @@ const SG_I18N = {
     extremeShieldBtn: '🚀 免费体验 ExtremeShield',
 
     // Support & Donations
-    supportTitle: '💖 支持 StreamGrabber 2',
+    supportTitle: '💖 支持 XtremeGrbr',
     supportBadge: '100% 免费 • 开放模式',
-    supportDesc: 'StreamGrabber 2 完全免费、零日志、无任何付费门槛。您的赞助将支持持续开发、升级 HLS 嗅探器并保障高速下载！',
+    supportDesc: 'XtremeGrbr 完全免费、零日志、无任何付费门槛。您的赞助将支持持续开发、升级 HLS 嗅探器并保障高速下载！',
     kofiBtn: '☕ 在 Ko-fi 上支持我',
     paypalBtn: '🅿️ 在 PayPal 上支持我',
     cryptoTitle: '加密货币赞赏',
@@ -270,12 +282,16 @@ const SG_I18N = {
   // Russian (Русский)
   ru: {
     // General / Branding
-    appName: 'Video Downloader - StreamGrabber 2',
-    appShortName: 'StreamGrabber 2',
-    appVersion: 'v3.5.0',
-    settingsTitle: 'Настройки - Video Downloader - StreamGrabber 2',
-    optionsHeading: 'Настройки StreamGrabber 2',
+    appName: 'Video Downloader - XtremeGrbr',
+    appShortName: 'XtremeGrbr',
+    appVersion: 'v3.5.1',
+    settingsTitle: 'Настройки - Video Downloader - XtremeGrbr',
+    optionsHeading: 'Настройки XtremeGrbr',
     languageSelectorLabel: 'Язык / Language / Idioma / 语言',
+    themeSelectorLabel: 'Тема интерфейса (Светлая / Темная)',
+    themeLight: '☀️ Светлый тон',
+    themeDark: '🌙 Темный тон',
+    btnToggleTheme: 'Переключить светлую/темную тему',
 
     // Options Form
     askFilenameLabel: 'Запрашивать имя файла перед загрузкой',
@@ -302,12 +318,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: 'Обновления и версия',
-    currentVersionLabel: 'Текущая версия: v3.5.0',
+    currentVersionLabel: 'Текущая версия: v3.5.1',
     btnCheckUpdates: 'Проверить обновления',
     checkingUpdates: 'Проверка обновлений...',
-    upToDate: 'StreamGrabber 2 обновлен до актуальной версии! (v3.5.0)',
+    upToDate: 'XtremeGrbr обновлен до актуальной версии! (v3.5.1)',
     updateAvailable: 'Доступно обновление! Обновление...',
-    updateThrottled: 'Проверка уже выполнялась недавно. У вас последняя версия (v3.5.0).',
+    updateThrottled: 'Проверка уже выполнялась недавно. У вас последняя версия (v3.5.1).',
     updateError: 'Не удалось проверить сейчас. Проверьте Chrome Web Store.',
 
     // ExtremeShield Promo
@@ -317,9 +333,9 @@ const SG_I18N = {
     extremeShieldBtn: '🚀 Попробовать ExtremeShield бесплатно',
 
     // Support & Donations
-    supportTitle: '💖 Поддержать StreamGrabber 2',
+    supportTitle: '💖 Поддержать XtremeGrbr',
     supportBadge: '100% Бесплатно • Открытая модель',
-    supportDesc: 'StreamGrabber 2 полностью бесплатен, не ведет логов и не имеет скрытых платежей. Ваша поддержка помогает развивать проект, обновлять парсеры HLS и обеспечивать максимальную скорость загрузки!',
+    supportDesc: 'XtremeGrbr полностью бесплатен, не ведет логов и не имеет скрытых платежей. Ваша поддержка помогает развивать проект, обновлять парсеры HLS и обеспечивать максимальную скорость загрузки!',
     kofiBtn: '☕ Поддержать на Ko-fi',
     paypalBtn: '🅿️ Поддержать на PayPal',
     cryptoTitle: 'Криптовалютные донаты',
@@ -412,6 +428,44 @@ function setStoredLanguage(lang, callback) {
 }
 
 /**
+ * Retrieves the stored theme preference ('light' | 'dark').
+ */
+function getStoredTheme(callback) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+    chrome.storage.sync.get({ theme: 'light' }, (res) => {
+      callback(res.theme || 'light');
+    });
+  } else {
+    callback('light');
+  }
+}
+
+/**
+ * Saves theme preference ('light' | 'dark').
+ */
+function setStoredTheme(theme, callback) {
+  const cleanTheme = theme === 'dark' ? 'dark' : 'light';
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+    chrome.storage.sync.set({ theme: cleanTheme }, () => {
+      if (callback) callback(cleanTheme);
+    });
+  } else {
+    if (callback) callback(cleanTheme);
+  }
+}
+
+/**
+ * Applies theme attribute to DOM for instant CSS variable switching.
+ */
+function applyTheme(theme) {
+  const cleanTheme = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', cleanTheme);
+  if (document.body) {
+    document.body.classList.toggle('theme-dark', cleanTheme === 'dark');
+  }
+}
+
+/**
  * Scans the current DOM and applies translations to all elements with:
  * - data-i18n: sets textContent
  * - data-i18n-title: sets title attribute
@@ -453,7 +507,17 @@ function applyI18n(lang = 'en') {
 
 // Export for module systems or global window object
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { SG_I18N, t, normalizeLanguage, getStoredLanguage, setStoredLanguage, applyI18n };
+  module.exports = {
+    SG_I18N,
+    t,
+    normalizeLanguage,
+    getStoredLanguage,
+    setStoredLanguage,
+    getStoredTheme,
+    setStoredTheme,
+    applyTheme,
+    applyI18n
+  };
 }
 if (typeof window !== 'undefined') {
   window.SG_I18N = SG_I18N;
@@ -461,5 +525,8 @@ if (typeof window !== 'undefined') {
   window.normalizeLanguage = normalizeLanguage;
   window.getStoredLanguage = getStoredLanguage;
   window.setStoredLanguage = setStoredLanguage;
+  window.getStoredTheme = getStoredTheme;
+  window.setStoredTheme = setStoredTheme;
+  window.applyTheme = applyTheme;
   window.applyI18n = applyI18n;
 }
