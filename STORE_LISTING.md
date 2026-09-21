@@ -5,8 +5,9 @@
 ## 📌 1. Essential Store Metadata
 
 * **Extension Title:** `XtremeShld: Ultimate Privacy, Pop-up & Ad Blocker`
+* **Previous Name:** `ExtremeShield` *(Formerly known as ExtremeShield)*
 * **Short Description (Summary, max 132 chars):**  
-  `Extreme defense against popups, trackers, fingerprinting, and redirects. 100% free with zero paywalls & zero telemetry.`
+  `XtremeShld (formerly ExtremeShield): Defense against popups, trackers, fingerprinting & ads. 100% free with zero paywalls & telemetry.`
 * **Category:** `Privacy & Security` *(Alternative: Productivity / Tools)*
 * **Pricing:** Free (No in-app purchases, no subscriptions, no locked tiers)
 * **Website / Support URL:** `https://ko-fi.com/yesuag`
@@ -19,9 +20,9 @@
 ### 🇺🇸 English Listing Description (United States)
 
 ```markdown
-🛡️ **XtremeShld: Ultimate Privacy, Pop-up & Ad Blocker (Manifest V3)**
+🛡️ **XtremeShld (formerly ExtremeShield): Ultimate Privacy, Pop-up & Ad Blocker (Manifest V3)**
 
-Experience high-speed browsing, total privacy, and absolute protection from deceptive advertising. XtremeShld combines military-grade popup trapping, video pre-roll defusing, anti-redirect shielding, and advanced canvas fingerprint spoofing into an ultra-fast, lightweight Chrome extension with ZERO paywalls, ZERO telemetry, and ZERO tracking.
+Experience high-speed browsing, total privacy, and absolute protection from deceptive advertising. XtremeShld (formerly known as ExtremeShield) combines military-grade popup trapping, video pre-roll defusing, anti-redirect shielding, and advanced canvas fingerprint spoofing into an ultra-fast, lightweight Chrome extension with ZERO paywalls, ZERO telemetry, and ZERO tracking.
 
 Designed with a sleek StreamGrabber-inspired interface supporting both Light Tone (☀️) and Dark Tone (🌙) themes.
 
@@ -91,9 +92,9 @@ Download streaming videos, m3u8 playlists, and audio streams directly at maximum
 ### 🇪🇸 Spanish Listing Description (Español)
 
 ```markdown
-🛡️ **XtremeShld: Bloqueador Definitivo de Privacidad, Pop-ups y Anuncios (Manifest V3)**
+🛡️ **XtremeShld (anteriormente ExtremeShield): Bloqueador Definitivo de Privacidad, Pop-ups y Anuncios (Manifest V3)**
 
-Navega a máxima velocidad con privacidad total y protección absoluta contra publicidad invasiva y engañosa. XtremeShld combina bloqueo militar de ventanas emergentes, desactivación de anuncios en videos, escudo anti-redirecciones y protección avanzada contra la huella digital en una extensión ultra rápida para Chrome, con CERO muros de pago, CERO telemetría y CERO seguimiento.
+Navega a máxima velocidad con privacidad total y protección absoluta contra publicidad invasiva y engañosa. XtremeShld (anteriormente conocido como ExtremeShield) combina bloqueo militar de ventanas emergentes, desactivación de anuncios en videos, escudo anti-redirecciones y protección avanzada contra la huella digital en una extensión ultra rápida para Chrome, con CERO muros de pago, CERO telemetría y CERO seguimiento.
 
 Diseñado con la interfaz moderna de StreamGrabber con selector de Tono Claro (☀️) y Tono Oscuro (🌙).
 
@@ -163,9 +164,9 @@ Descarga videos en streaming, listas m3u8 y pistas de audio directamente a la m�
 ### 🇨🇳 Chinese Listing Description (中文 - 中国)
 
 ```markdown
-🛡️ **XtremeShld: 终极隐私保护、弹窗与广告拦截装甲 (Manifest V3)**
+🛡️ **XtremeShld（原名 ExtremeShield）：终极隐私保护、弹窗与广告拦截装甲 (Manifest V3)**
 
-体验极致浏览速度、绝对隐私保护与全方位恶意广告拦截。XtremeShld 将弹窗拦截、视频前贴片广告跳过、防恶意重定向及高级 Canvas 指纹伪装技术融于一身，打造超快、轻量级的 Chrome 扩展。无付费墙、无数据遥测、零用户追踪。
+体验极致浏览速度、绝对隐私保护与全方位恶意广告拦截。XtremeShld（原名 ExtremeShield）将弹窗拦截、视频前贴片广告跳过、防恶意重定向及高级 Canvas 指纹伪装技术融于一身，打造超快、轻量级的 Chrome 扩展。无付费墙、无数据遥测、零用户追踪。
 
 全新采用 StreamGrabber 现代设计系统，并支持即时切换浅色明亮色调 (☀️) 与深色护黑色调 (🌙)。
 
@@ -235,9 +236,9 @@ Descarga videos en streaming, listas m3u8 y pistas de audio directamente a la m�
 ### 🇷🇺 Russian Listing Description (Русский)
 
 ```markdown
-🛡️ **XtremeShld: Полная защита от всплывающих окон, рекламы и слежки (Manifest V3)**
+🛡️ **XtremeShld (ранее ExtremeShield): Полная защита от всплывающих окон, рекламы и слежки (Manifest V3)**
 
-Наслаждайтесь молниеносной скоростью интернета, абсолютной конфиденциальностью и надежной защитой от навязчивой рекламы. XtremeShld объединяет блокировку всплывающих окон, пропуск видеорекламы, защиту от скрытых перенаправлений и защиту от фингерпринтинга в быстром расширении для Chrome без платных подписок, без телеметрии и без сбора данных.
+Наслаждайтесь молниеносной скоростью интернета, абсолютной конфиденциальностью и надежной защитой от навязчивой рекламы. XtremeShld (ранее известное как ExtremeShield) объединяет блокировку всплывающих окон, пропуск видеорекламы, защиту от скрытых перенаправлений и защиту от фингерпринтинга в быстром расширении для Chrome без платных подписок, без телеметрии и без сбора данных.
 
 Современный дизайн в стиле StreamGrabber с поддержкой переключения между Светлой (☀️) и Темной (🌙) темами.
 
@@ -307,7 +308,7 @@ Descarga videos en streaming, listas m3u8 y pistas de audio directamente a la m�
 ## 🎯 3. Single Purpose Statement (Declaración de Propósito Único para CWS)
 
 > **Single Purpose Description:**  
-> *"XtremeShld protects user privacy and browsing performance by intercepting unrequested popups, blocking cross-site tracking networks, spoofing canvas/audio device fingerprinting, and preventing malicious navigation redirects using native Chrome Declarative Net Request and content scripts."*
+> *"XtremeShld (formerly ExtremeShield) protects user privacy and browsing performance by intercepting unrequested popups, blocking cross-site tracking networks, spoofing canvas/audio device fingerprinting, and preventing malicious navigation redirects using native Chrome Declarative Net Request and content scripts."*
 
 ---
 
