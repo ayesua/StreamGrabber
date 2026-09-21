@@ -1,9 +1,9 @@
-# 🛡️ ExtremeShield: Ultimate Tracker & Popup Blocker
+# 🛡️ XtremeShld: Ultimate Privacy, Pop-up & Ad Blocker
 
 > **High-Performance Manifest V3 Privacy Armor**  
 > Combines the best features of **uBlock Origin**, **Poper Blocker**, **Privacy Badger**, **Ghostery**, and **AdGuard** into a 100% free, community-donation-powered Chrome Extension.
 
-![ExtremeShield Banner](icon128.png)
+![XtremeShld Banner](icon128.png)
 
 ---
 
@@ -65,7 +65,7 @@
    ```
    c:\Users\yesua\PY\Browser\ExtremeShield
    ```
-5. Pin **ExtremeShield** to your Chrome toolbar.
+5. Pin **XtremeShld** to your Chrome toolbar.
 
 ---
 
@@ -77,11 +77,11 @@ To generate a clean, production-ready `.zip` package for the Chrome Web Store:
 powershell -ExecutionPolicy Bypass -File ./package.ps1
 ```
 
-This will produce `ExtremeShield-v1.0.0.zip` ready for store submission.
+This will produce `XtremeShld-v1.0.31.zip` ready for store submission.
 
 ---
 
 ## 📄 License & Community Support
 
-ExtremeShield is licensed under the [MIT License](LICENSE).
+XtremeShld is licensed under the [MIT License](LICENSE).
 Supported 100% by voluntary community donations.

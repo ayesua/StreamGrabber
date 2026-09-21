@@ -1,5 +1,5 @@
-# ExtremeShield - Chrome Web Store Production Packaging Script
-# Bundles strictly the production runtime files into ExtremeShield-v<version>.zip
+# XtremeShld - Chrome Web Store Production Packaging Script
+# Bundles strictly the production runtime files into XtremeShld-v<version>.zip
 
 $ErrorActionPreference = "Stop"
 
@@ -10,11 +10,11 @@ Set-Location $workspace
 # Read version from manifest.json
 $manifestJson = Get-Content -Raw "manifest.json" | ConvertFrom-Json
 $version = $manifestJson.version
-$zipFileName = "ExtremeShield-v$version.zip"
+$zipFileName = "XtremeShld-v$version.zip"
 $zipPath = Join-Path $workspace $zipFileName
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host " Packing ExtremeShield v$version for CWS" -ForegroundColor Cyan
+Write-Host " Packing XtremeShld v$version for CWS" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 # Define strict list of runtime extension files
@@ -57,7 +57,7 @@ if ($missingFiles.Count -gt 0) {
 }
 
 # Create temporary packaging directory
-$stagingDir = Join-Path $env:TEMP "pureshield_pkg_$([guid]::NewGuid().ToString('N'))"
+$stagingDir = Join-Path $env:TEMP "xtremeshld_pkg_$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Path $stagingDir | Out-Null
 
 try {

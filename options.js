@@ -1,8 +1,8 @@
 /**
- * ExtremeShield - Options & Control Center Controller (v1.0.30)
+ * XtremeShld - Options & Control Center Controller (v1.0.31)
  * Manages protection toggles, advanced optional shields, interactive info modals,
  * domain whitelists, custom cosmetic filters, activity logs, backup/restore,
- * multi-language localization (EN, ES, ZH, RU), and extension update checks.
+ * multi-language localization (EN, ES, ZH, RU), Light/Dark tone theme, and extension update checks.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Language & Update Elements
+  // Theme, Language & Update Elements
+  const themeSelector = document.getElementById('theme-selector');
   const languageSelector = document.getElementById('language-selector');
   const btnUpdateNow = document.getElementById('btn-update-now');
   const updateBtnIcon = document.getElementById('update-btn-icon');
@@ -166,6 +167,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   /* ==========================================================================
+     THEME (LIGHT / DARK TONE) CONTROLLER
+     ========================================================================== */
+  function applyTheme(theme) {
+    const t = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+    if (themeSelector) themeSelector.value = t;
+  }
+
+  themeSelector?.addEventListener('change', async (e) => {
+    const newTheme = e.target.value;
+    applyTheme(newTheme);
+    await chrome.storage.local.set({ theme: newTheme });
+  });
+
+  // Cross-context synchronization (sync if changed from popup)
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local') {
+      if (changes.theme) {
+        applyTheme(changes.theme.newValue);
+      }
+      if (changes.language && changes.language.newValue !== currentLanguage) {
+        applyLanguage(changes.language.newValue);
+        if (languageSelector) languageSelector.value = changes.language.newValue;
+      }
+    }
+  });
+
+  /* ==========================================================================
      2. UPDATE NOW BUTTON (Live Chrome Web Store / Extension Check)
      ========================================================================== */
   let isCheckingUpdate = false;
@@ -270,12 +299,16 @@ document.addEventListener('DOMContentLoaded', async () => {
      ========================================================================== */
   async function loadAllSettings() {
     const data = await chrome.storage.local.get([
+      'theme',
       'language',
       'settings',
       'whitelistedDomains',
       'customCosmeticRules',
       'trackerLogs'
     ]);
+
+    // Apply saved theme (default to light)
+    applyTheme(data.theme || 'light');
 
     // Determine initial language
     let lang = data.language;
@@ -455,6 +488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      ========================================================================== */
   btnExportJson?.addEventListener('click', async () => {
     const data = await chrome.storage.local.get([
+      'theme',
       'language',
       'settings',
       'whitelistedDomains',
@@ -466,7 +500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'extremeshield_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = 'xtremeshld_backup_' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
     URL.revokeObjectURL(url);
   });

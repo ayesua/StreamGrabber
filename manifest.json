@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ExtremeShield: Ultimate Tracker & Popup Blocker",
-  "version": "1.0.30",
-  "description": "Extreme high-speed defense against trackers, popups, fingerprinting, and redirects. 100% free with zero paywalls.",
+  "name": "XtremeShld: Ultimate Privacy, Pop-up & Ad Blocker",
+  "version": "1.0.31",
+  "description": "Ultra high-speed privacy defense against trackers, pop-ups, fingerprinting, and video ads. 100% free with zero paywalls.",
   "permissions": [
     "storage",
     "alarms",
@@ -73,7 +73,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ExtremeShield Protection",
+    "default_title": "XtremeShld Protection",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
@@ -87,14 +87,14 @@
         "default": "Alt+Shift+Z",
         "mac": "Alt+Shift+Z"
       },
-      "description": "Activate ExtremeShield Element Zapper"
+      "description": "Activate XtremeShld Element Zapper"
     },
     "toggle_protection": {
       "suggested_key": {
         "default": "Alt+Shift+P",
         "mac": "Alt+Shift+P"
       },
-      "description": "Toggle ExtremeShield Protection ON/OFF"
+      "description": "Toggle XtremeShld Protection ON/OFF"
     }
   },
   "icons": {
@@ -109,7 +109,13 @@
         "element-picker.css",
         "icon16.png",
         "icon48.png",
-        "icon128.png"
+        "icon128.png",
+        "icon16_off.png",
+        "icon48_off.png",
+        "icon128_off.png",
+        "icon16_gray.png",
+        "icon48_gray.png",
+        "icon128_gray.png"
       ],
       "matches": [
         "<all_urls>"

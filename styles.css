@@ -1,33 +1,73 @@
-/* PureShield - Cyber Emerald Design System */
-:root {
-  --bg-primary: #090d16;
+/* XtremeShld - Unified StreamGrabber Design System */
+:root, [data-theme="light"] {
+  /* StreamGrabber Core Color Palette */
+  --vdh-dark: #090e19;
+  --vdh-header-bg: #0b1834;
+  --vdh-blue: #0087cd;
+  --vdh-blue-hover: #006ca7;
+  --vdh-yellow: #ffec25;
+  --vdh-green: #00a63d;
+  --vdh-green-hover: #008832;
+  --vdh-purple: #8b5cf6;
+  --vdh-red: #df4252;
+  --vdh-red-hover: #c93443;
+  --vdh-radius: 12px;
+  --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Light Theme (Default / User Selected) */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --border-color: #e2e8f0;
+  --border-active: rgba(223, 66, 82, 0.4);
+
+  --accent-emerald: #00a63d;
+  --accent-emerald-hover: #008832;
+  --accent-emerald-light: rgba(0, 166, 61, 0.12);
+
+  --accent-cyan: #0087cd;
+  --accent-rose: #df4252;
+  --accent-amber: #f59e0b;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 16px rgba(223, 66, 82, 0.3);
+  --font-sans: var(--font-main);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme */
+  --bg-primary: #090e19;
   --bg-secondary: #0f172a;
-  --bg-card: rgba(15, 23, 42, 0.75);
-  --bg-card-hover: rgba(30, 41, 59, 0.8);
-  --border-color: rgba(51, 65, 85, 0.6);
-  --border-active: rgba(16, 185, 129, 0.5);
+  --bg-card: #0f172a;
+  --bg-card-hover: #1e293b;
+  --border-color: #1e293b;
+  --border-active: rgba(223, 66, 82, 0.5);
 
   --accent-emerald: #10b981;
   --accent-emerald-hover: #059669;
   --accent-emerald-light: rgba(16, 185, 129, 0.15);
-  
-  --accent-cyan: #06b6d4;
-  --accent-rose: #f43f5e;
+
+  --accent-cyan: #0087cd;
+  --accent-rose: #df4252;
   --accent-amber: #f59e0b;
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-full: 9999px;
-
-  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.25);
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 20px rgba(223, 66, 82, 0.35);
 }
 
 * {
@@ -43,6 +83,7 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* ==========================================================================
@@ -54,7 +95,7 @@ body {
   max-height: 600px;
   overflow-y: auto;
   overflow-x: hidden;
-  background: radial-gradient(circle at 50% 0%, #132238 0%, var(--bg-primary) 70%);
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
 }
@@ -68,22 +109,22 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #64748b;
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
 
-/* Header */
+/* Header Navbar - StreamGrabber Deep Navy */
 .app-header {
-  padding: 14px 18px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--border-color);
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(8px);
+  border-bottom: 2px solid var(--vdh-red);
+  background: var(--vdh-header-bg);
+  color: #ffffff;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -95,24 +136,18 @@ body {
   gap: 10px;
 }
 
-.brand-icon {
+.brand-logo-img {
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(223, 66, 82, 0.6));
 }
 
 .brand-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   letter-spacing: -0.3px;
-  background: linear-gradient(90deg, #ffffff, #94a3b8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
 }
 
 .brand-badge {
@@ -387,12 +422,12 @@ body {
 
 /* Master Shield Hero Section */
 .hero-section {
-  padding: 20px 18px 14px 18px;
+  padding: 18px 18px 12px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .shield-button-wrapper {
@@ -408,7 +443,7 @@ body {
   transform: translate(-50%, -50%);
   width: 90px;
   height: 90px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(223, 66, 82, 0.25) 0%, transparent 70%);
   border-radius: 50%;
   transition: all 0.4s ease;
 }
@@ -417,44 +452,44 @@ body {
   width: 76px;
   height: 76px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #1e293b, #0f172a);
+  background: var(--bg-card);
   border: 2px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-card);
   position: relative;
   z-index: 2;
 }
 
-.shield-btn svg {
-  width: 38px;
-  height: 38px;
-  color: var(--text-muted);
-  transition: all 0.3s ease;
+.shield-main-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.shield-btn:hover .shield-main-img {
+  transform: scale(1.08);
 }
 
 /* Active Shield State */
 .shield-active .shield-btn {
-  border-color: var(--accent-emerald);
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.4);
-}
-
-.shield-active .shield-btn svg {
-  color: var(--accent-emerald);
+  border-color: var(--vdh-red);
+  box-shadow: 0 0 20px rgba(223, 66, 82, 0.35);
 }
 
 .shield-active .shield-glow {
   width: 110px;
   height: 110px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.5) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(223, 66, 82, 0.45) 0%, transparent 70%);
 }
 
 .status-domain {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   max-width: 280px;
   white-space: nowrap;
@@ -466,12 +501,12 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: var(--accent-emerald);
-  background: var(--accent-emerald-light);
+  font-size: 11px;
+  color: var(--vdh-red);
+  background: rgba(223, 66, 82, 0.12);
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .status-indicator.disabled {
@@ -484,53 +519,46 @@ body {
   background: rgba(245, 158, 11, 0.15);
 }
 
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-/* Live Stats Grid */
+/* Live Telemetry Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 0 18px 14px 18px;
+  gap: 8px;
+  padding: 0 18px 12px 18px;
 }
 
 .stat-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 12px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  backdrop-filter: blur(12px);
-  transition: border-color 0.2s;
+  gap: 3px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s, background-color 0.2s;
 }
 
 .stat-card:hover {
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: var(--vdh-red);
 }
 
 .stat-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 500;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
 .stat-value.highlight {
-  color: var(--accent-emerald);
+  color: var(--vdh-red);
 }
 
 .stat-sub {
@@ -567,24 +595,25 @@ body {
   padding: 10px;
   color: var(--text-primary);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  box-shadow: var(--shadow-card);
   transition: all 0.2s;
 }
 
 .tool-btn:hover {
   background: var(--bg-card-hover);
-  border-color: var(--accent-emerald);
-  color: #ffffff;
+  border-color: var(--vdh-red);
 }
 
 .tool-btn.active {
-  background: var(--accent-emerald-light);
-  border-color: var(--accent-emerald);
-  color: var(--accent-emerald);
+  background: rgba(223, 66, 82, 0.12);
+  border-color: var(--vdh-red);
+  color: var(--vdh-red);
+  font-weight: 700;
 }
 
 /* Tracker Inspector Drawer / Accordion */

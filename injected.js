@@ -316,7 +316,7 @@
 
       // 1. Direct Tracker / Ad-network / Search Masquerade detection: ALWAYS block
       if (isTrackerOrRedirectUrl(urlStr)) {
-        console.warn('[ExtremeShield] Blocked ad/redirect window.open:', urlStr);
+        console.warn('[XtremeShld] Blocked ad/redirect window.open:', urlStr);
         notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
         return createDummyWindow(urlStr);
       }
@@ -326,7 +326,7 @@
       if (inMediaZone) {
         const isSameHost = isSameDomainOrSubdomain(urlStr);
         if (!isSameHost || !urlStr || urlStr === 'about:blank') {
-          console.warn('[ExtremeShield] Blocked window.open during video/media interaction:', urlStr || 'about:blank');
+          console.warn('[XtremeShld] Blocked window.open during video/media interaction:', urlStr || 'about:blank');
           notifyBlocked('popup', { url: urlStr || 'Media-zone Popup', target: String(target || '_blank') });
           return createDummyWindow(urlStr);
         }
@@ -334,7 +334,7 @@
 
       // 3. Unsolicited / Timer / Video-ended popups without recent user interaction: Strictly block
       if (!hasRecentAction) {
-        console.warn('[ExtremeShield] Blocked background/unsolicited window.open:', urlStr || 'about:blank');
+        console.warn('[XtremeShld] Blocked background/unsolicited window.open:', urlStr || 'about:blank');
         notifyBlocked('popup', { url: urlStr || 'about:blank', target: String(target || '_blank') });
         return createDummyWindow(urlStr);
       }
@@ -350,7 +350,7 @@
         )
       );
       if (isCurrentPageUrl) {
-        console.warn('[ExtremeShield] Blocked tab-under clone window.open:', urlStr);
+        console.warn('[XtremeShld] Blocked tab-under clone window.open:', urlStr);
         notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
         return createDummyWindow(urlStr);
       }
@@ -367,7 +367,7 @@
         }
 
         if (isSameAsClicked) {
-          console.warn('[ExtremeShield] Blocked tab-under duplicate window.open of clicked link:', urlStr);
+          console.warn('[XtremeShld] Blocked tab-under duplicate window.open of clicked link:', urlStr);
           notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
           return createDummyWindow(urlStr);
         }
@@ -375,7 +375,7 @@
 
       // 5. Blank window handler: Never open real blank browser tabs for third-party scripts
       if (!urlStr || urlStr === 'about:blank') {
-        console.warn('[ExtremeShield] Neutralized blank window.open hijack attempt');
+        console.warn('[XtremeShld] Neutralized blank window.open hijack attempt');
         notifyBlocked('popup', { url: 'about:blank', target: String(target || '_blank') });
         return createDummyWindow('about:blank');
       }
@@ -385,7 +385,7 @@
       const isOAuth = isAllowedPopupDomain(urlStr);
 
       if (!isSameHost && !isOAuth && (urlStr.startsWith('http') || urlStr.startsWith('//'))) {
-        console.warn('[ExtremeShield] Blocked cross-domain popup on click:', urlStr);
+        console.warn('[XtremeShld] Blocked cross-domain popup on click:', urlStr);
         notifyBlocked('popup', { url: urlStr, target: String(target || '_blank') });
         return createDummyWindow(urlStr);
       }
@@ -393,7 +393,7 @@
       return originalOpen.apply(this, arguments);
     };
   } catch (err) {
-    console.error('[ExtremeShield] Error wrapping window.open:', err);
+    console.error('[XtremeShld] Error wrapping window.open:', err);
   }
 
   // Prevent dynamic iframe bypass of window.open
@@ -427,7 +427,7 @@
         const isOAuth = isAllowedPopupDomain(href);
 
         if (!isRecentUserAction() || isTrackerOrRedirectUrl(href) || (isCrossDomain && !isOAuth)) {
-          console.warn('[ExtremeShield] Intercepted synthetic/unsolicited anchor click exploit:', href);
+          console.warn('[XtremeShld] Intercepted synthetic/unsolicited anchor click exploit:', href);
           notifyBlocked('popup', { url: href, target: target || '_self' });
           return;
         }
@@ -435,7 +435,7 @@
       return originalClick.apply(this, arguments);
     };
   } catch (err) {
-    console.error('[ExtremeShield] Error wrapping HTMLElement.click:', err);
+    console.error('[XtremeShld] Error wrapping HTMLElement.click:', err);
   }
 
   // Intercept synthetic dispatchEvent click exploits
@@ -446,7 +446,7 @@
         if (this.tagName === 'A') {
           const href = this.getAttribute('href') || '';
           if (isTrackerOrRedirectUrl(href) || (!isSameDomainOrSubdomain(href) && !isAllowedPopupDomain(href))) {
-            console.warn('[ExtremeShield] Intercepted dispatchEvent click exploit:', href);
+            console.warn('[XtremeShld] Intercepted dispatchEvent click exploit:', href);
             notifyBlocked('popup', { url: href });
             return false;
           }
@@ -463,7 +463,7 @@
       if (config.blockPopups && !config.whitelisted) {
         const action = this.getAttribute('action') || '';
         if (isTrackerOrRedirectUrl(action) || (!isSameDomainOrSubdomain(action) && !isAllowedPopupDomain(action))) {
-          console.warn('[ExtremeShield] Intercepted unrequested form.submit popunder:', action);
+          console.warn('[XtremeShld] Intercepted unrequested form.submit popunder:', action);
           notifyBlocked('popup', { url: action });
           return;
         }
@@ -496,7 +496,7 @@
         set: function (url) {
           const urlStr = String(url || '').toLowerCase();
           if (config.blockPopups && !config.whitelisted && (urlStr.includes('twinrdsrv') || urlStr.includes('infinity.js') || isTrackerOrRedirectUrl(urlStr))) {
-            console.warn('[ExtremeShield] Blocked ad script injection:', url);
+            console.warn('[XtremeShld] Blocked ad script injection:', url);
             this.setAttribute('data-blocked-src', url);
             return;
           }
@@ -523,7 +523,7 @@
     Object.defineProperty(window, 'rg', {
       get: () => _rg,
       set: (val) => {
-        console.warn('[ExtremeShield] Neutralized popunder engine (rg) assignment');
+        console.warn('[XtremeShld] Neutralized popunder engine (rg) assignment');
       },
       configurable: true
     });
@@ -547,7 +547,7 @@
     Object.defineProperty(window, 'KLCsvkdwF', {
       get: () => _klc,
       set: (val) => {
-        console.warn('[ExtremeShield] Neutralized KLCsvkdwF popunder engine assignment');
+        console.warn('[XtremeShld] Neutralized KLCsvkdwF popunder engine assignment');
       },
       configurable: true
     });
@@ -591,7 +591,7 @@
     // 4. Media Zone Protection:
     // If user interacted with video/player, NEVER allow navigating current tab to external domain!
     if (isRecentMediaAction()) {
-      console.warn('[ExtremeShield] Blocked cross-domain redirect during media interaction:', urlStr);
+      console.warn('[XtremeShld] Blocked cross-domain redirect during media interaction:', urlStr);
       return false;
     }
 
@@ -603,7 +603,7 @@
         const clickedOrigin = new URL(lastClickedLinkHref, window.location.href).origin;
         const targetOrigin = new URL(urlStr, window.location.href).origin;
         if (clickedOrigin === window.location.origin && targetOrigin !== window.location.origin) {
-          console.warn('[ExtremeShield] Blocked tab-under cross-domain redirect attempt:', urlStr);
+          console.warn('[XtremeShld] Blocked tab-under cross-domain redirect attempt:', urlStr);
           return false;
         }
         // If the user explicitly clicked an external link with the same destination origin
@@ -626,7 +626,7 @@
         set: function (url) {
           if (!config.whitelisted && config.blockRedirects) {
             if (!isAllowedLocationChange(url)) {
-              console.warn('[ExtremeShield] Intercepted suspicious location.href redirect:', url);
+              console.warn('[XtremeShld] Intercepted suspicious location.href redirect:', url);
               notifyBlocked('popup', { url: String(url), detail: 'Tab-under/redirect hijack blocked' });
               return;
             }
@@ -643,7 +643,7 @@
     Location.prototype.replace = function (url) {
       if (!config.whitelisted && config.blockRedirects) {
         if (!isAllowedLocationChange(url)) {
-          console.warn('[ExtremeShield] Intercepted suspicious location.replace redirect:', url);
+          console.warn('[XtremeShld] Intercepted suspicious location.replace redirect:', url);
           notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
           return;
         }
@@ -656,7 +656,7 @@
     Location.prototype.assign = function (url) {
       if (!config.whitelisted && config.blockRedirects) {
         if (!isAllowedLocationChange(url)) {
-          console.warn('[ExtremeShield] Intercepted suspicious location.assign redirect:', url);
+          console.warn('[XtremeShld] Intercepted suspicious location.assign redirect:', url);
           notifyBlocked('popup', { url: String(url), detail: 'Auto-redirect hijack blocked' });
           return;
         }
@@ -737,7 +737,7 @@
         if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
           const urlStr = String(typeof resource === 'string' ? resource : (resource?.url || ''));
           if (isVastAdUrl(urlStr)) {
-            console.warn('[ExtremeShield] Returning empty VAST XML response to prevent Error 224003:', urlStr);
+            console.warn('[XtremeShld] Returning empty VAST XML response to prevent Error 224003:', urlStr);
             return Promise.resolve(new Response(EMPTY_VAST_XML, {
               status: 200,
               statusText: 'OK',
@@ -763,7 +763,7 @@
     const origXHRSend = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.send = function () {
       if (this._is_vast_ad) {
-        console.warn('[ExtremeShield] Intercepted XHR VAST ad request, returning empty VAST:', this._vast_target_url);
+        console.warn('[XtremeShld] Intercepted XHR VAST ad request, returning empty VAST:', this._vast_target_url);
         Object.defineProperty(this, 'responseText', { value: EMPTY_VAST_XML, writable: true, configurable: true });
         try {
           const doc = new DOMParser().parseFromString(EMPTY_VAST_XML, 'text/xml');
@@ -796,7 +796,7 @@
           if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
             if (options && typeof options === 'object') {
               if (options.advertising) {
-                console.warn('[ExtremeShield] Sanitizing JWPlayer advertising config to prevent Error 224003');
+                console.warn('[XtremeShld] Sanitizing JWPlayer advertising config to prevent Error 224003');
                 delete options.advertising;
               }
             }
@@ -805,11 +805,11 @@
           if (typeof player.on === 'function') {
             try {
               player.on('adError', () => {
-                console.warn('[ExtremeShield] Handled JWPlayer adError, resuming main content');
+                console.warn('[XtremeShld] Handled JWPlayer adError, resuming main content');
                 try { player.play(); } catch (_) {}
               });
               player.on('setupError', (e) => {
-                console.warn('[ExtremeShield] Handled JWPlayer setupError:', e);
+                console.warn('[XtremeShld] Handled JWPlayer setupError:', e);
               });
             } catch (_) {}
           }
@@ -820,18 +820,18 @@
       if (typeof player.on === 'function') {
         try {
           player.on('adError', () => {
-            console.warn('[ExtremeShield] Handled JWPlayer adError fallback, resuming main content');
+            console.warn('[XtremeShld] Handled JWPlayer adError fallback, resuming main content');
             try { player.play(); } catch (_) {}
           });
           player.on('setupError', (e) => {
-            console.warn('[ExtremeShield] Handled JWPlayer setupError fallback:', e);
+            console.warn('[XtremeShld] Handled JWPlayer setupError fallback:', e);
           });
         } catch (_) {}
       }
 
       if (typeof player.playAd === 'function') {
         player.playAd = function () {
-          console.warn('[ExtremeShield] JWPlayer playAd defused to prevent Error 224003');
+          console.warn('[XtremeShld] JWPlayer playAd defused to prevent Error 224003');
           return false;
         };
       }
@@ -969,7 +969,7 @@
           if (Array.isArray(item) && typeof item[0] === 'string') {
             const name = item[0].toLowerCase();
             if (name.includes('clickunder') || name.includes('popunder') || name.includes('ama1k3r') || name.includes('ad-provider')) {
-              console.warn('[ExtremeShield] Neutralized tube clickunder registration:', item[0]);
+              console.warn('[XtremeShld] Neutralized tube clickunder registration:', item[0]);
               if (typeof item[1] === 'function') {
                 const origCb = item[1];
                 item[1] = function (m) {
@@ -1036,7 +1036,7 @@
       if (typeof origApi === 'function') {
         sp.api = function (endpoint, params, callback, options) {
           if (typeof endpoint === 'string' && (endpoint.includes('ama1k3r') || endpoint.includes('Cl1ckCU') || endpoint.includes('Need2Go'))) {
-            console.warn('[ExtremeShield] Blocked Spaces clickunder API call:', endpoint);
+            console.warn('[XtremeShld] Blocked Spaces clickunder API call:', endpoint);
             if (typeof callback === 'function') callback({ code: -1, error: 'blocked' });
             return;
           }
@@ -1146,14 +1146,14 @@
         pushHistoryTimestamps = pushHistoryTimestamps.filter(t => (now - t) < 1000);
 
         if (url && typeof url === 'string' && isTrackerOrRedirectUrl(url)) {
-          console.warn('[ExtremeShield] Blocked suspicious history.pushState URL:', url);
+          console.warn('[XtremeShld] Blocked suspicious history.pushState URL:', url);
           notifyBlocked('popup', { url: String(url), detail: 'Malicious history state push blocked' });
           return;
         }
 
         // Defuse rapid burst without user interaction (>3 in 1s) or flood (>8 in 1s)
         if ((pushHistoryTimestamps.length >= 3 && !isRecentUserAction()) || pushHistoryTimestamps.length >= 8) {
-          console.warn('[ExtremeShield] Blocked history trapping loop (pushState flood):', url);
+          console.warn('[XtremeShld] Blocked history trapping loop (pushState flood):', url);
           notifyBlocked('annoyance', { detail: 'History back-button trapping defused' });
           return;
         }
@@ -1166,7 +1166,7 @@
     history.replaceState = function (state, title, url) {
       if (!config.whitelisted && config.blockRedirects && config.historyTrapDefense !== false) {
         if (url && typeof url === 'string' && isTrackerOrRedirectUrl(url)) {
-          console.warn('[ExtremeShield] Blocked suspicious history.replaceState URL:', url);
+          console.warn('[XtremeShld] Blocked suspicious history.replaceState URL:', url);
           notifyBlocked('popup', { url: String(url), detail: 'Malicious history state replace blocked' });
           return;
         }
@@ -1194,9 +1194,9 @@
           const hasUserGesture = isRecentUserAction();
 
           if (!isVideoOrEmbed && !hasUserGesture) {
-            console.warn('[ExtremeShield] Suppressed unauthorized fullscreen hijack attempt on:', this.tagName);
+            console.warn('[XtremeShld] Suppressed unauthorized fullscreen hijack attempt on:', this.tagName);
             notifyBlocked('annoyance', { detail: 'Fullscreen hijack attempt blocked' });
-            return Promise.reject(new DOMException('Fullscreen request suppressed by ExtremeShield', 'NotAllowedError'));
+            return Promise.reject(new DOMException('Fullscreen request suppressed by XtremeShld', 'NotAllowedError'));
           }
         }
         return origRequestFullscreen.apply(this, arguments);
@@ -1334,5 +1334,5 @@
     } catch (_) {}
   }
 
-  console.log('[ExtremeShield] Protection engine active.');
+  console.log('[XtremeShld] Protection engine active.');
 })();

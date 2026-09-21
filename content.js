@@ -1,7 +1,7 @@
 /**
- * PureShield - Content Script (Optimized Engine)
- * Features requestIdleCallback debounced scanning, addedNodes differential inspection,
- * hyperlink auditing stripping, context-menu unblocker, anti-autoplay, and cookie dismissal.
+ * XtremeShld - Content Script (Optimized Engine)
+ * Fast DOM scanning, deep text-focus awareness, Shadow DOM traversal,
+ * heuristic popup/overlay traps, element zapper, and cosmetic filter injection.
  */
 (() => {
   'use strict';
@@ -44,6 +44,39 @@
   };
 
   /* ==========================================================================
+     ACTIVE INPUT & SHADOW DOM INSPECTION (Prevents Focus Stealing)
+     ========================================================================== */
+  function getDeepActiveElement(root = document) {
+    try {
+      let el = root.activeElement;
+      while (el && el.shadowRoot && el.shadowRoot.activeElement) {
+        el = el.shadowRoot.activeElement;
+      }
+      return el;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function isTextInputActive() {
+    try {
+      const el = getDeepActiveElement();
+      if (!el) return false;
+      const tag = el.tagName ? el.tagName.toLowerCase() : '';
+      if (tag === 'input') {
+        const type = (el.type || 'text').toLowerCase();
+        return !['button', 'submit', 'reset', 'checkbox', 'radio', 'image', 'range', 'color', 'file'].includes(type);
+      }
+      if (tag === 'textarea' || tag === 'select') return true;
+      if (el.isContentEditable || el.getAttribute('contenteditable') === 'true' || el.getAttribute('contenteditable') === '') return true;
+      if (el.closest && el.closest('[contenteditable="true"], [role="textbox"], [role="searchbox"], [role="combobox"]')) return true;
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /* ==========================================================================
      1. INJECT MAIN WORLD SCRIPTLET
      ========================================================================== */
   function injectScriptlet() {
@@ -54,7 +87,7 @@
       script.onload = () => script.remove();
       (document.head || document.documentElement)?.appendChild(script);
     } catch (err) {
-      console.warn('[ExtremeShield] Scriptlet injection bypassed:', err);
+      console.warn('[XtremeShld] Scriptlet injection bypassed:', err);
     }
   }
   injectScriptlet();
@@ -284,7 +317,7 @@
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            console.warn('[ExtremeShield] Defused media click-jacking overlay link:', href);
+            console.warn('[XtremeShld] Defused media click-jacking overlay link:', href);
             try { target.remove(); } catch (_) {}
             safeSendMessage({
               action: 'recordBlockedEvent',
@@ -306,7 +339,7 @@
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            console.warn('[ExtremeShield] Intercepted malicious ad / search hijack link click:', href);
+            console.warn('[XtremeShld] Intercepted malicious ad / search hijack link click:', href);
             safeSendMessage({
               action: 'recordBlockedEvent',
               data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
@@ -383,9 +416,12 @@
     '.cookies-message',
     '.cookie-message',
     '#accept-cookies-btn',
-    '.tp-modal',
-    '.tp-backdrop',
-    '.tp-iframe-wrapper',
+    '#pianoOfferContainer .tp-modal',
+    '#pianoOfferContainer .tp-backdrop',
+    '.piano_wrapper .tp-modal',
+    '.piano_wrapper .tp-backdrop',
+    '#piano-experience .tp-modal',
+    '.tp-iframe-wrapper[id*="piano"]',
     '#pianoOfferContainer',
     '.pianoOfferContainer',
     '.piano_wrapper',
@@ -444,10 +480,12 @@
 
     // 3. Auto-dismiss Cookie Banners and Auto-Accept
     if (settings.dismissCookieBanners && targetRoot.querySelector) {
-      // Auto-click accept buttons on cookie consent banners if present
-      const acceptBtn = targetRoot.querySelector('#accept-cookies-btn, .cookie-message__btn');
-      if (acceptBtn && typeof acceptBtn.click === 'function') {
-        try { acceptBtn.click(); } catch (_) {}
+      // Auto-click accept buttons on cookie consent banners if present (NEVER while user is typing)
+      if (!isTextInputActive()) {
+        const acceptBtn = targetRoot.querySelector('#accept-cookies-btn, .cookie-message__btn');
+        if (acceptBtn && typeof acceptBtn.click === 'function') {
+          try { acceptBtn.click(); } catch (_) {}
+        }
       }
 
       // Pre-set consent cookies on known sites to prevent banner initialization
@@ -522,30 +560,30 @@
       scanShadowRoots(targetRoot, 0);
     }
 
-    // 4. Scroll Lock Recovery (Unlocks html and body overflow)
-    unlockScroll();
-
-    // 5. Apply advanced features if enabled
-    applyAdvancedFeatures();
+    // 4. Scroll Lock Recovery (Unlocks html and body overflow - suppressed during active typing)
+    if (!isTextInputActive()) {
+      unlockScroll();
+    }
   }
 
   /* ==========================================================================
-     IN-STREAM VIDEO AD DEFUSER & AUTO-SKIPPER (High-Performance)
+     IN-STREAM VIDEO AD DEFUSER & AUTO-SKIPPER (Safe & Context-Aware)
      ========================================================================== */
   function setupVideoAdSkipper() {
     if (isWhitelisted) return;
 
+    // Strict video ad skip selectors (Strictly excludes generic "skip" accessibility links!)
     const SKIP_BUTTON_SELECTORS = [
-      '.skip-button',
+      '.ytp-skip-ad-button',
+      '.ytp-ad-skip-button',
+      '.ytp-ad-skip-button-modern',
+      'button.ytp-ad-skip-button-text',
       '.video-ad-skip',
       '.video-ad-skip-button',
       '.ad-skip-button',
       '.ad-skip',
       '.skip-ad',
-      '.ytp-ad-skip-button',
-      '.ytp-ad-skip-button-modern',
-      '[class*="skip-button"]',
-      '[class*="skip"][class*="ad"]',
+      '[class*="video-ad-skip"]',
       '[class*="ad-skip"]',
       '[class*="kt-player-advertising"] [class*="skip"]',
       '#anc-tst-skip_ad-btn',
@@ -553,22 +591,59 @@
       '.video-overlay-skip-txt',
       '.video-overlay-skip',
       '[class*="video-overlay-skip"]',
-      'button[aria-label*="skip" i]',
-      'button[aria-label*="saltar" i]'
+      'button[aria-label*="skip ad" i]',
+      'button[aria-label*="saltar anuncio" i]',
+      'button[aria-label*="saltar publicidad" i]'
     ];
 
+    // Filter out standard website accessibility navigation buttons (e.g. "Skip navigation")
+    function isAccessibilitySkip(el) {
+      if (!el) return false;
+      const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      const id = (el.id || '').toLowerCase();
+      const cls = (el.className || '').toLowerCase();
+      if (aria.includes('navigation') || aria.includes('content') || aria.includes('search') || aria.includes('menu') || aria.includes('header')) return true;
+      if (id.includes('nav') || id.includes('content') || id.includes('skip-to') || id.includes('skip_to')) return true;
+      if (cls.includes('nav') || cls.includes('content') || cls.includes('skip-link') || cls.includes('skip_link')) return true;
+      if (el.closest && el.closest('#skip-navigation, #skip-to-content, .skip-to-content, [id*="skip-nav" i], [class*="skip-nav" i]')) return true;
+      return false;
+    }
+
     function checkVideoAds() {
-      // Zero CPU overhead if page is hidden or no videos are present
-      if (isWhitelisted || document.hidden) return;
+      // Zero CPU overhead if page is hidden, or if user is actively typing in ANY text field
+      if (isWhitelisted || document.hidden || isTextInputActive()) return;
 
       const video = document.querySelector('video');
       if (!video) return;
 
-      // 1. Auto-click visible Skip button by specific class
+      // 1. Auto-click visible Skip button strictly within recognized video players
       for (const sel of SKIP_BUTTON_SELECTORS) {
-        const btn = document.querySelector(sel);
-        if (btn && btn.offsetParent !== null && typeof btn.click === 'function') {
-          btn.click();
+        const btns = document.querySelectorAll(sel);
+        for (let i = 0; i < btns.length; i++) {
+          const btn = btns[i];
+          if (!btn || btn.offsetParent === null || typeof btn.click !== 'function') continue;
+          if (isAccessibilitySkip(btn)) continue;
+
+          // Must be inside a recognized video player or video ad overlay
+          const player = btn.closest('.html5-video-player, .video-js, .jwplayer, .plyr, .video-ads, .ytp-ad-player-overlay, .ad-container, [class*="player" i], [id*="player" i], [class*="video-overlay" i], [class*="kt-player-advertising"]');
+          if (!player) continue;
+
+          // On YouTube (.html5-video-player), verify an ad is actually active before clicking
+          if (player.classList.contains('html5-video-player') || player.id === 'movie_player') {
+            const isAdShowing = player.classList.contains('ad-showing') ||
+                                player.classList.contains('ad-interrupting') ||
+                                Boolean(player.querySelector('.ytp-ad-player-overlay, .ytp-ad-text, .ytp-ad-preview-container'));
+            if (!isAdShowing) continue;
+          }
+
+          // Preserve activeElement focus across click execution
+          const prevFocus = getDeepActiveElement();
+          try {
+            btn.click();
+          } catch (_) {}
+          if (prevFocus && prevFocus !== getDeepActiveElement() && typeof prevFocus.focus === 'function') {
+            try { prevFocus.focus({ preventScroll: true }); } catch (_) {}
+          }
           break;
         }
       }
@@ -640,10 +715,11 @@
   }
 
   function unlockScroll() {
-    if (isWhitelisted || !settings.removeOverlays) return;
+    if (isWhitelisted || !settings.removeOverlays || isTextInputActive()) return;
     const docEl = document.documentElement;
     const body = document.body;
-    const lockClasses = ['tp-modal-open', 'modal-open', 'no-scroll', 'overflow-hidden', 'scroll-locked', 'disable-scroll', 'fancybox-active', 'has-modal'];
+    // Exclude tp-modal-open to prevent collision with Tangram Polymer on YouTube / Google apps
+    const lockClasses = ['modal-open', 'no-scroll', 'overflow-hidden', 'scroll-locked', 'disable-scroll', 'fancybox-active', 'has-modal'];
 
     if (docEl) {
       if (docEl.style.overflow === 'hidden' || docEl.style.overflowY === 'hidden') {
@@ -675,7 +751,9 @@
     for (let i = 0; i < mutations.length; i++) {
       const m = mutations[i];
       if (m.type === 'attributes' && (m.target === document.documentElement || m.target === document.body)) {
-        unlockScroll();
+        if (!isTextInputActive()) {
+          unlockScroll();
+        }
         continue;
       }
       const added = m.addedNodes;

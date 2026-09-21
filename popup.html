@@ -3,32 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ExtremeShield</title>
+  <title>XtremeShld</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="popup-body">
   <!-- Header -->
   <header class="app-header">
     <div class="brand">
-      <div class="brand-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#090d16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2.2"/>
-          <polygon points="9 8.5 15 8.5 17 11.5 12 16.5 7 11.5" stroke-width="1.6" fill="#090d16" fill-opacity="0.3"/>
-          <line x1="7" y1="11.5" x2="17" y2="11.5" stroke-width="1.2"/>
-          <polyline points="9 8.5 12 16.5 15 8.5" stroke-width="1.2"/>
-        </svg>
-      </div>
+      <img src="icon48.png" class="brand-logo-img" alt="XtremeShld" />
       <div>
-        <h1 class="brand-title">ExtremeShield</h1>
+        <h1 class="brand-title">XtremeShld</h1>
       </div>
     </div>
     <div class="header-actions">
       <!-- Master Power Toggle -->
-      <label class="master-switch" title="Turn ExtremeShield ON / OFF Globally">
+      <label class="master-switch" title="Turn XtremeShld ON / OFF Globally">
         <input type="checkbox" id="master-power-toggle" checked>
         <span class="master-slider"></span>
       </label>
-      <button class="btn-donate-header" id="btn-header-donate" title="Support ExtremeShield">
+      <button class="icon-btn" id="btnToggleTheme" title="Toggle Light / Dark tone">
+        ☀️
+      </button>
+      <button class="btn-donate-header" id="btn-header-donate" title="Support XtremeShld">
         💖 Donate
       </button>
       <button class="icon-btn" id="btn-quick-zap" title="Zap Element on Page">
@@ -50,18 +46,12 @@
     <div class="shield-button-wrapper" id="shield-toggle-btn">
       <div class="shield-glow"></div>
       <button class="shield-btn" aria-label="Toggle Protection">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
-          <polygon points="9 8.5 15 8.5 17 11.5 12 16.5 7 11.5" stroke-width="1.8" fill="currentColor" fill-opacity="0.15"/>
-          <line x1="7" y1="11.5" x2="17" y2="11.5" stroke-width="1.3"/>
-          <polyline points="9 8.5 12 16.5 15 8.5" stroke-width="1.3"/>
-        </svg>
+        <img id="shield-icon-img" src="icon128.png" alt="XtremeShld" class="shield-main-img" />
       </button>
     </div>
     <div>
       <div class="status-domain" id="current-domain">Loading...</div>
       <div class="status-indicator" id="status-pill">
-        <span class="status-dot"></span>
         <span id="status-text">Protected</span>
       </div>
     </div>
@@ -71,7 +61,7 @@
       <div class="donate-card-left">
         <span class="heart-pulse">💖</span>
         <div style="text-align: left;">
-          <div class="donate-card-title">Support ExtremeShield</div>
+          <div class="donate-card-title">Support XtremeShld</div>
           <div class="donate-card-sub">100% Free • Powered by Donations</div>
         </div>
       </div>
@@ -191,11 +181,11 @@
   <div class="modal-overlay" id="donation-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">💖 Support ExtremeShield</h3>
+        <h3 class="modal-title">💖 Support XtremeShld</h3>
         <button class="icon-btn" id="btn-close-modal">&times;</button>
       </div>
       <p style="font-size: 12px; color: var(--text-secondary);">
-        ExtremeShield is completely free, zero-log, and has no locked features. Your tips keep server filter lists updated and servers online!
+        XtremeShld is completely free, zero-log, and has no locked features. Your tips keep server filter lists updated and servers online!
       </p>
       <div class="donation-options">
         <a href="https://ko-fi.com/K5I126GJJZ" target="_blank" class="donation-link-item" id="link-kofi" style="background: #72a4f2; border: 1px solid #5a8ee5; color: #ffffff; padding: 10px 14px;">

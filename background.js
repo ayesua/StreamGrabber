@@ -1,5 +1,5 @@
 /**
- * ExtremeShield - Background Service Worker (Manifest V3)
+ * XtremeShld - Background Service Worker (Manifest V3)
  * Manages DNR rulesets, onRuleMatchedDebug telemetry, dynamic whitelisting,
  * WebRTC IP leak defense, memory garbage collection, hotkeys, and context menus.
  */
@@ -203,7 +203,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   // Setup Context Menus
   setupContextMenus();
 
-  console.log('[PureShield] Background Service Worker initialized.');
+  console.log('[XtremeShld] Background Service Worker initialized.');
 });
 
 /* ==========================================================================
@@ -293,7 +293,7 @@ if (chrome.declarativeNetRequest && chrome.declarativeNetRequest.onRuleMatchedDe
       chrome.tabs.get(tabId, (targetTab) => {
         if (chrome.runtime.lastError || !targetTab) return;
         if (targetTab.openerTabId) {
-          console.warn('[ExtremeShield] Auto-closing DNR blocked popup tab:', url);
+          console.warn('[XtremeShld] Auto-closing DNR blocked popup tab:', url);
           try { chrome.tabs.remove(tabId); } catch (_) {}
         }
       });
@@ -309,7 +309,7 @@ function applyWebRTCProtection(enable) {
     chrome.privacy.network.webRTCIPHandlingPolicy.set({
       value: enable ? 'default_public_interface_only' : 'default'
     }, () => {
-      console.log(`[PureShield] WebRTC leak protection: ${enable ? 'ENABLED' : 'DISABLED'}`);
+      console.log(`[XtremeShld] WebRTC leak protection: ${enable ? 'ENABLED' : 'DISABLED'}`);
     });
   }
 }
@@ -320,20 +320,20 @@ function applyWebRTCProtection(enable) {
 function setupContextMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
-      id: 'pureshield-zap-element',
+      id: 'xtremeshld-zap-element',
       title: '⚡ Zap Element on this Page (Alt+Shift+Z)',
       contexts: ['all']
     });
 
     chrome.contextMenus.create({
-      id: 'pureshield-whitelist-domain',
+      id: 'xtremeshld-whitelist-domain',
       title: '🛡️ Whitelist this Site',
       contexts: ['page']
     });
 
     chrome.contextMenus.create({
-      id: 'pureshield-options',
-      title: '⚙️ ExtremeShield Settings',
+      id: 'xtremeshld-options',
+      title: '⚙️ XtremeShld Settings',
       contexts: ['action']
     });
   });
@@ -342,7 +342,7 @@ function setupContextMenus() {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab || !tab.id) return;
 
-  if (info.menuItemId === 'pureshield-zap-element') {
+  if (info.menuItemId === 'xtremeshld-zap-element') {
     chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' }, (res) => {
       if (chrome.runtime.lastError || !res) {
         chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).then(() => {
@@ -352,12 +352,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         }).catch(() => {});
       }
     });
-  } else if (info.menuItemId === 'pureshield-whitelist-domain') {
+  } else if (info.menuItemId === 'xtremeshld-whitelist-domain') {
     try {
       const url = new URL(tab.url);
       whitelistDomain(url.hostname);
     } catch (_) {}
-  } else if (info.menuItemId === 'pureshield-options') {
+  } else if (info.menuItemId === 'xtremeshld-options') {
     chrome.runtime.openOptionsPage();
   }
 });
@@ -483,7 +483,7 @@ chrome.tabs.onCreated.addListener((tab) => {
   if (!isTabWatchdogActive(tab.openerTabId)) return;
   const url = tab.pendingUrl || tab.url || '';
   if (isMaliciousAdUrl(url)) {
-    console.warn('[ExtremeShield] Terminating malicious ad popup tab on creation:', url);
+    console.warn('[XtremeShld] Terminating malicious ad popup tab on creation:', url);
     try {
       chrome.tabs.remove(tab.id, () => { if (chrome.runtime.lastError) {} });
     } catch (_) {}
@@ -509,7 +509,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   updateTabUI(tabId, currentUrl);
 
   if (isTabWatchdogActive(tab?.openerTabId) && isMaliciousAdUrl(currentUrl)) {
-    console.warn('[ExtremeShield] Terminating malicious ad popup tab on navigation:', currentUrl);
+    console.warn('[XtremeShld] Terminating malicious ad popup tab on navigation:', currentUrl);
     try {
       chrome.tabs.remove(tabId, () => { if (chrome.runtime.lastError) {} });
     } catch (_) {}
@@ -660,7 +660,7 @@ async function setGlobalProtection(enabled) {
     applyWebRTCProtection(currentSettings.blockWebRTCLeaks !== false);
     chrome.action.setBadgeText({ text: '' });
     refreshExtensionIcons();
-    console.log('[ExtremeShield] Global protection: ENABLED');
+    console.log('[XtremeShld] Global protection: ENABLED');
   } else {
     await chrome.declarativeNetRequest.updateEnabledRulesets({
       disableRulesetIds: ALL_RULESETS
@@ -669,7 +669,7 @@ async function setGlobalProtection(enabled) {
     chrome.action.setBadgeText({ text: 'OFF' });
     chrome.action.setBadgeBackgroundColor({ color: '#64748b' });
     refreshExtensionIcons();
-    console.log('[ExtremeShield] Global protection: DISABLED');
+    console.log('[XtremeShld] Global protection: DISABLED');
   }
 }
 
@@ -702,7 +702,7 @@ async function whitelistDomain(domain) {
     await chrome.storage.local.set({ whitelistedDomains: list });
     currentWhitelistedDomains = list;
     refreshExtensionIcons();
-    console.log(`[ExtremeShield] Whitelisted domain: ${domain}`);
+    console.log(`[XtremeShld] Whitelisted domain: ${domain}`);
   }
 }
 
@@ -714,7 +714,7 @@ async function removeWhitelistedDomain(domain) {
   await chrome.storage.local.set({ whitelistedDomains: list });
   currentWhitelistedDomains = list;
   refreshExtensionIcons();
-  console.log(`[ExtremeShield] Removed whitelist for domain: ${domain}`);
+  console.log(`[XtremeShld] Removed whitelist for domain: ${domain}`);
 }
 
 /* ==========================================================================

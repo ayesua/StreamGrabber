@@ -1,7 +1,7 @@
 /**
- * PureShield - Popup Controller
+ * XtremeShld - Popup Controller
  * Manages UI interactions, live tab telemetry, master shield switch,
- * quick protection toggles, tracker inspector, and donation modal.
+ * quick protection toggles, tracker inspector, theme switcher, and donation modal.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -13,7 +13,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // DOM Elements
   const masterPowerToggle = document.getElementById('master-power-toggle');
+  const btnToggleTheme = document.getElementById('btnToggleTheme');
   const shieldBtn = document.getElementById('shield-toggle-btn');
+  const shieldIconImg = document.getElementById('shield-icon-img');
   const heroSection = document.querySelector('.hero-section');
   const currentDomainEl = document.getElementById('current-domain');
   const statusPill = document.getElementById('status-pill');
@@ -63,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   } catch (err) {
-    console.warn('[PureShield] Error querying active tab:', err);
+    console.warn('[XtremeShld] Error querying active tab:', err);
   }
 
   // 2. Load Persisted State & Tab Telemetry
@@ -141,6 +143,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Theme Management (Light / Dark)
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    if (btnToggleTheme) {
+      btnToggleTheme.textContent = t === 'dark' ? '☀️' : '🌙';
+      btnToggleTheme.title = t === 'dark' ? 'Switch to Light tone' : 'Switch to Dark tone';
+    }
+  }
+
+  const { theme } = await chrome.storage.local.get(['theme']);
+  applyTheme(theme || 'light');
+
+  btnToggleTheme?.addEventListener('click', async () => {
+    const nextTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+    await chrome.storage.local.set({ theme: nextTheme });
+  });
+
+  // Cross-context synchronization
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.theme) {
+      applyTheme(changes.theme.newValue);
+    }
+  });
+
   function updateShieldUI(isPaused = false) {
     const isProtected = masterEnabled && !isWhitelisted && !currentTab?.url?.startsWith('chrome://');
     
@@ -148,18 +175,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       heroSection.classList.add('shield-active');
       statusPill.className = 'status-indicator';
       statusText.textContent = 'Protected';
+      if (shieldIconImg) shieldIconImg.src = 'icon128.png';
     } else if (isPaused) {
       heroSection.classList.remove('shield-active');
       statusPill.className = 'status-indicator paused';
       statusText.textContent = 'Paused (15m)';
+      if (shieldIconImg) shieldIconImg.src = 'icon128_gray.png';
     } else if (isWhitelisted) {
       heroSection.classList.remove('shield-active');
       statusPill.className = 'status-indicator paused';
       statusText.textContent = 'Whitelisted';
+      if (shieldIconImg) shieldIconImg.src = 'icon128_gray.png';
     } else {
       heroSection.classList.remove('shield-active');
       statusPill.className = 'status-indicator disabled';
       statusText.textContent = 'Shield Disabled';
+      if (shieldIconImg) shieldIconImg.src = 'icon128_gray.png';
     }
   }
 
