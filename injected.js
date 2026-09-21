@@ -403,13 +403,21 @@
       const origGet = origContentWindowDesc.get;
       Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
         get: function () {
-          const win = origGet.call(this);
-          if (!config.whitelisted && config.blockPopups && win && win.open && win.open !== window.open) {
-            try {
-              win.open = window.open;
-            } catch (_) {}
+          try {
+            const win = origGet.call(this);
+            if (!config.whitelisted && config.blockPopups && win) {
+              try {
+                if (win.open && win.open !== window.open) {
+                  win.open = window.open;
+                }
+              } catch (_) {
+                // Cross-origin iframe frame access restricted by browser SOP - ignore safely
+              }
+            }
+            return win;
+          } catch (_) {
+            return origGet.call(this);
           }
-          return win;
         },
         configurable: true
       });
@@ -427,7 +435,6 @@
         const isOAuth = isAllowedPopupDomain(href);
 
         if (!isRecentUserAction() || isTrackerOrRedirectUrl(href) || (isCrossDomain && !isOAuth)) {
-          console.warn('[XtremeShld] Intercepted synthetic/unsolicited anchor click exploit:', href);
           notifyBlocked('popup', { url: href, target: target || '_self' });
           return;
         }
@@ -446,7 +453,6 @@
         if (this.tagName === 'A') {
           const href = this.getAttribute('href') || '';
           if (isTrackerOrRedirectUrl(href) || (!isSameDomainOrSubdomain(href) && !isAllowedPopupDomain(href))) {
-            console.warn('[XtremeShld] Intercepted dispatchEvent click exploit:', href);
             notifyBlocked('popup', { url: href });
             return false;
           }
@@ -463,7 +469,6 @@
       if (config.blockPopups && !config.whitelisted) {
         const action = this.getAttribute('action') || '';
         if (isTrackerOrRedirectUrl(action) || (!isSameDomainOrSubdomain(action) && !isAllowedPopupDomain(action))) {
-          console.warn('[XtremeShld] Intercepted unrequested form.submit popunder:', action);
           notifyBlocked('popup', { url: action });
           return;
         }
@@ -487,20 +492,39 @@
     };
   } catch (_) {}
 
-  // Defuse dynamic ad script injection (e.g. TwinRed infinity.js)
+  // Defuse dynamic ad/popunder script injection (e.g. TwinRed infinity.js, exoclick popunders)
   try {
     const scriptSrcDesc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
     if (scriptSrcDesc && scriptSrcDesc.set) {
       const origScriptSrcSet = scriptSrcDesc.set;
       Object.defineProperty(HTMLScriptElement.prototype, 'src', {
         set: function (url) {
-          const urlStr = String(url || '').toLowerCase();
-          if (config.blockPopups && !config.whitelisted && (urlStr.includes('twinrdsrv') || urlStr.includes('infinity.js') || isTrackerOrRedirectUrl(urlStr))) {
-            console.warn('[XtremeShld] Blocked ad script injection:', url);
-            this.setAttribute('data-blocked-src', url);
-            return;
+          try {
+            const rawUrl = (url && typeof url === 'object' && typeof url.toString === 'function') ? url.toString() : String(url || '');
+            const urlLower = rawUrl.toLowerCase();
+            
+            // Only intercept active popunder/redirect inject engines in script.src (DNR declarativeNetRequest handles trackers like GTM, GA, Taboola cleanly at network layer)
+            const isMaliciousScript = (
+              urlLower.includes('twinrdsrv') ||
+              urlLower.includes('infinity.js') ||
+              urlLower.includes('popads') ||
+              urlLower.includes('popcash') ||
+              urlLower.includes('clickadu') ||
+              urlLower.includes('admaven') ||
+              urlLower.includes('exoclick') ||
+              urlLower.includes('monetag') ||
+              urlLower.includes('tarklot') ||
+              urlLower.includes('trafficstars')
+            );
+
+            if (config.blockPopups && !config.whitelisted && isMaliciousScript) {
+              this.setAttribute('data-blocked-src', rawUrl);
+              return;
+            }
+            return origScriptSrcSet.call(this, url);
+          } catch (_) {
+            return origScriptSrcSet.call(this, url);
           }
-          return origScriptSrcSet.call(this, url);
         },
         get: scriptSrcDesc.get,
         configurable: true
@@ -1331,6 +1355,21 @@
       window.canRunAds = true;
       window.isAdBlockActive = false;
       window.adblock = false;
+
+      // Safe no-op stubs for blocked analytics to prevent page scripts from crashing
+      if (!window.ga) {
+        window.ga = function () {};
+        window.ga.q = [];
+        window.ga.loaded = true;
+      }
+      if (!window.gtag) {
+        window.gtag = function () {};
+      }
+      if (!window.fbq) {
+        window.fbq = function () {};
+        window.fbq.push = function () {};
+        window.fbq.loaded = true;
+      }
     } catch (_) {}
   }
 
