@@ -12,16 +12,16 @@ Fast video, audio, and HLS (.m3u8) stream detector and downloader with player pr
 ENGLISH DESCRIPTION
 --------------------------------------------------------------------------------
 
-⚡ Video Downloader - XtremeGrbr: Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation, Theme Switcher & Quality Selector
+⚡ Video Downloader - XtremeGrbr (Formerly StreamGrabber / StreamGrabber 2): Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation, Theme Switcher & Quality Selector
 
-Video Downloader - XtremeGrbr is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, dark & light theme modes, and multi-resolution quality selection.
+Video Downloader - XtremeGrbr (formerly known as StreamGrabber and StreamGrabber 2) is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, dark & light theme modes, and multi-resolution quality selection.
 
 --------------------------------------------------------------------------------
-⚠️ IMPORTANT NOTICE — OFFICIAL XTREMEGRBR RELEASE
+⚠️ IMPORTANT NOTICE — OFFICIAL XTREMEGRBR (FORMERLY STREAMGRABBER) RELEASE
 --------------------------------------------------------------------------------
-Please be aware that an unauthorized Chinese rip-off / copycat clone of our original extension recently surfaced on the Chrome Web Store. To protect our community from unverified code, adware, and clones, we have officially rebranded to "Video Downloader - XtremeGrbr" (v3.5.1).
+Please be aware that an unauthorized Chinese rip-off / copycat clone of our original extension (StreamGrabber) recently surfaced on the Chrome Web Store. To safeguard our users against unverified code, adware, and clones, we have officially rebranded from StreamGrabber to "Video Downloader - XtremeGrbr" (v3.5.1).
 
-This is the genuine, 100% free, zero-log, and actively maintained official release by the original author. If you come across any unauthorized copies or rip-offs on the Chrome Web Store, please help our community by clicking "Report abuse" to have Google take them down!
+This is the genuine, 100% free, zero-log, and actively maintained official continuation of StreamGrabber by the original author. If you come across any unauthorized copies, fake clones, or rip-offs impersonating StreamGrabber or XtremeGrbr on the Chrome Web Store, please help our community by clicking "Report abuse" to have Google take them down!
 
 --------------------------------------------------------------------------------
 🚀 KEY FEATURES & CAPABILITIES
