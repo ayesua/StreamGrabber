@@ -135,7 +135,7 @@ function ensureDirectDlPolling() {
         });
       });
     }
-  }, 500);
+  }, 350);
 }
 
 function formatBytes(bytes) {
@@ -936,7 +936,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-function handleStartDownload({ item, referer, downloadTabId, format }, callback) {
+function handleStartDownload({ item, referer, downloadTabId, format, downloadId: passedDownloadId }, callback) {
   if (!item || !item.url) {
     if (callback) callback({ success: false, error: 'Invalid media item' });
     return;
@@ -951,7 +951,7 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
 
   const chosenFormat = (format || 'mp4').toLowerCase();
 
-  chrome.storage.sync.get({ askFilename: false }, async (settings) => {
+  chrome.storage.sync.get({ askFilename: false, maxThreads: 8 }, async (settings) => {
     const askFilename = Boolean(settings.askFilename);
 
     const sanitizedTitle = (item.title || 'video_completo')
@@ -960,7 +960,10 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
       .trim()
       .substring(0, 100);
 
-    const downloadId = 'dl_' + Date.now();
+    const downloadId = passedDownloadId || ('dl_' + Date.now());
+
+    // Immediately unblock caller with success and downloadId
+    if (callback) callback({ success: true, downloadId });
 
     // If a non-HLS variant was selected (e.g. direct MP4 from VK or other multi-quality source), route to direct downloader
     if (item.selectedVariantUrl) {
@@ -978,7 +981,7 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
         title: item.title,
         type: 'HLS',
         format: chosenFormat,
-        progress: 0,
+        progress: 1,
         speedBps: 0,
         status: 'downloading',
         downloadedBytes: 0
@@ -988,6 +991,7 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
         if (chrome.runtime.lastError) {}
       });
 
+      hlsEngine.maxParallel = settings.maxThreads || 8;
       hlsEngine.startDownload({
         id: downloadId,
         url: item.url,
@@ -1018,8 +1022,6 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
       }).catch(err => {
         console.error('HLS Download Error:', err);
       });
-
-      if (callback) callback({ success: true, downloadId });
     } else {
       // Direct Media File Downloader with intact URL (avoids HTTP 404 from signature invalidation)
       let ext = chosenFormat ? `.${chosenFormat}` : '.mp4';
@@ -1038,7 +1040,7 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
         title: item.title || sanitizedTitle,
         type: item.type || 'MP4',
         format: chosenFormat,
-        progress: 0,
+        progress: 1,
         speedBps: 0,
         status: 'downloading',
         downloadedBytes: 0,
@@ -1050,9 +1052,9 @@ function handleStartDownload({ item, referer, downloadTabId, format }, callback)
       });
 
       if (item.rotation && item.rotation !== 0 && ext === '.mp4') {
-        startRotatedDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.rotation, downloadTabId);
+        startRotatedDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, null, item.title, item.rotation, downloadTabId);
       } else {
-        startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, callback, item.title, item.size, downloadTabId);
+        startDirectDownload(item.url, filename, pageReferer, downloadId, askFilename, null, item.title, item.size, downloadTabId);
       }
     }
   });
@@ -1126,6 +1128,7 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
 
   if (message.action === 'START_DOWNLOAD') {
     handleStartDownload({
+      downloadId: message.downloadId,
       item: message.item,
       referer: message.referer,
       downloadTabId: message.tabId || sender.tab?.id,
@@ -1332,17 +1335,39 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
 async function resolveFinalDirectUrl(rawUrl, referer) {
   let targetUrl = rawUrl;
   try {
-    for (let hop = 0; hop < 5; hop++) {
+    for (let hop = 0; hop < 3; hop++) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(targetUrl, {
-        method: 'GET',
-        headers: referer ? { 'Referer': referer } : {},
-        redirect: 'manual',
-        signal: controller.signal
-      });
-      clearTimeout(timer);
-      if (res.status >= 300 && res.status < 400) {
+      const timer = setTimeout(() => controller.abort(), 1200);
+      let res = null;
+      try {
+        // Fast HEAD: 0 body bytes, captures 301/302/307 redirects instantaneously in milliseconds
+        res = await fetch(targetUrl, {
+          method: 'HEAD',
+          headers: referer ? { 'Referer': referer } : {},
+          redirect: 'manual',
+          signal: controller.signal
+        });
+      } catch (headErr) {
+        if (!controller.signal.aborted) {
+          try {
+            res = await fetch(targetUrl, {
+              method: 'GET',
+              headers: {
+                ...(referer ? { 'Referer': referer } : {}),
+                'Range': 'bytes=0-0'
+              },
+              redirect: 'manual',
+              signal: controller.signal
+            });
+          } catch (e) {}
+        }
+      } finally {
+        clearTimeout(timer);
+        // Abort immediately to ensure no connection or response body stream stays open
+        try { controller.abort(); } catch (e) {}
+      }
+
+      if (res && res.status >= 300 && res.status < 400) {
         const loc = res.headers.get('location');
         if (loc) {
           targetUrl = new URL(loc, targetUrl).href;
@@ -1352,7 +1377,7 @@ async function resolveFinalDirectUrl(rawUrl, referer) {
       break;
     }
   } catch (e) {
-    console.warn('[StreamGrabber] Redirect resolution notice:', e.message);
+    console.warn('[XtremeGrbr] Redirect resolution notice:', e.message);
   }
   return targetUrl;
 }
@@ -1393,12 +1418,12 @@ async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs
         if (sendResponse) sendResponse({ success: true, downloadId, downloadItemId });
       } else {
         const err = chrome.runtime.lastError?.message || 'Direct download failed';
-        console.warn('[StreamGrabber] chrome.downloads.download failed, trying fallback fetch:', err);
+        console.warn('[XtremeGrbr] chrome.downloads.download failed, trying fallback fetch:', err);
         fetchFallbackDownload(finalUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
       }
     });
   } catch (err) {
-    console.error('[StreamGrabber] Error starting download:', err);
+    console.error('[XtremeGrbr] Error starting download:', err);
     fetchFallbackDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
   }
 }

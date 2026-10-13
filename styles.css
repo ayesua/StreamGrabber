@@ -455,6 +455,14 @@ body {
   background: var(--vdh-green-hover);
 }
 
+.btn-primary.is-starting,
+.btn-secondary.is-starting {
+  opacity: 0.85;
+  pointer-events: none;
+  cursor: wait;
+  filter: saturate(0.85);
+}
+
 .btn-secondary {
   flex: 1;
   background: #f1f5f9;
@@ -548,6 +556,19 @@ body {
   background: var(--vdh-blue);
   width: 0%;
   transition: width 0.3s ease;
+}
+
+@keyframes progressPulse {
+  0% { opacity: 0.65; filter: brightness(0.95); }
+  50% { opacity: 1; filter: brightness(1.25); }
+  100% { opacity: 0.65; filter: brightness(0.95); }
+}
+
+.progress-bar-fill.is-connecting {
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 50%, #0284c7 100%);
+  background-size: 200% 100%;
+  animation: progressPulse 1.2s ease-in-out infinite;
+  min-width: 15px;
 }
 
 .download-meta {

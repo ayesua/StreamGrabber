@@ -179,7 +179,7 @@ export function applyMp4Rotation(arrayBuffer, rotationDegrees) {
 
 export class HLSEngine {
   constructor(options = {}) {
-    this.maxParallel = options.maxParallel || 6;
+    this.maxParallel = options.maxParallel || 8;
     this.activeDownloads = new Map();
     this.keyCache = new Map();
   }
@@ -532,7 +532,7 @@ export class HLSEngine {
 
             const now = Date.now();
             const elapsedSec = (now - lastSpeedCheck) / 1000;
-            if (elapsedSec >= 0.5) {
+            if (elapsedSec >= 0.25) {
               downloadState.speedBps = bytesSinceCheck / elapsedSec;
               lastSpeedCheck = now;
               bytesSinceCheck = 0;
@@ -548,7 +548,7 @@ export class HLSEngine {
           } catch (err) {
             retries--;
             if (retries === 0) throw new Error(`Error en fragmento ${index + 1}/${segments.length}: ${err.message}`);
-            await new Promise(r => setTimeout(r, (6 - retries) * 500));
+            await new Promise(r => setTimeout(r, Math.min(1000, (6 - retries) * 200)));
           }
         }
       };
@@ -569,7 +569,7 @@ export class HLSEngine {
         }
       };
 
-      const numWorkers = Math.min(this.maxParallel || 5, segments.length);
+      const numWorkers = Math.min(this.maxParallel || 8, segments.length);
       const workers = [];
       for (let w = 0; w < numWorkers; w++) {
         workers.push(worker());

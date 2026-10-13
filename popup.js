@@ -654,6 +654,15 @@ function renderMediaList(mediaList) {
       btnDownload.addEventListener('click', () => {
         const format = card.querySelector('.format-select')?.value || 'mp4';
         const selectedVariant = card.querySelector('.quality-select')?.value || item.selectedVariantUrl;
+        
+        btnDownload.classList.add('is-starting');
+        const origDownloadHTML = btnDownload.innerHTML;
+        btnDownload.innerHTML = `<span>⏳ ${typeof t === 'function' ? t('startingDownload', currentLang) : 'Starting...'}</span>`;
+        setTimeout(() => {
+          btnDownload.classList.remove('is-starting');
+          btnDownload.innerHTML = origDownloadHTML;
+        }, 2200);
+
         triggerDownload(item, format, selectedVariant);
       });
     }
@@ -661,7 +670,17 @@ function renderMediaList(mediaList) {
     // Audio MP3 Button
     const btnAudio = card.querySelector('.btn-audio');
     if (btnAudio) {
-      btnAudio.addEventListener('click', () => triggerDownload({ ...item, type: 'Audio' }, 'mp3'));
+      btnAudio.addEventListener('click', () => {
+        btnAudio.classList.add('is-starting');
+        const origAudioHTML = btnAudio.innerHTML;
+        btnAudio.textContent = '⏳ ...';
+        setTimeout(() => {
+          btnAudio.classList.remove('is-starting');
+          btnAudio.innerHTML = origAudioHTML;
+        }, 2200);
+
+        triggerDownload({ ...item, type: 'Audio' }, 'mp3');
+      });
     }
 
     // Copy Link Button
@@ -903,8 +922,23 @@ function executeDownload(item, title, format) {
     title
   };
 
+  const downloadId = 'dl_' + Date.now();
+
+  // Instant optimistic UI feedback - download card appears immediately!
+  updateActiveDownloadUI({
+    id: downloadId,
+    title: title || item.title || 'Video',
+    type: item.type || 'MP4',
+    format: format,
+    progress: 1,
+    speedBps: 0,
+    status: 'connecting',
+    downloadedBytes: 0
+  });
+
   chrome.runtime.sendMessage({
     action: 'START_DOWNLOAD',
+    downloadId,
     item: updatedItem,
     format,
     tabId: currentTabId,
@@ -942,6 +976,7 @@ function renderActiveDownloads(downloads) {
   container.style.display = 'block';
   list.innerHTML = activeOnly.map(dl => {
     const isComplete = dl.status === 'complete' || (dl.progress >= 100 && dl.status !== 'downloading');
+    const isConnecting = !isComplete && (dl.status === 'connecting' || dl.status === 'starting' || (dl.progress <= 1 && (!dl.speedBps || dl.speedBps === 0)));
     return `
       <div class="download-item" id="dl_${dl.id}">
         <div class="download-item-header">
@@ -952,12 +987,14 @@ function renderActiveDownloads(downloads) {
           }
         </div>
         <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width: ${dl.progress || 0}%; ${isComplete ? 'background: var(--vdh-green);' : ''}"></div>
+          <div class="progress-bar-fill ${isConnecting ? 'is-connecting' : ''}" style="width: ${isConnecting ? 10 : (dl.progress || 0)}%; ${isComplete ? 'background: var(--vdh-green);' : ''}"></div>
         </div>
         <div class="download-meta">
           ${isComplete
             ? `<span style="color: var(--vdh-green); font-weight: 700;">Download complete! (100% • ${formatBytes(dl.downloadedBytes)})</span>`
-            : `<span>${dl.progress || 0}% (${formatBytes(dl.downloadedBytes)})</span><span>⚡ ${formatSpeed(dl.speedBps)}</span>`
+            : isConnecting
+              ? `<span>⏳ ${typeof t === 'function' ? t('connectingStream', currentLang) : 'Connecting to stream...'}</span><span>⚡ ${typeof t === 'function' ? t('startingDownload', currentLang) : 'Starting...'}</span>`
+              : `<span>${dl.progress || 0}% (${formatBytes(dl.downloadedBytes)})</span><span>⚡ ${formatSpeed(dl.speedBps)}</span>`
           }
         </div>
       </div>
@@ -1034,11 +1071,22 @@ function updateActiveDownloadUI(state) {
 
   const fill = el.querySelector('.progress-bar-fill');
   const meta = el.querySelector('.download-meta');
+  const isConnecting = (state.status === 'connecting' || state.status === 'starting' || (state.progress <= 1 && (!state.speedBps || state.speedBps === 0)));
 
-  if (fill) fill.style.width = `${state.progress || 0}%`;
+  if (fill) {
+    if (isConnecting) {
+      fill.classList.add('is-connecting');
+      fill.style.width = '10%';
+    } else {
+      fill.classList.remove('is-connecting');
+      fill.style.width = `${state.progress || 0}%`;
+    }
+  }
+
   if (meta) {
     if (state.status === 'complete') {
       if (fill) {
+        fill.classList.remove('is-connecting');
         fill.style.width = '100%';
         fill.style.background = 'var(--vdh-green)';
       }
@@ -1058,6 +1106,11 @@ function updateActiveDownloadUI(state) {
       }, 1500);
     } else if (state.status === 'error') {
       meta.innerHTML = `<span style="color: var(--vdh-red);">Error: ${escapeHtml(state.error || 'Streaming error')}</span>`;
+    } else if (isConnecting) {
+      meta.innerHTML = `
+        <span>⏳ ${typeof t === 'function' ? t('connectingStream', currentLang) : 'Connecting to stream...'}</span>
+        <span>⚡ ${typeof t === 'function' ? t('startingDownload', currentLang) : 'Starting...'}</span>
+      `;
     } else {
       meta.innerHTML = `
         <span>${state.progress || 0}% (${formatBytes(state.downloadedBytes)})</span>

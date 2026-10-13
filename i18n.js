@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Video Downloader - XtremeGrbr
  * Internationalization (i18n) Module
  * Supported Languages:
@@ -96,7 +96,9 @@ const SG_I18N = {
     closeModal: 'Close',
     promoShieldTitle: 'Block Video Ads & Popups:',
     promoShieldDesc: 'Try ExtremeShield Free!',
-    promoShieldBtn: 'Get ↗'
+    promoShieldBtn: 'Get ↗',
+    startingDownload: 'Starting...',
+    connectingStream: 'Connecting to stream...'
   },
 
   // Spanish (Español)
@@ -186,7 +188,9 @@ const SG_I18N = {
     closeModal: 'Cerrar',
     promoShieldTitle: 'Bloquea anuncios y ventanas emergentes:',
     promoShieldDesc: '¡Prueba ExtremeShield Gratis!',
-    promoShieldBtn: 'Obtener ↗'
+    promoShieldBtn: 'Obtener ↗',
+    startingDownload: 'Iniciando...',
+    connectingStream: 'Conectando con el video...'
   },
 
   // Chinese (China) - 简体中文
@@ -276,7 +280,9 @@ const SG_I18N = {
     closeModal: '关闭',
     promoShieldTitle: '拦截视频弹窗与烦人广告：',
     promoShieldDesc: '免费体验 ExtremeShield！',
-    promoShieldBtn: '获取 ↗'
+    promoShieldBtn: '获取 ↗',
+    startingDownload: '正在启动...',
+    connectingStream: '正在连接视频流...'
   },
 
   // Russian (Русский)
@@ -366,7 +372,9 @@ const SG_I18N = {
     closeModal: 'Закрыть',
     promoShieldTitle: 'Блокируйте рекламу и поп-апы:',
     promoShieldDesc: 'Попробуйте ExtremeShield бесплатно!',
-    promoShieldBtn: 'Открыть ↗'
+    promoShieldBtn: 'Открыть ↗',
+    startingDownload: 'Запуск...',
+    connectingStream: 'Подключение к потоку...'
   }
 };
 
