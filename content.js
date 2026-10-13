@@ -653,7 +653,17 @@
       for (let i = 0; i < videos.length; i++) {
         const v = videos[i];
         const src = (v.src || v.currentSrc || '').toLowerCase();
-        const isAdContainer = v.closest('.ad-container, [class*="ad-container"], [class*="preroll"], [id*="preroll"], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising"], [class*="video-overlay"], [id*="videoads"]');
+        
+        // Never accelerate genuine main video content (> 30s or on legitimate video players)
+        if (v.duration && !isNaN(v.duration) && v.duration > 35) {
+          // Reset playbackRate if it was previously set high
+          if (v.playbackRate > 2.0) {
+            try { v.playbackRate = 1.0; } catch (_) {}
+          }
+          continue;
+        }
+
+        const isAdContainer = v.closest('.ad-container, [class*="ad-container" i], [class*="preroll" i], [id*="preroll" i], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising" i], [id*="videoads" i]');
         const isAdSource = src.includes('/ad/') ||
                            src.includes('vast') ||
                            src.includes('preroll') ||

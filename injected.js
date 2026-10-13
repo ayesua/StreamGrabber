@@ -751,7 +751,10 @@
         lower.includes('/ad_server') ||
         lower.includes('in_stream_ad') ||
         lower.includes('jwpreroll') ||
-        lower.includes('ad_preroll')
+        lower.includes('ad_preroll') ||
+        lower.includes('magsrv.com/splash') ||
+        lower.includes('twinrdengine.com/adraw') ||
+        lower.includes('tsyndicate.com/do2/')
       );
     }
 
@@ -935,10 +938,31 @@
       configurable: true
     });
 
-    // 4. KVS Player Auto-Skipper
+    // 4. KVS Player Auto-Skipper & Pre-roll Sanitizer
+    function sanitizeKvsFlashvars(fv) {
+      if (!fv || typeof fv !== 'object') return fv;
+      try {
+        const adKeys = [
+          'adv_pre', 'adv_pre_vast', 'adv_pre_vast_alt', 'adv_pre_duration',
+          'adv_pre_skip_duration', 'adv_pre_click_url', 'adv_post', 'adv_post_vast',
+          'adv_post_vast_alt', 'adv_post_duration', 'adv_post_skip_duration',
+          'adv_pause', 'adv_pause_vast'
+        ];
+        for (const k of adKeys) {
+          if (k in fv) {
+            delete fv[k];
+          }
+        }
+      } catch (_) {}
+      return fv;
+    }
+
     let _ktPlayer = window.kt_player;
     Object.defineProperty(window, 'kt_player', {
       get: () => function (container, swf, width, height, flashvars) {
+        if (config.blockMediaPrerolls && flashvars) {
+          sanitizeKvsFlashvars(flashvars);
+        }
         const player = _ktPlayer ? _ktPlayer.apply(this, arguments) : null;
         if (config.blockMediaPrerolls && player && typeof player.skip_preroll === 'function') {
           setTimeout(() => {
