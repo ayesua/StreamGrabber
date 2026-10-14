@@ -415,6 +415,26 @@ html.pureshield-picking-active #pureshield-picker-toolbar input[type="range"] {
   animation: pureshield-fade-out 0.3s forwards !important;
 }
 
+.pureshield-toast.pureshield-zapper-toast {
+  border-left: 4px solid #38bdf8 !important;
+}
+
+.pureshield-toast.pureshield-zapper-toast .pureshield-toast-title {
+  color: #38bdf8 !important;
+}
+
+.pureshield-toast.pureshield-zapper-toast .pureshield-toast-btn {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  font-weight: 600 !important;
+}
+
+.pureshield-toast.pureshield-zapper-toast .pureshield-toast-btn:hover {
+  background: rgba(56, 189, 248, 0.3) !important;
+  color: #ffffff !important;
+}
+
 .pureshield-toast-info {
   display: flex !important;
   flex-direction: column !important;

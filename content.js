@@ -7,6 +7,7 @@
   'use strict';
 
   const hostname = window.location.hostname;
+  const normalizedDomain = hostname.replace(/^www\./i, '');
 
   // Protect critical web applications (Google Workspace, accounts) from invasive scriptlet alterations
   const PROTECTED_SYSTEM_DOMAINS = [
@@ -17,7 +18,7 @@
     'calendar.google.com',
     'meet.google.com'
   ];
-  const isProtectedDomain = PROTECTED_SYSTEM_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d));
+  const isProtectedDomain = PROTECTED_SYSTEM_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d) || (normalizedDomain && (normalizedDomain === d || normalizedDomain.endsWith('.' + d))));
 
   let isWhitelisted = isProtectedDomain;
   let settings = {
@@ -42,6 +43,13 @@
     unlockRightClick: false,
     blockAutoplay: false
   };
+
+  /* ==========================================================================
+     COSMETIC FILTERING STATE (Declared early to eliminate TDZ ReferenceErrors)
+     ========================================================================== */
+  let cosmeticStyleTag = null;
+  const BUILTIN_COSMETIC_SELECTORS = [];
+  let activeCosmeticSelectors = [];
 
   /* ==========================================================================
      ACTIVE INPUT & SHADOW DOM INSPECTION (Prevents Focus Stealing)
@@ -122,7 +130,10 @@
       const isMasterOff = data.masterEnabled === false;
       const isPaused = Boolean(data.pauseUntil && Date.now() < data.pauseUntil);
       const whitelist = data.whitelistedDomains || [];
-      const isDomainWhitelisted = whitelist.some(domain => hostname === domain || hostname.endsWith('.' + domain));
+      const isDomainWhitelisted = whitelist.some(domain => {
+        return hostname === domain || hostname.endsWith('.' + domain) ||
+               (normalizedDomain && (normalizedDomain === domain || normalizedDomain.endsWith('.' + domain)));
+      });
 
       isWhitelisted = isProtectedDomain || isMasterOff || isPaused || isDomainWhitelisted;
 
@@ -157,8 +168,10 @@
         applyCustomCosmeticRules(data.customCosmeticRules || {});
         applyAdvancedFeatures();
       } else {
-        const el = document.getElementById('ps-custom-cosmetic-styles');
+        const el = document.getElementById('pureshield-cosmetic-styles');
         if (el) el.remove();
+        cosmeticStyleTag = null;
+        activeCosmeticSelectors = [];
       }
     });
   }
@@ -560,6 +573,24 @@
       scanShadowRoots(targetRoot, 0);
     }
 
+    // 3C. Dynamic Cosmetic Filtering Enforcement
+    if (!isWhitelisted && activeCosmeticSelectors.length > 0 && targetRoot.querySelectorAll) {
+      for (let s = 0; s < activeCosmeticSelectors.length; s++) {
+        try {
+          const matches = targetRoot.querySelectorAll(activeCosmeticSelectors[s]);
+          for (let m = 0; m < matches.length; m++) {
+            const el = matches[m];
+            if (el.style.display !== 'none') {
+              el.style.setProperty('display', 'none', 'important');
+              el.style.setProperty('visibility', 'hidden', 'important');
+              el.style.setProperty('pointer-events', 'none', 'important');
+              el.setAttribute('data-pureshield-zapped', 'true');
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
     // 4. Scroll Lock Recovery (Unlocks html and body overflow - suppressed during active typing)
     if (!isTextInputActive()) {
       unlockScroll();
@@ -871,32 +902,105 @@
   }
 
   /* ==========================================================================
+     6B. DEDICATED ZAPPER TOAST NOTIFICATION
+     ========================================================================== */
+  function showZapperToast(title, subtitle, onUndo) {
+    if (!settings.showToastNotifications || !document.body) return;
+    const container = ensureToastContainer();
+
+    while (container.children.length >= 3) {
+      container.removeChild(container.firstChild);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'pureshield-toast pureshield-zapper-toast';
+
+    let displaySub = subtitle || '';
+    if (displaySub.length > 50) {
+      displaySub = displaySub.slice(0, 47) + '...';
+    }
+
+    toast.innerHTML = `
+      <div class="pureshield-toast-info">
+        <div class="pureshield-toast-title">${title}</div>
+        <div class="pureshield-toast-url" title="${subtitle}">${displaySub}</div>
+      </div>
+      <div class="pureshield-toast-actions">
+        ${onUndo ? '<button class="pureshield-toast-btn" id="ps-zapper-undo-btn">Undo</button>' : ''}
+        <button class="pureshield-toast-close" title="Close">&times;</button>
+      </div>
+    `;
+
+    const undoBtn = toast.querySelector('#ps-zapper-undo-btn');
+    if (undoBtn && onUndo) {
+      undoBtn.addEventListener('click', () => {
+        onUndo();
+        dismissToast(toast);
+      });
+    }
+
+    const closeBtn = toast.querySelector('.pureshield-toast-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => dismissToast(toast));
+    }
+
+    container.appendChild(toast);
+    const timer = setTimeout(() => dismissToast(toast), 5000);
+    toast.addEventListener('mouseenter', () => clearTimeout(timer));
+  }
+
+  /* ==========================================================================
      7. COSMETIC FILTERING ENGINE (Built-in & Custom Rules)
      ========================================================================== */
-  let cosmeticStyleTag = null;
-  const BUILTIN_COSMETIC_SELECTORS = [];
-
   function ensureCosmeticStyles() {
-    if (!cosmeticStyleTag) {
-      cosmeticStyleTag = document.createElement('style');
-      cosmeticStyleTag.id = 'pureshield-cosmetic-styles';
-      (document.head || document.documentElement).appendChild(cosmeticStyleTag);
+    if (!cosmeticStyleTag || !document.contains(cosmeticStyleTag)) {
+      cosmeticStyleTag = document.getElementById('pureshield-cosmetic-styles');
+      if (!cosmeticStyleTag) {
+        cosmeticStyleTag = document.createElement('style');
+        cosmeticStyleTag.id = 'pureshield-cosmetic-styles';
+        (document.head || document.documentElement).appendChild(cosmeticStyleTag);
+      }
     }
+    return cosmeticStyleTag;
   }
 
   function applyCustomCosmeticRules(customRules) {
-    ensureCosmeticStyles();
+    const styleEl = ensureCosmeticStyles();
 
     if (isWhitelisted) {
-      cosmeticStyleTag.textContent = '';
+      if (styleEl) styleEl.textContent = '';
+      activeCosmeticSelectors = [];
       return;
     }
 
-    const userRules = (customRules && customRules[hostname]) || [];
-    const allRules = [...BUILTIN_COSMETIC_SELECTORS, ...userRules];
+    const hostRules = (customRules && customRules[hostname]) || [];
+    const normRules = (customRules && normalizedDomain !== hostname && customRules[normalizedDomain]) || [];
+    const userRules = Array.from(new Set([...hostRules, ...normRules]));
+    const allRules = Array.from(new Set([...BUILTIN_COSMETIC_SELECTORS, ...userRules]));
+    activeCosmeticSelectors = allRules;
 
-    const css = allRules.map(selector => `${selector} { display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }`).join('\n');
-    cosmeticStyleTag.textContent = css;
+    if (allRules.length === 0) {
+      if (styleEl) styleEl.textContent = '';
+      return;
+    }
+
+    const css = allRules.map(selector => {
+      return `${selector} { display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }`;
+    }).join('\n');
+    styleEl.textContent = css;
+
+    // Immediately enforce display: none on any matching elements already in the DOM
+    allRules.forEach(selector => {
+      try {
+        const els = document.querySelectorAll(selector);
+        for (let i = 0; i < els.length; i++) {
+          els[i].style.setProperty('display', 'none', 'important');
+          els[i].style.setProperty('visibility', 'hidden', 'important');
+          els[i].style.setProperty('pointer-events', 'none', 'important');
+          els[i].setAttribute('data-pureshield-zapped', 'true');
+        }
+      } catch (_) {}
+    });
   }
   applyCustomCosmeticRules({});
 
@@ -936,29 +1040,132 @@
 
   function getUniqueSelector(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return '';
+
+    // 1. Stable, non-dynamic ID check
     if (el.id && !el.id.startsWith('pureshield-')) {
-      return `#${CSS.escape(el.id)}`;
+      const isDynamicId = /[a-f0-9]{12,}|[0-9]{7,}|interstitial|overlay/i.test(el.id);
+      if (!isDynamicId) {
+        try {
+          const idSel = '#' + CSS.escape(el.id);
+          if (document.querySelectorAll(idSel).length === 1) {
+            return idSel;
+          }
+        } catch (_) {}
+      }
     }
 
+    // 2. High-specificity attributes for links (href)
+    const tag = el.nodeName.toLowerCase();
+    if (tag === 'a' && el.getAttribute('href')) {
+      const href = el.getAttribute('href').trim();
+      if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        try {
+          const url = new URL(href, window.location.href);
+          const pathPart = url.pathname.replace(/\/$/, '').split('/').pop();
+          if (pathPart && pathPart.length > 3) {
+            const hrefSel = 'a[href*="' + CSS.escape(pathPart) + '"]';
+            if (document.querySelectorAll(hrefSel).length === 1) {
+              return hrefSel;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 3. High-specificity attributes for iframes (src zone/id)
+    if (tag === 'iframe' && el.getAttribute('src')) {
+      const src = el.getAttribute('src').trim();
+      if (src && src !== 'about:blank') {
+        try {
+          const url = new URL(src, window.location.href);
+          const zoneMatch = url.search.match(/zone=([0-9]+)/);
+          if (zoneMatch) {
+            const ifrSel = 'iframe[src*="zone=' + zoneMatch[1] + '"]';
+            if (document.querySelectorAll(ifrSel).length === 1) {
+              return ifrSel;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 4. Meaningful custom attributes (e.g. data-ad-slot, data-zone-id, name)
+    const distinctAttrs = ['data-ad-slot', 'data-zone-id', 'data-widget-id', 'name'];
+    for (const attr of distinctAttrs) {
+      const val = el.getAttribute(attr);
+      if (val && !val.includes('"') && !val.includes("'")) {
+        try {
+          const attrSel = `${tag}[${attr}="${CSS.escape(val)}"]`;
+          if (document.querySelectorAll(attrSel).length === 1) {
+            return attrSel;
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 5. Hierarchical traversal with sibling disambiguation (:nth-of-type)
     let path = [];
     let curr = el;
     while (curr && curr.nodeType === Node.ELEMENT_NODE && curr !== document.body && curr !== document.documentElement) {
       if (curr.id && !curr.id.startsWith('pureshield-')) {
-        path.unshift(`#${CSS.escape(curr.id)}`);
-        break;
+        const isDyn = /[a-f0-9]{12,}|[0-9]{7,}|interstitial|overlay/i.test(curr.id);
+        if (!isDyn) {
+          try {
+            const idSel = '#' + CSS.escape(curr.id);
+            if (document.querySelectorAll(idSel).length === 1) {
+              path.unshift(idSel);
+              break;
+            }
+          } catch (_) {}
+        }
       }
+
       let selector = curr.nodeName.toLowerCase();
       if (curr.className && typeof curr.className === 'string') {
-        const validClasses = curr.className.split(/\s+/).filter(c => c && !c.startsWith('pureshield-') && !c.includes(':') && !c.includes('['));
+        const validClasses = curr.className.split(/\s+/).filter(c => 
+          c && !c.startsWith('pureshield-') && !c.includes(':') && !c.includes('[') &&
+          !/^(is-|has-|active|open|hover|focus|playing|paused|mouseover|splash)/i.test(c)
+        );
         if (validClasses.length > 0) {
           selector += '.' + validClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
         }
       }
+
+      // Sibling disambiguation with :nth-of-type
+      if (curr.parentElement) {
+        try {
+          const siblings = Array.from(curr.parentElement.children).filter(child => {
+            if (child.nodeName.toLowerCase() !== curr.nodeName.toLowerCase()) return false;
+            if (selector.includes('.')) {
+              const classes = selector.split('.').slice(1);
+              return classes.every(cls => child.classList.contains(cls));
+            }
+            return true;
+          });
+          if (siblings.length > 1) {
+            const index = siblings.indexOf(curr) + 1;
+            selector += ':nth-of-type(' + index + ')';
+          }
+        } catch (_) {}
+      }
+
       path.unshift(selector);
-      if (path.length >= 4) break;
+      if (path.length >= 5) break;
+
+      // Early stop if partial path already uniquely matches this element
+      try {
+        const partial = path.join(' > ');
+        const matches = document.querySelectorAll(partial);
+        if (matches.length === 1 && matches[0] === el) {
+          return partial;
+        }
+      } catch (_) {}
+
       curr = curr.parentElement;
     }
-    return path.length > 0 ? path.join(' > ') : (el.nodeName ? el.nodeName.toLowerCase() : '');
+
+    const fullSelector = path.join(' > ');
+    return fullSelector || (el.nodeName ? el.nodeName.toLowerCase() : '');
   }
 
   function activateElementPicker() {
@@ -1306,54 +1513,118 @@
     const selector = getUniqueSelector(targetEl);
     if (!selector) return;
 
-    clearHighlightsAndPreviews();
-    isLocked = false;
+    // 1. Immediately hide the target element & matching elements in the DOM
+    const hideNode = (node) => {
+      if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+      node.style.setProperty('display', 'none', 'important');
+      node.style.setProperty('visibility', 'hidden', 'important');
+      node.style.setProperty('pointer-events', 'none', 'important');
+      node.style.setProperty('height', '0', 'important');
+      node.style.setProperty('width', '0', 'important');
+      node.style.setProperty('opacity', '0', 'important');
+      node.setAttribute('data-pureshield-zapped', 'true');
+    };
 
+    hideNode(targetEl);
+    try {
+      document.querySelectorAll(selector).forEach(hideNode);
+    } catch (_) {}
+
+    // 2. Synchronously append rule to cosmetic style sheet
+    const styleEl = ensureCosmeticStyles();
+    const zapRule = `${selector} { display: none !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }`;
+    styleEl.textContent += '\n' + zapRule;
+    if (!activeCosmeticSelectors.includes(selector)) {
+      activeCosmeticSelectors.push(selector);
+    }
+
+    // 3. Deactivate picker immediately so user exits selection mode cleanly
+    deactivateElementPicker();
+
+    // 4. Show friendly feedback toast with immediate undo
+    showZapperToast('⚡ Element Vaporized', selector, () => {
+      handleUndoZap();
+    });
+
+    // 5. Persist the rule under both hostname and normalized domain
     chrome.storage.local.get(['customCosmeticRules'], (data) => {
       const customRules = data.customCosmeticRules || {};
-      if (!customRules[hostname]) {
-        customRules[hostname] = [];
+      const canonical = hostname.replace(/^www\./i, '');
+      const domainsToUpdate = [hostname];
+      if (canonical !== hostname) {
+        domainsToUpdate.push(canonical);
       }
-      if (!customRules[hostname].includes(selector)) {
-        customRules[hostname].push(selector);
-      }
+      domainsToUpdate.forEach(d => {
+        if (!customRules[d]) customRules[d] = [];
+        if (!customRules[d].includes(selector)) {
+          customRules[d].push(selector);
+        }
+      });
+
       sessionZapHistory.push(selector);
       if (sessionZapHistory.length > 50) sessionZapHistory.shift();
 
-      chrome.storage.local.set({ customCosmeticRules: customRules }, () => {
-        applyCustomCosmeticRules(customRules);
-        showBlockedPopupToast(`⚡ Vaporized: ${selector}`);
-        updateToolbarUI();
-      });
+      chrome.storage.local.set({ customCosmeticRules: customRules });
     });
   }
 
   function handleUndoZap() {
     chrome.storage.local.get(['customCosmeticRules'], (data) => {
       const customRules = data.customCosmeticRules || {};
-      const domainRules = customRules[hostname] || [];
+      const hostRules = customRules[hostname] || [];
+      const normRules = (normalizedDomain !== hostname && customRules[normalizedDomain]) || [];
+      const domainRules = Array.from(new Set([...hostRules, ...normRules]));
 
       if (domainRules.length === 0 && sessionZapHistory.length === 0) {
-        showBlockedPopupToast('No zapped items to undo on this site.');
+        showZapperToast('Notice', 'No zapped items to undo on this site.');
         return;
       }
 
       let removedSelector = sessionZapHistory.pop();
       if (!removedSelector && domainRules.length > 0) {
         removedSelector = domainRules.pop();
-      } else if (removedSelector) {
-        const idx = domainRules.indexOf(removedSelector);
-        if (idx !== -1) domainRules.splice(idx, 1);
       }
 
-      customRules[hostname] = domainRules;
+      if (removedSelector) {
+        const canonical = hostname.replace(/^www\./i, '');
+        const domainsToUpdate = [hostname];
+        if (canonical !== hostname) {
+          domainsToUpdate.push(canonical);
+        }
+        domainsToUpdate.forEach(d => {
+          if (customRules[d]) {
+            const idx = customRules[d].indexOf(removedSelector);
+            if (idx !== -1) customRules[d].splice(idx, 1);
+          }
+        });
+      }
 
       chrome.storage.local.set({ customCosmeticRules: customRules }, () => {
         applyCustomCosmeticRules(customRules);
-        showBlockedPopupToast(`↩️ Restored: ${removedSelector || 'Element'}`);
-        isLocked = false;
-        clearHighlightsAndPreviews();
-        updateToolbarUI();
+
+        // Restore any elements previously hidden inline with this selector
+        if (removedSelector) {
+          try {
+            document.querySelectorAll(removedSelector).forEach(el => {
+              if (el.getAttribute('data-pureshield-zapped') === 'true') {
+                el.removeAttribute('data-pureshield-zapped');
+                el.style.removeProperty('display');
+                el.style.removeProperty('visibility');
+                el.style.removeProperty('pointer-events');
+                el.style.removeProperty('height');
+                el.style.removeProperty('width');
+                el.style.removeProperty('opacity');
+              }
+            });
+          } catch (_) {}
+        }
+
+        showZapperToast('↩️ Element Restored', removedSelector || 'Selector restored');
+        if (pickerActive) {
+          isLocked = false;
+          clearHighlightsAndPreviews();
+          updateToolbarUI();
+        }
       });
     });
   }

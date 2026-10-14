@@ -441,10 +441,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const data = await chrome.storage.local.get(['customCosmeticRules']);
         const customRules = data.customCosmeticRules || {};
-        if (customRules[domain]) {
-          customRules[domain] = customRules[domain].filter(s => s !== selector);
-          if (customRules[domain].length === 0) delete customRules[domain];
-        }
+        const canonical = domain.replace(/^www\./i, '');
+        const domains = Array.from(new Set([domain, canonical, 'www.' + canonical]));
+        domains.forEach(d => {
+          if (customRules[d]) {
+            customRules[d] = customRules[d].filter(s => s !== selector);
+            if (customRules[d].length === 0) delete customRules[d];
+          }
+        });
         await chrome.storage.local.set({ customCosmeticRules: customRules });
         renderCosmeticRules(customRules);
       });
