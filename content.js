@@ -694,7 +694,6 @@
           continue;
         }
 
-        const isAdContainer = v.closest('.ad-container, [class*="ad-container" i], [class*="preroll" i], [id*="preroll" i], .video-ads, .vjs-ad-playing, .is-advertising, [class*="advertising" i], [id*="videoads" i]');
         const isAdSource = src.includes('/ad/') ||
                            src.includes('vast') ||
                            src.includes('preroll') ||
@@ -705,6 +704,17 @@
                            src.includes('exosrv') ||
                            src.includes('exoclick') ||
                            src.includes('trafficstars');
+
+        // Never tamper with main player video engines unless it's an explicit ad stream URL
+        const isLegitPlayerEngine = v.classList.contains('fp-engine') || Boolean(v.closest('#kt_player, .flowplayer, .video-holder, .plyr'));
+        if (isLegitPlayerEngine && !isAdSource) {
+          if (v.playbackRate > 2.0) {
+            try { v.playbackRate = 1.0; } catch (_) {}
+          }
+          continue;
+        }
+
+        const isAdContainer = v.closest('.ad-container, [class*="ad-container" i], [class*="preroll" i], [id*="preroll" i], .video-ads, .vjs-ad-playing, [id*="videoads" i], .kt-player-advertising');
 
         if (isAdContainer || isAdSource) {
           try {

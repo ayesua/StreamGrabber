@@ -966,15 +966,18 @@
       configurable: true
     });
 
-    // 4. KVS Player Auto-Skipper & Pre-roll Sanitizer
+    // 4. KVS Player Pre-roll & Anti-Adblock Honeypot Sanitizer
     function sanitizeKvsFlashvars(fv) {
       if (!fv || typeof fv !== 'object') return fv;
       try {
         const adKeys = [
           'adv_pre', 'adv_pre_vast', 'adv_pre_vast_alt', 'adv_pre_duration',
-          'adv_pre_skip_duration', 'adv_pre_click_url', 'adv_post', 'adv_post_vast',
-          'adv_post_vast_alt', 'adv_post_duration', 'adv_post_skip_duration',
-          'adv_pause', 'adv_pause_vast'
+          'adv_pre_skip_duration', 'adv_pre_click_url', 'adv_pre_url',
+          'adv_pre_alternative', 'adv_pre_alternative_type',
+          'adv_post', 'adv_post_vast', 'adv_post_vast_alt', 'adv_post_duration',
+          'adv_post_skip_duration', 'adv_post_click_url', 'adv_post_url',
+          'adv_pause', 'adv_pause_vast',
+          'protect_block', 'protect_block_html', 'protect_block_html_after'
         ];
         for (const k of adKeys) {
           if (k in fv) {
@@ -991,45 +994,11 @@
         if (config.blockMediaPrerolls && flashvars) {
           sanitizeKvsFlashvars(flashvars);
         }
-        const player = _ktPlayer ? _ktPlayer.apply(this, arguments) : null;
-        if (config.blockMediaPrerolls && player && typeof player.skip_preroll === 'function') {
-          setTimeout(() => {
-            try { player.skip_preroll(); } catch (_) {}
-          }, 20);
-        }
-        return player;
+        return _ktPlayer ? _ktPlayer.apply(this, arguments) : null;
       },
       set: (fn) => { _ktPlayer = fn; },
       configurable: true
     });
-
-    let kvsInterval = null;
-    let kvsCount = 0;
-    function checkKVS() {
-      try {
-        if (!config.blockMediaPrerolls) return;
-        kvsCount++;
-        let playerFound = false;
-        if (window.kvsplayer && typeof window.kvsplayer === 'object') {
-          for (const id in window.kvsplayer) {
-            const p = window.kvsplayer[id];
-            if (p) {
-              playerFound = true;
-              if (typeof p.skip_preroll === 'function') p.skip_preroll();
-              if (typeof p.skip_postroll === 'function') p.skip_postroll();
-            }
-          }
-        }
-        if ((kvsCount > 60 || (!playerFound && kvsCount > 15)) && kvsInterval) {
-          clearInterval(kvsInterval);
-          kvsInterval = null;
-        }
-      } catch (_) {}
-    }
-
-    if (window.kvsplayer || window.kt_player) {
-      kvsInterval = setInterval(checkKVS, 1200);
-    }
   } catch (_) {}
 
   /* ==========================================================================
