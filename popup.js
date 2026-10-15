@@ -82,6 +82,79 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Master Extension Enable / Disable State
+  let isExtensionEnabled = true;
+
+  function updateExtensionStatusUI() {
+    const btnToggle = document.getElementById('btnToggleExtension');
+    const disabledBanner = document.getElementById('disabledBanner');
+    const mediaListContainer = document.getElementById('mediaListContainer');
+    const emptyState = document.getElementById('emptyState');
+    const filterPills = document.querySelector('.filter-pills-bar');
+    const mediaCount = document.getElementById('mediaCount');
+
+    if (btnToggle) {
+      if (isExtensionEnabled) {
+        btnToggle.classList.remove('disabled');
+        btnToggle.setAttribute('title', 'Pause / Disable XtremeGrbr');
+        btnToggle.style.color = '#22c55e';
+      } else {
+        btnToggle.classList.add('disabled');
+        btnToggle.setAttribute('title', 'Turn On / Enable XtremeGrbr');
+        btnToggle.style.color = '#ef4444';
+      }
+    }
+
+    if (disabledBanner) {
+      disabledBanner.style.display = isExtensionEnabled ? 'none' : 'flex';
+    }
+
+    if (!isExtensionEnabled) {
+      if (mediaCount) {
+        mediaCount.textContent = 'Paused';
+        mediaCount.style.background = '#fee2e2';
+        mediaCount.style.color = '#ef4444';
+      }
+      if (mediaListContainer) mediaListContainer.style.display = 'none';
+      if (emptyState) emptyState.style.display = 'none';
+      if (filterPills) filterPills.style.opacity = '0.35';
+    } else {
+      if (mediaCount) {
+        mediaCount.style.background = '#e0f2fe';
+        mediaCount.style.color = 'var(--vdh-blue)';
+      }
+      if (mediaListContainer) mediaListContainer.style.display = 'block';
+      if (filterPills) filterPills.style.opacity = '1';
+    }
+  }
+
+  function toggleExtensionEnabled() {
+    isExtensionEnabled = !isExtensionEnabled;
+    chrome.storage.local.set({ extensionEnabled: isExtensionEnabled }, () => {
+      chrome.runtime.sendMessage({ action: 'SET_EXTENSION_ENABLED', enabled: isExtensionEnabled }, () => {
+        if (chrome.runtime.lastError) {}
+      });
+      updateExtensionStatusUI();
+      if (isExtensionEnabled) {
+        loadTabMedia();
+      }
+    });
+  }
+
+  chrome.storage.local.get({ extensionEnabled: true }, (res) => {
+    isExtensionEnabled = res.extensionEnabled !== false;
+    updateExtensionStatusUI();
+  });
+
+  const btnToggleExtension = document.getElementById('btnToggleExtension');
+  if (btnToggleExtension) {
+    btnToggleExtension.addEventListener('click', toggleExtensionEnabled);
+  }
+  const btnEnableExtension = document.getElementById('btnEnableExtension');
+  if (btnEnableExtension) {
+    btnEnableExtension.addEventListener('click', toggleExtensionEnabled);
+  }
+
   // 1. Get Active Tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
@@ -456,6 +529,10 @@ function closePreview() {
 
 async function loadTabMedia() {
   if (!currentTabId) return;
+  if (!isExtensionEnabled) {
+    updateExtensionStatusUI();
+    return;
+  }
 
   chrome.runtime.sendMessage({ action: 'GET_TAB_MEDIA', tabId: currentTabId }, (response) => {
     if (chrome.runtime.lastError || !response) return;
@@ -476,10 +553,17 @@ function updateFilterCounts(mediaList) {
   const countAll = document.getElementById('countAll');
   const countVideos = document.getElementById('countVideos');
   const countAudios = document.getElementById('countAudios');
+  const mediaCount = document.getElementById('mediaCount');
 
   if (countAll) countAll.textContent = total;
   if (countVideos) countVideos.textContent = videos;
   if (countAudios) countAudios.textContent = audios;
+
+  if (mediaCount && isExtensionEnabled) {
+    mediaCount.textContent = `${total} detected`;
+    mediaCount.style.background = '#e0f2fe';
+    mediaCount.style.color = 'var(--vdh-blue)';
+  }
 }
 
 function groupAndSortMediaList(rawList) {

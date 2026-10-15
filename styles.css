@@ -1561,3 +1561,94 @@ body.theme-dark .version-badge {
   transform: rotate(18deg) scale(1.1);
 }
 
+/* Master Power Toggle Button & Disabled State */
+.btn-power-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #22c55e;
+}
+
+.btn-power-toggle:hover {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #4ade80 !important;
+}
+
+.btn-power-toggle.disabled {
+  color: #ef4444;
+  opacity: 0.9;
+}
+
+.btn-power-toggle.disabled:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+}
+
+.extension-disabled-banner {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 12px 16px 4px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #f8fafc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  animation: fadeInDown 0.25s ease;
+}
+
+.disabled-banner-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.disabled-banner-content {
+  flex: 1;
+}
+
+.disabled-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f87171;
+  margin-bottom: 2px;
+}
+
+.disabled-banner-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.btn-enable-action {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-enable-action:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+

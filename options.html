@@ -148,7 +148,7 @@
   <div class="options-card">
     <div class="options-title">
       <span data-i18n="optionsHeading">XtremeGrbr Settings</span>
-      <span style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.1</span>
+      <span style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.2</span>
     </div>
 
     <!-- Language & Theme Selectors at the Top of Configuration -->
@@ -179,6 +179,17 @@
     </div>
 
     <form id="optionsForm">
+      <!-- Master Extension Enable / Disable Option -->
+      <div class="form-group toggle-group" style="background: #f0fdf4; border: 1.5px solid #86efac; margin-bottom: 14px;">
+        <div class="toggle-label-wrap">
+          <label for="extensionEnabled" style="margin-bottom: 2px; color: #15803d; font-size: 14px; font-weight: 700;" data-i18n="extensionEnabledLabel">Enable XtremeGrbr Extension</label>
+          <div class="form-help" style="color: #166534;" data-i18n="extensionEnabledHelp">Master switch to turn XtremeGrbr video detection and downloads on or off without disabling the extension in Chrome.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="extensionEnabled" checked>
+          <span class="slider" style="background-color: #00a63d;"></span>
+        </label>
+      </div>
       <!-- Ask File Name Toggle Option -->
       <div class="form-group toggle-group">
         <div class="toggle-label-wrap">

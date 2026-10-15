@@ -53,6 +53,25 @@
   if (window.__STREAMGRABBER_INITIALIZED__) return;
   window.__STREAMGRABBER_INITIALIZED__ = true;
 
+  let isExtensionEnabled = true;
+  chrome.storage.local.get({ extensionEnabled: true }, (res) => {
+    isExtensionEnabled = res.extensionEnabled !== false;
+    if (!isExtensionEnabled && typeof floatingBtn !== 'undefined' && floatingBtn) {
+      floatingBtn.style.display = 'none';
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.extensionEnabled !== undefined) {
+      isExtensionEnabled = changes.extensionEnabled.newValue !== false;
+      if (!isExtensionEnabled && typeof floatingBtn !== 'undefined' && floatingBtn) {
+        floatingBtn.style.display = 'none';
+      } else if (isExtensionEnabled && typeof runScan === 'function') {
+        runScan();
+      }
+    }
+  });
+
   const detectedUrls = new Set();
   let cachedPoster = null;
 
@@ -230,6 +249,7 @@
   }
 
   function reportMedia(mediaItem) {
+    if (!isExtensionEnabled) return;
     if (!mediaItem.url || isExcludedUrl(mediaItem.url) || isAdOrAnnounceUrl(mediaItem.url) || detectedUrls.has(mediaItem.url)) return;
 
     detectedUrls.add(mediaItem.url);
@@ -1267,7 +1287,7 @@
 
   function updateTracker() {
     checkUrlChange();
-    if (!isFloatingBtnEnabled) {
+    if (!isExtensionEnabled || !isFloatingBtnEnabled) {
       if (floatingBtn) floatingBtn.style.display = 'none';
       return;
     }

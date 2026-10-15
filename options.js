@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const languageSelector = document.getElementById('languageSelector');
   const themeSelector = document.getElementById('themeSelector');
+  const extensionEnabledInput = document.getElementById('extensionEnabled');
   const askFilenameInput = document.getElementById('askFilename');
   const showFloatingBtnInput = document.getElementById('showFloatingBtn');
   const minSizeInput = document.getElementById('minSize');
@@ -58,6 +59,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 2. Load saved options
+  chrome.storage.local.get({ extensionEnabled: true }, (res) => {
+    if (extensionEnabledInput) extensionEnabledInput.checked = res.extensionEnabled !== false;
+  });
+
+  if (extensionEnabledInput) {
+    extensionEnabledInput.addEventListener('change', () => {
+      const enabled = extensionEnabledInput.checked;
+      chrome.storage.local.set({ extensionEnabled: enabled }, () => {
+        chrome.runtime.sendMessage({ action: 'SET_EXTENSION_ENABLED', enabled }, () => {
+          if (chrome.runtime.lastError) {}
+        });
+        if (toast) {
+          toast.textContent = enabled ? 'XtremeGrbr has been enabled!' : 'XtremeGrbr has been paused/disabled!';
+          toast.style.display = 'block';
+          setTimeout(() => {
+            toast.style.display = 'none';
+            toast.textContent = 'Preferences saved successfully!';
+          }, 2000);
+        }
+      });
+    });
+  }
+
   chrome.storage.sync.get({
     askFilename: false,
     showFloatingBtn: true,

@@ -26,6 +26,12 @@
     </div>
 
     <div class="vdh-nav-actions">
+      <button id="btnToggleExtension" class="icon-btn btn-power-toggle" title="Pause / Disable XtremeGrbr" data-i18n-title="btnToggleExtension">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+          <line x1="12" y1="2" x2="12" y2="12"></line>
+        </svg>
+      </button>
       <button id="btnToggleTheme" class="icon-btn btn-theme-toggle" title="Toggle Light / Dark Theme" data-i18n-title="btnToggleTheme">
         <span id="themeIcon">🌙</span>
       </button>
@@ -50,6 +56,16 @@
       </button>
     </div>
   </header>
+
+  <!-- Extension Disabled Banner (Shown when user turns off XtremeGrbr) -->
+  <div id="disabledBanner" class="extension-disabled-banner" style="display: none;">
+    <div class="disabled-banner-icon">⏸️</div>
+    <div class="disabled-banner-content">
+      <div class="disabled-banner-title" data-i18n="disabledBannerTitle">XtremeGrbr is Paused</div>
+      <div class="disabled-banner-desc" data-i18n="disabledBannerDesc">Video detection, sniffing, and background processing are turned off.</div>
+    </div>
+    <button id="btnEnableExtension" class="btn-enable-action" data-i18n="btnEnableAction">Turn On</button>
+  </div>
 
   <!-- Subbar with Active Tab Info -->
   <div class="vdh-subbar">

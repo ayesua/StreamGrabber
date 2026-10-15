@@ -19,6 +19,30 @@ const chromeDlMap = new Map();
 const directDlMeta = new Map();
 let directDlPollInterval = null;
 
+// Master extension enabled state
+let isExtensionGloballyEnabled = true;
+
+chrome.storage.local.get({ extensionEnabled: true }, (res) => {
+  isExtensionGloballyEnabled = res.extensionEnabled !== false;
+  updateAllBadges();
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.extensionEnabled !== undefined) {
+    isExtensionGloballyEnabled = changes.extensionEnabled.newValue !== false;
+    updateAllBadges();
+  }
+});
+
+function updateAllBadges() {
+  chrome.tabs.query({}, (tabs) => {
+    if (!tabs) return;
+    for (const t of tabs) {
+      if (t.id) updateBadge(t.id);
+    }
+  });
+}
+
 function handleDownloadItemComplete(downloadItemId, downloadId, item) {
   chromeDlMap.delete(downloadItemId);
   directDlMeta.delete(downloadId);
@@ -297,6 +321,7 @@ function isGenericOrTechnicalTitle(title) {
 }
 
 function addMediaItem(tabId, item) {
+  if (!isExtensionGloballyEnabled) return;
   if (!tabId || tabId < 0) return;
   if (!item || !item.url) return;
   if (isExcludedNetworkUrl(item.url, '')) return;
@@ -634,6 +659,12 @@ async function resolveVkVideo(vkData, tabId) {
 }
 
 function updateBadge(tabId) {
+  if (!tabId || tabId < 0) return;
+  if (!isExtensionGloballyEnabled) {
+    chrome.action.setBadgeText({ tabId, text: 'OFF' });
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#64748b' });
+    return;
+  }
   const tabStore = tabMediaStore.get(tabId);
   const count = tabStore ? tabStore.size : 0;
 
@@ -687,6 +718,7 @@ async function cropToVideoElement(fullDataUrl, rect) {
 // 1. Network Sniffer via webRequest
 chrome.webRequest.onHeadersReceived.addListener(
   (details) => {
+    if (!isExtensionGloballyEnabled) return;
     if (!details.tabId || details.tabId < 0) return;
 
     const url = details.url;
@@ -865,6 +897,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: e.message });
       }
     })();
+    return true;
+  }
+
+  if (message.action === 'GET_EXTENSION_STATUS') {
+    sendResponse({ enabled: isExtensionGloballyEnabled });
+    return true;
+  }
+
+  if (message.action === 'SET_EXTENSION_ENABLED') {
+    isExtensionGloballyEnabled = message.enabled !== false;
+    chrome.storage.local.set({ extensionEnabled: isExtensionGloballyEnabled }, () => {
+      updateAllBadges();
+      sendResponse({ success: true, enabled: isExtensionGloballyEnabled });
+    });
     return true;
   }
 
