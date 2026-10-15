@@ -20,6 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateSpinner = document.getElementById('updateSpinner');
   const updateResultAlert = document.getElementById('updateResultAlert');
 
+  // Dynamic Version Display from Manifest
+  try {
+    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.2';
+    const optionsVersionLabel = document.getElementById('optionsVersionLabel');
+    const updateStatusText = document.getElementById('updateStatusText');
+    if (optionsVersionLabel) optionsVersionLabel.textContent = `v${manifestVer}`;
+    if (updateStatusText) updateStatusText.textContent = `Current Version: v${manifestVer}`;
+  } catch (_) {}
+
   // 1. Language Initialization & Real-Time Switching
   if (typeof getStoredLanguage === 'function') {
     getStoredLanguage((lang) => {
