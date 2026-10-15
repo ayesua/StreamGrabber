@@ -559,6 +559,93 @@ function extractVkVideoId(url) {
   }
 }
 
+function getEffectiveReferer(url, originalReferer) {
+  let ref = originalReferer || '';
+  const lowerUrl = (url || '').toLowerCase();
+  const lowerRef = (ref || '').toLowerCase();
+
+  // VoyeurHit / VoyeurOK CDN anti-hotlinking handling
+  if (lowerUrl.includes('voyeur') || lowerRef.includes('voyeur') ||
+      lowerUrl.includes('nv7s.com') ||
+      (lowerUrl.includes('ahcdn.com') && (lowerUrl.includes('/vh/') || lowerRef.includes('voyeur')))) {
+    return 'https://voyeurhit.com/';
+  }
+
+  // xHamster CDN handling
+  if (lowerUrl.includes('xhcdn.com') || lowerRef.includes('xhamster') || (lowerUrl.includes('ahcdn.com') && lowerRef.includes('xhamster'))) {
+    return 'https://xhamster.com/';
+  }
+
+  // ThisVid handling
+  if (lowerUrl.includes('thisvid.com') || lowerRef.includes('thisvid.com')) {
+    return 'https://thisvid.com/';
+  }
+
+  return ref;
+}
+
+function decodeVoyeurHitPath(str) {
+  if (!str || typeof str !== 'string') return '';
+  try {
+    const alphabet = "АВСDЕFGHIJKLМNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,~";
+    let out = "", idx = 0;
+    str = str.replace(/[^АВСЕМA-Za-z0-9\.\,\~]/g, "");
+    do {
+      let r = alphabet.indexOf(str.charAt(idx++)), o = alphabet.indexOf(str.charAt(idx++)), a = alphabet.indexOf(str.charAt(idx++)), s = alphabet.indexOf(str.charAt(idx++));
+      r = r << 2 | o >> 4;
+      o = (15 & o) << 4 | a >> 2;
+      let l = (3 & a) << 6 | s;
+      out += String.fromCharCode(r);
+      if (64 != a) out += String.fromCharCode(o);
+      if (64 != s) out += String.fromCharCode(l);
+    } while (idx < str.length);
+    return unescape(out);
+  } catch (_) {
+    return '';
+  }
+}
+
+async function resolveVoyeurHitStream(videoId, tabId, pageTitle, poster) {
+  if (!videoId || !tabId) return;
+  const targetTitle = pageTitle || tabTitles.get(tabId) || 'Video';
+  const targetPoster = poster || tabPosters.get(tabId) || null;
+  if (targetTitle && !isGenericOrTechnicalTitle(targetTitle)) {
+    tabTitles.set(tabId, targetTitle);
+  }
+  if (targetPoster) {
+    tabPosters.set(tabId, targetPoster);
+  }
+
+  try {
+    const res = await fetch(`https://voyeurhit.com/api/videofile.php?video_id=${videoId}&lifetime=8640000`, {
+      headers: { 'Referer': `https://voyeurhit.com/embed/${videoId}/` }
+    });
+    if (!res.ok) return;
+    const files = await res.json();
+    if (Array.isArray(files) && files.length > 0 && files[0].video_url) {
+      const decodedPath = decodeVoyeurHitPath(files[0].video_url);
+      if (decodedPath && decodedPath.startsWith('/')) {
+        const rawStream = 'https://voyeurhit.com' + decodedPath;
+        const directMp4 = await resolveFinalDirectUrl(rawStream, 'https://voyeurhit.com/');
+        addMediaItem(tabId, {
+          id: 'voyeur_' + videoId,
+          url: directMp4 || rawStream,
+          title: targetTitle,
+          type: 'MP4',
+          quality: detectQualityFromUrl(decodedPath, '1080p Full HD'),
+          isStream: false,
+          poster: targetPoster,
+          source: 'VoyeurHit Stream',
+          timestamp: Date.now()
+        });
+        updateBadge(tabId);
+      }
+    }
+  } catch (err) {
+    console.warn('[XtremeGrbr] resolveVoyeurHitStream error:', err);
+  }
+}
+
 async function resolveVkVideo(vkData, tabId) {
   const videoId = vkData?.videoId;
   if (!videoId || !tabId) return;
@@ -886,6 +973,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === 'RESOLVE_VOYEUR_STREAM') {
+    const targetTabId = tabId || message.tabId;
+    if (targetTabId && message.videoId) {
+      resolveVoyeurHitStream(message.videoId, targetTabId, message.pageTitle, message.poster);
+    }
+    return true;
+  }
+
   if (message.action === 'PREPARE_PREVIEW_RULES') {
     (async () => {
       try {
@@ -1020,6 +1115,7 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
   }
 
   const chosenFormat = (format || 'mp4').toLowerCase();
+  const effectiveReferer = getEffectiveReferer(item.url, referer || item.pageUrl || '');
 
   chrome.storage.sync.get({ askFilename: false, maxThreads: 8 }, async (settings) => {
     const askFilename = Boolean(settings.askFilename);
@@ -1068,7 +1164,7 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
         selectedVariantUrl: item.selectedVariantUrl,
         title: item.title,
         tabId: downloadTabId,
-        referer: referer || item.pageUrl || '',
+        referer: effectiveReferer,
         format: chosenFormat,
         saveAs: askFilename,
         rotation: item.rotation || 0,
@@ -1103,7 +1199,7 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
       if (!cleanBaseTitle) cleanBaseTitle = 'video_completo';
 
       const filename = `${cleanBaseTitle}${ext}`;
-      const pageReferer = referer || item.pageUrl || '';
+      const pageReferer = effectiveReferer;
 
       const initialState = {
         id: downloadId,
@@ -1307,6 +1403,7 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
  */
 async function setDownloadRefererRules(mediaUrl, refererUrl) {
   if (!chrome.declarativeNetRequest) return;
+  refererUrl = getEffectiveReferer(mediaUrl, refererUrl);
   try {
     let refererOrigin = '';
     if (refererUrl) {
@@ -1374,7 +1471,7 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'remove' }
+            { header: 'Referer', operation: 'set', value: (refererUrl && refererUrl.includes('voyeur')) ? 'https://voyeurhit.com/' : (refererUrl || 'https://xhamster.com/') }
           ]
         },
         condition: {
@@ -1400,7 +1497,7 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'remove' }
+            { header: 'Referer', operation: 'set', value: 'https://voyeurhit.com/' }
           ]
         },
         condition: {
@@ -1453,6 +1550,7 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
  * (e.g. xHamster xhcdn.com -> ahcdn.com), fixing the 15-byte "Missing referer" corruption!
  */
 async function resolveFinalDirectUrl(rawUrl, referer) {
+  const effectiveRef = getEffectiveReferer(rawUrl, referer);
   let targetUrl = rawUrl;
   try {
     for (let hop = 0; hop < 3; hop++) {
@@ -1463,7 +1561,7 @@ async function resolveFinalDirectUrl(rawUrl, referer) {
         // Fast HEAD: 0 body bytes, captures 301/302/307 redirects instantaneously in milliseconds
         res = await fetch(targetUrl, {
           method: 'HEAD',
-          headers: referer ? { 'Referer': referer } : {},
+          headers: effectiveRef ? { 'Referer': effectiveRef } : {},
           redirect: 'manual',
           signal: controller.signal
         });
@@ -1473,7 +1571,7 @@ async function resolveFinalDirectUrl(rawUrl, referer) {
             res = await fetch(targetUrl, {
               method: 'GET',
               headers: {
-                ...(referer ? { 'Referer': referer } : {}),
+                ...(effectiveRef ? { 'Referer': effectiveRef } : {}),
                 'Range': 'bytes=0-0'
               },
               redirect: 'manual',
@@ -1504,12 +1602,14 @@ async function resolveFinalDirectUrl(rawUrl, referer) {
 
 async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, expectedSize, downloadTabId) {
   try {
+    const effectiveReferer = getEffectiveReferer(rawUrl, referer);
+
     // 1. Resolve redirect so Chrome connects directly to the final media server with the Referer header
-    const finalUrl = await resolveFinalDirectUrl(rawUrl, referer);
+    const finalUrl = await resolveFinalDirectUrl(rawUrl, effectiveReferer);
 
     // 2. Set declarativeNetRequest rules for the final host and original host
-    if (referer) {
-      await setDownloadRefererRules(finalUrl, referer);
+    if (effectiveReferer) {
+      await setDownloadRefererRules(finalUrl, effectiveReferer);
     }
 
     const downloadOptions = {
@@ -1518,9 +1618,9 @@ async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs
       saveAs: Boolean(saveAs)
     };
 
-    if (referer) {
+    if (effectiveReferer) {
       try {
-        downloadOptions.headers = [{ name: 'Referer', value: referer }];
+        downloadOptions.headers = [{ name: 'Referer', value: effectiveReferer }];
       } catch (e) {}
     }
 
@@ -1539,20 +1639,21 @@ async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs
       } else {
         const err = chrome.runtime.lastError?.message || 'Direct download failed';
         console.warn('[XtremeGrbr] chrome.downloads.download failed, trying fallback fetch:', err);
-        fetchFallbackDownload(finalUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
+        fetchFallbackDownload(finalUrl, filename, effectiveReferer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
       }
     });
   } catch (err) {
     console.error('[XtremeGrbr] Error starting download:', err);
-    fetchFallbackDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
+    fetchFallbackDownload(rawUrl, filename, effectiveReferer, downloadId, saveAs, sendResponse, itemTitle, downloadTabId);
   }
 }
 
 async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs, sendResponse, itemTitle, tabId) {
   try {
     let blob = null;
+    const effectiveReferer = getEffectiveReferer(url, referer);
     try {
-      const headers = referer ? { 'Referer': referer } : {};
+      const headers = effectiveReferer ? { 'Referer': effectiveReferer } : {};
       const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 

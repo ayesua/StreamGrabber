@@ -485,43 +485,20 @@
       }
 
       // VoyeurOK / VoyeurHit / VideoVoyeurHit Direct Stream Resolver
-      const voyeurMatch = fullHtml.match(/data-src=["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
-                          fullHtml.match(/["']embedUrl["']\s*:\s*["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
-                          location.href.match(/voyeurhit\.tube\/embed\/(\d+)/i) ||
-                          location.href.match(/voyeurok\.com\/watch\/(\d+)/i);
+      const voyeurMatch = fullHtml.match(/https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
+                          location.href.match(/(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
+                          fullHtml.match(/data-src=["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
+                          fullHtml.match(/["']embedUrl["']\s*:\s*["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i);
       if (voyeurMatch && voyeurMatch[1]) {
         const vidId = voyeurMatch[1];
-        fetch(`https://voyeurhit.tube/api/videofile.php?video_id=${vidId}&lifetime=8640000`, {
-          headers: { 'Referer': `https://voyeurhit.tube/embed/${vidId}/` }
-        }).then(r => r.json()).then(files => {
-          if (Array.isArray(files) && files.length > 0 && files[0].video_url) {
-            function b164_dec(str) {
-              const alphabet = "АВСDЕFGHIJKLМNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,~";
-              let out = "", idx = 0;
-              str = str.replace(/[^АВСЕМA-Za-z0-9\.\,\~]/g, "");
-              do {
-                let r = alphabet.indexOf(str.charAt(idx++)), o = alphabet.indexOf(str.charAt(idx++)), a = alphabet.indexOf(str.charAt(idx++)), s = alphabet.indexOf(str.charAt(idx++));
-                r = r << 2 | o >> 4;
-                o = (15 & o) << 4 | a >> 2;
-                let l = (3 & a) << 6 | s;
-                out += String.fromCharCode(r);
-                if (64 != a) out += String.fromCharCode(o);
-                if (64 != s) out += String.fromCharCode(l);
-              } while (idx < str.length);
-              return unescape(out);
-            }
-            const path = b164_dec(files[0].video_url);
-            if (path && path.startsWith('/')) {
-              const fullStream = 'https://voyeurhit.tube' + path;
-              reportMedia({
-                url: fullStream,
-                quality: detectQualityFromUrl(path, '1080p Full HD'),
-                type: 'MP4',
-                poster: poster
-              });
-            }
-          }
-        }).catch(() => {});
+        chrome.runtime.sendMessage({
+          action: 'RESOLVE_VOYEUR_STREAM',
+          videoId: vidId,
+          pageTitle: getPageTitle(),
+          poster: poster
+        }, () => {
+          if (chrome.runtime.lastError) {}
+        });
       }
 
       // Base64 Encoded video URLs (common anti-leech obfuscation on tube sites)

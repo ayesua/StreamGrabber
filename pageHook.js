@@ -81,7 +81,28 @@
     }
   } catch (e) {}
 
-  // Intercept window.fetch to sniff dynamic Yandex/VK stream API responses & defuse VAST ads
+  function decodeVoyeurHitPath(str) {
+    if (!str || typeof str !== 'string') return '';
+    try {
+      const alphabet = "АВСDЕFGHIJKLМNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,~";
+      let out = "", idx = 0;
+      str = str.replace(/[^АВСЕМA-Za-z0-9\.\,\~]/g, "");
+      do {
+        let r = alphabet.indexOf(str.charAt(idx++)), o = alphabet.indexOf(str.charAt(idx++)), a = alphabet.indexOf(str.charAt(idx++)), s = alphabet.indexOf(str.charAt(idx++));
+        r = r << 2 | o >> 4;
+        o = (15 & o) << 4 | a >> 2;
+        let l = (3 & a) << 6 | s;
+        out += String.fromCharCode(r);
+        if (64 != a) out += String.fromCharCode(o);
+        if (64 != s) out += String.fromCharCode(l);
+      } while (idx < str.length);
+      return unescape(out);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // Intercept window.fetch to sniff dynamic Yandex/VK/VoyeurHit stream API responses & defuse VAST ads
   try {
     const origFetch = window.fetch;
     if (origFetch) {
@@ -113,39 +134,64 @@
 
         const promise = origFetch.apply(this, arguments);
 
-        if (url && typeof url === 'string' && url.includes('al_video.php')) {
-          promise.then(res => {
-            try {
-              const clone = res.clone();
-              clone.text().then(text => {
-                if (text && text.includes('player')) {
-                  const json = JSON.parse(text);
-                  let player = null;
-                  if (Array.isArray(json?.payload)) {
-                    for (const part of json.payload) {
-                      if (Array.isArray(part)) {
-                        const found = part.find(x => x && x.player?.params?.[0]);
-                        if (found) { player = found.player.params[0]; break; }
+        if (url && typeof url === 'string') {
+          if (url.includes('videofile.php')) {
+            promise.then(res => {
+              try {
+                const clone = res.clone();
+                clone.json().then(files => {
+                  if (Array.isArray(files) && files.length > 0 && files[0].video_url) {
+                    const decoded = decodeVoyeurHitPath(files[0].video_url);
+                    if (decoded && decoded.startsWith('/')) {
+                      const origin = (location.origin.includes('voyeur') ? location.origin : 'https://voyeurhit.com');
+                      broadcastStreamData({
+                        url: origin + decoded,
+                        type: 'MP4',
+                        quality: detectQualityFromUrl(decoded, '1080p Full HD'),
+                        title: document.title,
+                        poster: null
+                      });
+                    }
+                  }
+                }).catch(() => {});
+              } catch (err) {}
+            }).catch(() => {});
+          }
+
+          if (url.includes('al_video.php')) {
+            promise.then(res => {
+              try {
+                const clone = res.clone();
+                clone.text().then(text => {
+                  if (text && text.includes('player')) {
+                    const json = JSON.parse(text);
+                    let player = null;
+                    if (Array.isArray(json?.payload)) {
+                      for (const part of json.payload) {
+                        if (Array.isArray(part)) {
+                          const found = part.find(x => x && x.player?.params?.[0]);
+                          if (found) { player = found.player.params[0]; break; }
+                        }
+                      }
+                    }
+                    if (player) {
+                      const title = player.md_title || document.title;
+                      const poster = player.jpg || null;
+                      if (player.hls) {
+                        broadcastStreamData({ url: player.hls, type: 'HLS', quality: 'Auto HD', title, poster });
+                      }
+                      const qMap = { url2160: '4K 2160p', url1440: '2K 1440p', url1080: '1080p Full HD', url720: '720p HD', url480: '480p SD', url360: '360p SD', url240: '240p SD' };
+                      for (const [k, q] of Object.entries(qMap)) {
+                        if (player[k]) {
+                          broadcastStreamData({ url: player[k], type: 'MP4', quality: q, title, poster });
+                        }
                       }
                     }
                   }
-                  if (player) {
-                    const title = player.md_title || document.title;
-                    const poster = player.jpg || null;
-                    if (player.hls) {
-                      broadcastStreamData({ url: player.hls, type: 'HLS', quality: 'Auto HD', title, poster });
-                    }
-                    const qMap = { url2160: '4K 2160p', url1440: '2K 1440p', url1080: '1080p Full HD', url720: '720p HD', url480: '480p SD', url360: '360p SD', url240: '240p SD' };
-                    for (const [k, q] of Object.entries(qMap)) {
-                      if (player[k]) {
-                        broadcastStreamData({ url: player[k], type: 'MP4', quality: q, title, poster });
-                      }
-                    }
-                  }
-                }
-              }).catch(() => {});
-            } catch (err) {}
-          }).catch(() => {});
+                }).catch(() => {});
+              } catch (err) {}
+            }).catch(() => {});
+          }
         }
 
         return promise;
@@ -173,6 +219,29 @@
               type: (lower.includes('.m3u8') || lower.includes('strm.yandex')) ? 'HLS' : 'MP4',
               quality: detectQualityFromUrl(this.__xg_url),
               title: document.title
+            });
+          }
+
+          if (lower.includes('videofile.php')) {
+            this.addEventListener('load', function () {
+              try {
+                if (this.responseText) {
+                  const files = JSON.parse(this.responseText);
+                  if (Array.isArray(files) && files.length > 0 && files[0].video_url) {
+                    const decoded = decodeVoyeurHitPath(files[0].video_url);
+                    if (decoded && decoded.startsWith('/')) {
+                      const origin = (location.origin.includes('voyeur') ? location.origin : 'https://voyeurhit.com');
+                      broadcastStreamData({
+                        url: origin + decoded,
+                        type: 'MP4',
+                        quality: detectQualityFromUrl(decoded, '1080p Full HD'),
+                        title: document.title,
+                        poster: null
+                      });
+                    }
+                  }
+                }
+              } catch (err) {}
             });
           }
 
