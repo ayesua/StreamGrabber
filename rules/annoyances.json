@@ -231,11 +231,11 @@
   },
   {
     "id": 4021,
-    "priority": 1,
+    "priority": 10,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
-        { "header": "Referer", "operation": "remove" }
+        { "header": "Referer", "operation": "set", "value": "https://voyeurhit.com/" }
       ]
     },
     "condition": {
@@ -245,11 +245,11 @@
   },
   {
     "id": 4022,
-    "priority": 1,
+    "priority": 10,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
-        { "header": "Referer", "operation": "remove" }
+        { "header": "Referer", "operation": "set", "value": "https://voyeurhit.com/" }
       ]
     },
     "condition": {
@@ -259,44 +259,30 @@
   },
   {
     "id": 4023,
-    "priority": 1,
+    "priority": 10,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
-        { "header": "Referer", "operation": "remove" }
+        { "header": "Referer", "operation": "set", "value": "https://voyeurhit.com/" }
       ]
     },
     "condition": {
-      "urlFilter": "||voyeurok.com^",
-      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+      "urlFilter": "||ahcdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other"]
     }
   },
   {
     "id": 4024,
-    "priority": 1,
+    "priority": 10,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
-        { "header": "Referer", "operation": "remove" }
+        { "header": "Referer", "operation": "set", "value": "https://voyeurhit.com/" }
       ]
     },
     "condition": {
-      "urlFilter": "||voyeurhit.tube^",
-      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
-    }
-  },
-  {
-    "id": 4025,
-    "priority": 1,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        { "header": "Referer", "operation": "remove" }
-      ]
-    },
-    "condition": {
-      "urlFilter": "||videovoyeurhit.tube^",
-      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+      "urlFilter": "||nv7s.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other"]
     }
   }
 ]

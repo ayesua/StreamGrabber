@@ -14,46 +14,7 @@
     return; // Never inject into critical Google Workspace apps
   }
 
-  // Defuse referer-checking CDN blocks (e.g. Error 224003 on voyeurok, videovoyeurhit, voyeurhit)
-  const isVoyeurDomain = ['voyeurhit', 'videovoyeurhit', 'voyeurok'].some(d => hostname.includes(d));
-  if (isVoyeurDomain) {
-    console.log('[XtremeShld:Debug] Injected into Voyeur domain:', hostname, '(isTop:', window === window.top, ')');
-    const setMetaReferrer = () => {
-      try {
-        let meta = document.querySelector('meta[name="referrer"]');
-        const target = document.head || document.documentElement;
-        if (!meta) {
-          if (!target) return false;
-          meta = document.createElement('meta');
-          meta.name = 'referrer';
-          meta.content = 'no-referrer';
-          target.appendChild(meta);
-          console.log('[XtremeShld:Debug] Referrer-policy successfully set to no-referrer on', hostname);
-          return true;
-        } else {
-          meta.content = 'no-referrer';
-          console.log('[XtremeShld:Debug] Referrer-policy updated to no-referrer on', hostname);
-          return true;
-        }
-      } catch (e) {
-        console.warn('[XtremeShld:Debug] Error setting meta referrer:', e);
-      }
-      return false;
-    };
 
-    if (!setMetaReferrer()) {
-      if (document.readyState === 'loading') {
-        const obs = new MutationObserver(() => {
-          if (setMetaReferrer()) obs.disconnect();
-        });
-        obs.observe(document, { childList: true, subtree: true });
-        document.addEventListener('DOMContentLoaded', () => {
-          setMetaReferrer();
-          obs.disconnect();
-        }, { once: true });
-      }
-    }
-  }
 
   // Active configuration received from content script
   const isInitialWhitelisted = document.documentElement?.getAttribute('data-extremeshield-whitelisted') === 'true';
