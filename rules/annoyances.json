@@ -88,5 +88,145 @@
       "urlFilter": "||cleverpush.com^",
       "resourceTypes": ["script", "xmlhttprequest"]
     }
+  },
+  {
+    "id": 4011,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||ahcdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4012,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||nv7s.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4013,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||xhcdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4014,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||tkncdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4015,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||phprcdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4016,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||phncdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4017,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||ypncdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4018,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||rdtcdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4019,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||bcvcdn.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4020,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||vpcdn.net^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
   }
 ]

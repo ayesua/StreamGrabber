@@ -817,6 +817,37 @@
       if (!player || typeof player !== 'object' || player.__es_wrapped__) return player;
       player.__es_wrapped__ = true;
 
+      function attachPlayerGuards(p) {
+        if (!p || typeof p.on !== 'function') return;
+        try {
+          p.on('adError', () => {
+            console.warn('[XtremeShld] Handled JWPlayer adError, resuming main content');
+            try { p.play(); } catch (_) {}
+          });
+          p.on('setupError', (e) => {
+            console.warn('[XtremeShld] Handled JWPlayer setupError:', e);
+          });
+          p.on('error', (e) => {
+            console.warn('[XtremeShld] JWPlayer error event intercepted:', e);
+            // Automatic recovery for transient Error 224003 / 224001 media load failures
+            if (e && (e.code === 224003 || e.code === 224001 || (typeof e.message === 'string' && (e.message.includes('224003') || e.message.includes('224001'))))) {
+              console.warn('[XtremeShld] Attempting automated playback recovery for Error 224003');
+              setTimeout(() => {
+                try {
+                  const item = typeof p.getPlaylistItem === 'function' ? p.getPlaylistItem() : null;
+                  if (item && item.file && typeof p.load === 'function') {
+                    p.load([item]);
+                    p.play();
+                  } else if (typeof p.play === 'function') {
+                    p.play();
+                  }
+                } catch (_) {}
+              }, 400);
+            }
+          });
+        } catch (_) {}
+      }
+
       if (typeof player.setup === 'function') {
         const origSetup = player.setup;
         player.setup = function (options) {
@@ -829,36 +860,23 @@
             }
           }
           const res = origSetup.apply(this, arguments);
-          if (typeof player.on === 'function') {
-            try {
-              player.on('adError', () => {
-                console.warn('[XtremeShld] Handled JWPlayer adError, resuming main content');
-                try { player.play(); } catch (_) {}
-              });
-              player.on('setupError', (e) => {
-                console.warn('[XtremeShld] Handled JWPlayer setupError:', e);
-              });
-            } catch (_) {}
-          }
+          attachPlayerGuards(player);
           return res;
         };
       }
 
-      if (typeof player.on === 'function') {
-        try {
-          player.on('adError', () => {
-            console.warn('[XtremeShld] Handled JWPlayer adError fallback, resuming main content');
-            try { player.play(); } catch (_) {}
-          });
-          player.on('setupError', (e) => {
-            console.warn('[XtremeShld] Handled JWPlayer setupError fallback:', e);
-          });
-        } catch (_) {}
-      }
+      attachPlayerGuards(player);
 
       if (typeof player.playAd === 'function') {
         player.playAd = function () {
           console.warn('[XtremeShld] JWPlayer playAd defused to prevent Error 224003');
+          setTimeout(() => {
+            try {
+              if (typeof player.play === 'function') {
+                player.play();
+              }
+            } catch (_) {}
+          }, 30);
           return false;
         };
       }
@@ -918,6 +936,16 @@
       get: () => _pl3748,
       set: (p) => {
         _pl3748 = wrapJWPlayerInstance(p);
+      },
+      configurable: true
+    });
+
+    if (window.ktk_player) wrapJWPlayerInstance(window.ktk_player);
+    let _ktk_player = window.ktk_player;
+    Object.defineProperty(window, 'ktk_player', {
+      get: () => _ktk_player,
+      set: (p) => {
+        _ktk_player = wrapJWPlayerInstance(p);
       },
       configurable: true
     });
