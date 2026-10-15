@@ -555,15 +555,24 @@
       }
 
       // VoyeurOK / VoyeurHit / VideoVoyeurHit Direct Stream Resolver
-      const voyeurMatch = fullHtml.match(/https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
-                          location.href.match(/(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
-                          fullHtml.match(/data-src=["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
-                          fullHtml.match(/["']embedUrl["']\s*:\s*["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i);
-      if (voyeurMatch && voyeurMatch[1]) {
-        const vidId = voyeurMatch[1];
+      let voyeurVidId = null;
+      const voyeurEl = document.querySelector('#player[data-src], iframe[src*="voyeurhit"], iframe[data-src*="voyeurhit"], iframe[src*="videovoyeurhit"], iframe[data-src*="videovoyeurhit"], [data-remote*="videovoyeurhit"]');
+      if (voyeurEl) {
+        const elSrc = voyeurEl.src || voyeurEl.getAttribute('data-src') || voyeurEl.getAttribute('data-remote') || '';
+        const m = elSrc.match(/(?:embed|videos)\/(\d+)/i);
+        if (m && m[1]) voyeurVidId = m[1];
+      }
+      if (!voyeurVidId) {
+        const voyeurMatch = fullHtml.match(/https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
+                            location.href.match(/(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
+                            fullHtml.match(/data-src=["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
+                            fullHtml.match(/["']embedUrl["']\s*:\s*["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i);
+        if (voyeurMatch && voyeurMatch[1]) voyeurVidId = voyeurMatch[1];
+      }
+      if (voyeurVidId) {
         chrome.runtime.sendMessage({
           action: 'RESOLVE_VOYEUR_STREAM',
-          videoId: vidId,
+          videoId: voyeurVidId,
           pageTitle: getPageTitle(),
           poster: poster
         }, () => {

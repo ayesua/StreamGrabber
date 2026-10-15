@@ -645,13 +645,17 @@ async function resolveVoyeurHitStream(videoId, tabId, pageTitle, poster) {
       const decodedPath = decodeVoyeurHitPath(files[0].video_url);
       if (decodedPath && decodedPath.startsWith('/')) {
         const rawStream = 'https://voyeurhit.com' + decodedPath;
-        const directMp4 = await resolveFinalDirectUrl(rawStream, 'https://voyeurhit.com/');
+        const resolved = await resolveFinalDirectUrl(rawStream, 'https://voyeurhit.com/');
+        const finalUrl = (typeof resolved === 'object' && resolved.url) ? resolved.url : (typeof resolved === 'string' ? resolved : rawStream);
+        const resolvedSize = (typeof resolved === 'object' && resolved.size) ? resolved.size : null;
+
         addMediaItem(tabId, {
           id: 'voyeur_' + videoId,
-          url: directMp4 || rawStream,
+          url: finalUrl,
           title: targetTitle,
           type: 'MP4',
           quality: detectQualityFromUrl(decodedPath, '1080p Full HD'),
+          size: resolvedSize,
           isStream: false,
           poster: targetPoster,
           source: 'VoyeurHit Stream',
@@ -1568,57 +1572,45 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
 /**
  * Resolves HTTP redirects (302, 301, 307) upfront before calling chrome.downloads.download.
  * This prevents Chrome from stripping Referer headers on cross-origin redirects
- * (e.g. xHamster xhcdn.com -> ahcdn.com), fixing the 15-byte "Missing referer" corruption!
+ * (e.g. xHamster xhcdn.com -> ahcdn.com or VoyeurHit voyeurhit.com -> ahcdn.com).
  */
 async function resolveFinalDirectUrl(rawUrl, referer) {
   const effectiveRef = getEffectiveReferer(rawUrl, referer);
-  let targetUrl = rawUrl;
   try {
-    for (let hop = 0; hop < 3; hop++) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1200);
-      let res = null;
-      try {
-        // Fast HEAD: 0 body bytes, captures 301/302/307 redirects instantaneously in milliseconds
-        res = await fetch(targetUrl, {
-          method: 'HEAD',
-          headers: effectiveRef ? { 'Referer': effectiveRef } : {},
-          redirect: 'manual',
-          signal: controller.signal
-        });
-      } catch (headErr) {
-        if (!controller.signal.aborted) {
-          try {
-            res = await fetch(targetUrl, {
-              method: 'GET',
-              headers: {
-                ...(effectiveRef ? { 'Referer': effectiveRef } : {}),
-                'Range': 'bytes=0-0'
-              },
-              redirect: 'manual',
-              signal: controller.signal
-            });
-          } catch (e) {}
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    try {
+      // 1-byte range request with redirect: 'follow'.
+      // Browser automatically follows 301/302 redirects to the final media server.
+      // res.url is guaranteed to be the final direct CDN URL!
+      const res = await fetch(rawUrl, {
+        method: 'GET',
+        headers: {
+          ...(effectiveRef ? { 'Referer': effectiveRef } : {}),
+          'Range': 'bytes=0-0'
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      if (res && res.url && res.url.startsWith('http')) {
+        let size = null;
+        const cr = res.headers.get('content-range');
+        if (cr && cr.includes('/')) {
+          const parsed = parseInt(cr.split('/')[1], 10);
+          if (parsed > 0) size = parsed;
+        } else {
+          const cl = res.headers.get('content-length');
+          if (cl && parseInt(cl, 10) > 1000) size = parseInt(cl, 10);
         }
-      } finally {
-        clearTimeout(timer);
-        // Abort immediately to ensure no connection or response body stream stays open
-        try { controller.abort(); } catch (e) {}
+        return { url: res.url, size };
       }
-
-      if (res && res.status >= 300 && res.status < 400) {
-        const loc = res.headers.get('location');
-        if (loc) {
-          targetUrl = new URL(loc, targetUrl).href;
-          continue;
-        }
-      }
-      break;
+    } finally {
+      clearTimeout(timer);
     }
   } catch (e) {
     console.warn('[XtremeGrbr] Redirect resolution notice:', e.message);
   }
-  return targetUrl;
+  return { url: rawUrl, size: null };
 }
 
 async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs, sendResponse, itemTitle, expectedSize, downloadTabId) {
@@ -1626,7 +1618,11 @@ async function startDirectDownload(rawUrl, filename, referer, downloadId, saveAs
     const effectiveReferer = getEffectiveReferer(rawUrl, referer);
 
     // 1. Resolve redirect so Chrome connects directly to the final media server with the Referer header
-    const finalUrl = await resolveFinalDirectUrl(rawUrl, effectiveReferer);
+    const resolved = await resolveFinalDirectUrl(rawUrl, effectiveReferer);
+    const finalUrl = (typeof resolved === 'object' && resolved.url) ? resolved.url : (resolved || rawUrl);
+    if (!expectedSize && typeof resolved === 'object' && resolved.size) {
+      expectedSize = resolved.size;
+    }
 
     // 2. Set declarativeNetRequest rules for the final host and original host
     if (effectiveReferer) {
