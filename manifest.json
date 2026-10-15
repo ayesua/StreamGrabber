@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "XtremeShld: Ultimate Privacy, Pop-up & Ad Blocker",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "Ultra high-speed privacy defense against trackers, pop-ups, fingerprinting, and video ads. 100% free with zero paywalls.",
   "permissions": [
     "storage",

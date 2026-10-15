@@ -228,5 +228,47 @@
       "urlFilter": "||vpcdn.net^",
       "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
     }
+  },
+  {
+    "id": 4021,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||videovoyeurhit.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4022,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||voyeurhit.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4023,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||voyeurok.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
   }
 ]

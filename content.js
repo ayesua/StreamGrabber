@@ -591,6 +591,17 @@
       }
     }
 
+    // 3D. Defuse Referer-Checking Video Embeds (voyeurok, videovoyeurhit, voyeurhit)
+    if (targetRoot.querySelectorAll) {
+      const voyeurIframes = targetRoot.querySelectorAll('iframe[src*="voyeurhit"], iframe[data-src*="voyeurhit"], iframe[src*="voyeurok"], iframe[data-src*="voyeurok"]');
+      for (let i = 0; i < voyeurIframes.length; i++) {
+        const ifr = voyeurIframes[i];
+        if (ifr.getAttribute('referrerpolicy') !== 'no-referrer') {
+          ifr.setAttribute('referrerpolicy', 'no-referrer');
+        }
+      }
+    }
+
     // 4. Scroll Lock Recovery (Unlocks html and body overflow - suppressed during active typing)
     if (!isTextInputActive()) {
       unlockScroll();
@@ -706,7 +717,9 @@
                            src.includes('trafficstars');
 
         // Never tamper with main player video engines unless it's an explicit ad stream URL
-        const isLegitPlayerEngine = v.classList.contains('fp-engine') || Boolean(v.closest('#kt_player, .flowplayer, .video-holder, .plyr'));
+        const isLegitPlayerEngine = v.classList.contains('fp-engine') ||
+                                    v.classList.contains('jw-video') ||
+                                    Boolean(v.closest('#kt_player, .flowplayer, .video-holder, .plyr, .jwplayer, [class*="jwplayer" i]'));
         if (isLegitPlayerEngine && !isAdSource) {
           if (v.playbackRate > 2.0) {
             try { v.playbackRate = 1.0; } catch (_) {}

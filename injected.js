@@ -14,6 +14,21 @@
     return; // Never inject into critical Google Workspace apps
   }
 
+  // Defuse referer-checking CDN blocks (e.g. Error 224003 on voyeurok, videovoyeurhit, voyeurhit)
+  if (['videovoyeurhit.com', 'voyeurhit.com', 'voyeurok.com'].some(d => hostname === d || hostname.endsWith('.' + d))) {
+    try {
+      let meta = document.querySelector('meta[name="referrer"]');
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'referrer';
+        meta.content = 'no-referrer';
+        (document.head || document.documentElement).appendChild(meta);
+      } else {
+        meta.content = 'no-referrer';
+      }
+    } catch (_) {}
+  }
+
   // Active configuration received from content script
   const isInitialWhitelisted = document.documentElement?.getAttribute('data-extremeshield-whitelisted') === 'true';
   const config = {
@@ -763,6 +778,13 @@
       window.fetch = function (resource, init) {
         if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
           const urlStr = String(typeof resource === 'string' ? resource : (resource?.url || ''));
+          if (urlStr.includes('vast.yomeno.xyz')) {
+            return Promise.resolve(new Response(JSON.stringify({ campaign: null }), {
+              status: 200,
+              statusText: 'OK',
+              headers: { 'Content-Type': 'application/json' }
+            }));
+          }
           if (isVastAdUrl(urlStr)) {
             console.warn('[XtremeShld] Returning empty VAST XML response to prevent Error 224003:', urlStr);
             return Promise.resolve(new Response(EMPTY_VAST_XML, {
@@ -835,7 +857,8 @@
               setTimeout(() => {
                 try {
                   const item = typeof p.getPlaylistItem === 'function' ? p.getPlaylistItem() : null;
-                  if (item && item.file && typeof p.load === 'function') {
+                  const hasMedia = item && (item.file || (Array.isArray(item.sources) && item.sources.length > 0));
+                  if (hasMedia && typeof p.load === 'function') {
                     p.load([item]);
                     p.play();
                   } else if (typeof p.play === 'function') {
@@ -963,6 +986,13 @@
     Object.defineProperty(window, 'ad_preroll2', {
       get: () => _ad_preroll2 || (() => false),
       set: () => { _ad_preroll2 = () => false; },
+      configurable: true
+    });
+
+    let _ad_preroll = window.ad_preroll;
+    Object.defineProperty(window, 'ad_preroll', {
+      get: () => _ad_preroll || (() => false),
+      set: () => { _ad_preroll = () => false; },
       configurable: true
     });
 
