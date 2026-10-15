@@ -381,38 +381,57 @@ function openPreview(item) {
 
   const streamUrl = item.selectedVariantUrl || item.url;
 
-  if (item.type === 'HLS' || streamUrl.includes('.m3u8')) {
-    if (window.Hls && window.Hls.isSupported()) {
-      currentHlsInstance = new window.Hls({
-        maxBufferLength: 15,
-        enableWorker: true
-      });
-      currentHlsInstance.loadSource(streamUrl);
-      currentHlsInstance.attachMedia(player);
-      currentHlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
-        player.play().catch(() => {});
-      });
-      currentHlsInstance.on(window.Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          if (statusMsg) {
-            statusMsg.textContent = 'Preview notice: Direct stream playback requires unrestricted CORS. Full video download remains available!';
-            statusMsg.style.display = 'block';
+  player.onerror = () => {
+    const err = player.error;
+    console.warn('[XtremeGrbr] Preview error:', err);
+    if (statusMsg) {
+      statusMsg.innerHTML = 'Preview note: Server restricted direct in-player playback. <br><strong>Click "Download Now" to download the complete HD file directly!</strong>';
+      statusMsg.style.display = 'block';
+    }
+  };
+
+  const startPlayback = () => {
+    if (item.type === 'HLS' || streamUrl.includes('.m3u8')) {
+      if (window.Hls && window.Hls.isSupported()) {
+        currentHlsInstance = new window.Hls({
+          maxBufferLength: 15,
+          enableWorker: true
+        });
+        currentHlsInstance.loadSource(streamUrl);
+        currentHlsInstance.attachMedia(player);
+        currentHlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
+          player.play().catch(() => {});
+        });
+        currentHlsInstance.on(window.Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            if (statusMsg) {
+              statusMsg.textContent = 'Preview notice: Direct stream playback requires unrestricted CORS. Full video download remains available!';
+              statusMsg.style.display = 'block';
+            }
           }
+        });
+      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        player.src = streamUrl;
+        player.play().catch(() => {});
+      } else {
+        if (statusMsg) {
+          statusMsg.textContent = 'HLS preview playback not supported natively in this browser.';
+          statusMsg.style.display = 'block';
         }
-      });
-    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+      }
+    } else {
       player.src = streamUrl;
       player.play().catch(() => {});
-    } else {
-      if (statusMsg) {
-        statusMsg.textContent = 'HLS preview playback not supported natively in this browser.';
-        statusMsg.style.display = 'block';
-      }
     }
-  } else {
-    player.src = streamUrl;
-    player.play().catch(() => {});
-  }
+  };
+
+  chrome.runtime.sendMessage({
+    action: 'PREPARE_PREVIEW_RULES',
+    url: streamUrl,
+    pageUrl: item.pageUrl || ''
+  }, () => {
+    startPlayback();
+  });
 }
 
 function closePreviewPlayerOnly() {

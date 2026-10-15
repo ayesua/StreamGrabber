@@ -172,7 +172,16 @@ function parseMediaInfo(url, contentType, contentLength) {
   let quality = 'Auto HD';
   const resMatch = url.match(/(\d{3,4})p/i) || url.match(/(\d{3,4})x(\d{3,4})/i);
   if (resMatch) {
-    quality = resMatch[0];
+    const num = parseInt(resMatch[1], 10);
+    if (num >= 1080) quality = `${num}p Full HD`;
+    else if (num >= 720) quality = `${num}p HD`;
+    else quality = `${num}p SD`;
+  } else if (lowerUrl.includes('_hq') || lowerUrl.includes('hq.mp4') || lowerUrl.includes('_hd') || lowerUrl.includes('hd.mp4') || lowerUrl.includes('1080')) {
+    quality = '1080p Full HD';
+  } else if (lowerUrl.includes('720')) {
+    quality = '720p HD';
+  } else if (lowerUrl.includes('_lq') || lowerUrl.includes('lq.mp4') || lowerUrl.includes('_sd') || lowerUrl.includes('sd.mp4') || lowerUrl.includes('480')) {
+    quality = '480p SD';
   } else if (isStream) {
     quality = 'HD Stream';
   }
@@ -845,6 +854,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === 'PREPARE_PREVIEW_RULES') {
+    (async () => {
+      try {
+        if (message.url) {
+          await setDownloadRefererRules(message.url, message.pageUrl || '');
+        }
+        sendResponse({ success: true });
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
+    return true;
+  }
+
   if (message.action === 'GET_TAB_MEDIA') {
     const tabStore = tabMediaStore.get(message.tabId);
     let mediaList = tabStore ? Array.from(tabStore.values()) : [];
@@ -1237,10 +1260,14 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
  * Injects required Referer and Origin headers at the network layer.
  */
 async function setDownloadRefererRules(mediaUrl, refererUrl) {
-  if (!refererUrl || !chrome.declarativeNetRequest) return;
+  if (!chrome.declarativeNetRequest) return;
   try {
-    const refererParsed = new URL(refererUrl);
-    const refererOrigin = refererParsed.origin;
+    let refererOrigin = '';
+    if (refererUrl) {
+      try {
+        refererOrigin = new URL(refererUrl).origin;
+      } catch (e) {}
+    }
     const mediaHost = new URL(mediaUrl).hostname;
     const parts = mediaHost.split('.');
     const baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : mediaHost;
@@ -1252,8 +1279,10 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'set', value: refererUrl },
-            { header: 'Origin', operation: 'set', value: refererOrigin }
+            ...(refererUrl ? [
+              { header: 'Referer', operation: 'set', value: refererUrl },
+              { header: 'Origin', operation: 'set', value: refererOrigin }
+            ] : [])
           ]
         },
         condition: {
@@ -1267,8 +1296,10 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'set', value: refererUrl },
-            { header: 'Origin', operation: 'set', value: refererOrigin }
+            ...(refererUrl ? [
+              { header: 'Referer', operation: 'set', value: refererUrl },
+              { header: 'Origin', operation: 'set', value: refererOrigin }
+            ] : [])
           ]
         },
         condition: {
@@ -1281,8 +1312,10 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'set', value: refererUrl },
-            { header: 'Origin', operation: 'set', value: refererOrigin }
+            ...(refererUrl ? [
+              { header: 'Referer', operation: 'set', value: refererUrl },
+              { header: 'Origin', operation: 'set', value: refererOrigin }
+            ] : [])
           ]
         },
         condition: {
@@ -1291,12 +1324,11 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
       },
       {
         id: 9903,
-        priority: 20,
+        priority: 30,
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'set', value: refererUrl },
-            { header: 'Origin', operation: 'set', value: refererOrigin }
+            { header: 'Referer', operation: 'remove' }
           ]
         },
         condition: {
@@ -1309,22 +1341,63 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'set', value: refererUrl },
-            { header: 'Origin', operation: 'set', value: refererOrigin }
+            { header: 'Referer', operation: 'set', value: refererUrl || 'https://xhamster.com/' }
           ]
         },
         condition: {
           urlFilter: `*://*.xhcdn.com/*`
         }
+      },
+      {
+        id: 9905,
+        priority: 30,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [
+            { header: 'Referer', operation: 'remove' }
+          ]
+        },
+        condition: {
+          urlFilter: `*://*.nv7s.com/*`
+        }
+      },
+      {
+        id: 9906,
+        priority: 30,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [
+            { header: 'Referer', operation: 'set', value: 'https://thisvid.com/' },
+            { header: 'Origin', operation: 'set', value: 'https://thisvid.com' }
+          ]
+        },
+        condition: {
+          urlFilter: `*://*.thisvid.com/*`
+        }
+      },
+      {
+        id: 9907,
+        priority: 30,
+        action: {
+          type: 'modifyHeaders',
+          responseHeaders: [
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'GET, HEAD, OPTIONS' }
+          ]
+        },
+        condition: {
+          initiatorDomains: [chrome.runtime.id],
+          urlFilter: '*://*/*'
+        }
       }
     ];
 
     await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: [9900, 9901, 9902, 9903, 9904],
+      removeRuleIds: [9900, 9901, 9902, 9903, 9904, 9905, 9906, 9907],
       addRules: rules
     });
   } catch (e) {
-    console.warn('[StreamGrabber] DNR error:', e);
+    console.warn('[XtremeGrbr] DNR error:', e);
   }
 }
 

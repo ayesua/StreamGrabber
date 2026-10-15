@@ -57,7 +57,8 @@
   let cachedPoster = null;
 
   function detectQualityFromUrl(url, defaultQuality = 'Auto HD') {
-    if (!url) return defaultQuality;
+    if (!url || typeof url !== 'string') return defaultQuality;
+    const lower = url.toLowerCase();
     const match = url.match(/(\d{3,4})p/i) || url.match(/(\d{3,4})x(\d{3,4})/i);
     if (match) {
       const num = parseInt(match[1], 10);
@@ -65,6 +66,9 @@
       if (num >= 720) return `${num}p HD`;
       return `${num}p SD`;
     }
+    if (lower.includes('_hq') || lower.includes('hq.mp4') || lower.includes('_hd') || lower.includes('hd.mp4') || lower.includes('1080')) return '1080p Full HD';
+    if (lower.includes('720')) return '720p HD';
+    if (lower.includes('_lq') || lower.includes('lq.mp4') || lower.includes('_sd') || lower.includes('sd.mp4') || lower.includes('480')) return '480p SD';
     return defaultQuality;
   }
 
@@ -433,27 +437,71 @@
 
       // High Resolution MP4 (1080p, 720p, HQ)
       const highMp4Match = fullHtml.match(/["']?(?:video_url_high|video_url_hq|video_url_1080p|video_url_720p|video_alt_url|video_alt_url2)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i);
-      if (highMp4Match && highMp4Match[1] && !isExcludedUrl(highMp4Match[1])) {
-        const u = highMp4Match[1].replace(/\\/g, '');
-        reportMedia({
-          url: u,
-          quality: detectQualityFromUrl(u, '1080p Full HD'),
-          type: 'MP4',
-          poster: poster
-        });
+      if (highMp4Match && highMp4Match[1]) {
+        let u = highMp4Match[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
+        if (u.startsWith('http') && !isExcludedUrl(u)) {
+          reportMedia({
+            url: u,
+            quality: detectQualityFromUrl(u, '1080p Full HD'),
+            type: 'MP4',
+            poster: poster
+          });
+        }
       }
 
       // Standard MP4
       const stdMp4Match = fullHtml.match(/["']?(?:video_url|video_alt_url3|video_alt_url4|video_url_text)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i) ||
                           fullHtml.match(/sources\s*:\s*\[\s*\{[^}]*file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
-      if (stdMp4Match && stdMp4Match[1] && !isExcludedUrl(stdMp4Match[1])) {
-        const u = stdMp4Match[1].replace(/\\/g, '');
-        reportMedia({
-          url: u,
-          quality: detectQualityFromUrl(u, 'Auto HD'),
-          type: 'MP4',
-          poster: poster
-        });
+      if (stdMp4Match && stdMp4Match[1]) {
+        let u = stdMp4Match[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
+        if (u.startsWith('http') && !isExcludedUrl(u)) {
+          reportMedia({
+            url: u,
+            quality: detectQualityFromUrl(u, 'Auto HD'),
+            type: 'MP4',
+            poster: poster
+          });
+        }
+      }
+
+      // VoyeurOK / VoyeurHit / VideoVoyeurHit Direct Stream Resolver
+      const voyeurMatch = fullHtml.match(/data-src=["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
+                          fullHtml.match(/["']embedUrl["']\s*:\s*["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
+                          location.href.match(/voyeurhit\.tube\/embed\/(\d+)/i) ||
+                          location.href.match(/voyeurok\.com\/watch\/(\d+)/i);
+      if (voyeurMatch && voyeurMatch[1]) {
+        const vidId = voyeurMatch[1];
+        fetch(`https://voyeurhit.tube/api/videofile.php?video_id=${vidId}&lifetime=8640000`, {
+          headers: { 'Referer': `https://voyeurhit.tube/embed/${vidId}/` }
+        }).then(r => r.json()).then(files => {
+          if (Array.isArray(files) && files.length > 0 && files[0].video_url) {
+            function b164_dec(str) {
+              const alphabet = "АВСDЕFGHIJKLМNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,~";
+              let out = "", idx = 0;
+              str = str.replace(/[^АВСЕМA-Za-z0-9\.\,\~]/g, "");
+              do {
+                let r = alphabet.indexOf(str.charAt(idx++)), o = alphabet.indexOf(str.charAt(idx++)), a = alphabet.indexOf(str.charAt(idx++)), s = alphabet.indexOf(str.charAt(idx++));
+                r = r << 2 | o >> 4;
+                o = (15 & o) << 4 | a >> 2;
+                let l = (3 & a) << 6 | s;
+                out += String.fromCharCode(r);
+                if (64 != a) out += String.fromCharCode(o);
+                if (64 != s) out += String.fromCharCode(l);
+              } while (idx < str.length);
+              return unescape(out);
+            }
+            const path = b164_dec(files[0].video_url);
+            if (path && path.startsWith('/')) {
+              const fullStream = 'https://voyeurhit.tube' + path;
+              reportMedia({
+                url: fullStream,
+                quality: detectQualityFromUrl(path, '1080p Full HD'),
+                type: 'MP4',
+                poster: poster
+              });
+            }
+          }
+        }).catch(() => {});
       }
 
       // Base64 Encoded video URLs (common anti-leech obfuscation on tube sites)
@@ -1296,10 +1344,56 @@
     setTimeout(updateTracker, 1500);
   }
 
+  // Defuse interstitials and unhide player display icons (e.g. TrafficStars on thisvid, JWPlayer on voyeurhit)
+  function cleanupInterstitialsAndFixPlayers() {
+    try {
+      const badSelectors = [
+        '#tr-interstitial',
+        '[id^="tr-interstitial"]',
+        '[class*="interstitial-overlay"]',
+        '[id^="tr-"][style*="z-index"]',
+        '.fp-ad',
+        '.fp-preroll',
+        '.video-overlay-advertisement'
+      ];
+      for (const sel of badSelectors) {
+        const els = document.querySelectorAll(sel);
+        for (const el of els) {
+          if (el && el.parentNode) {
+            el.remove();
+          }
+        }
+      }
+
+      // Ensure Flowplayer / JWPlayer elements have proper pointer-events and visibility
+      const players = document.querySelectorAll('.fp-player, #kt_player, .jwplayer, .video__player');
+      for (const p of players) {
+        if (p) {
+          p.style.pointerEvents = 'auto';
+        }
+      }
+    } catch (e) {}
+  }
+
+  try {
+    const style = document.createElement('style');
+    style.id = '__xg_player_fix_css__';
+    style.textContent = `
+      .jw-display-icon-container { display: flex !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+      .jw-state-idle .jw-display-icon-container { display: flex !important; }
+      .fp-player { pointer-events: auto !important; }
+      #kt_player { pointer-events: auto !important; }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  } catch (e) {}
+
+  setInterval(cleanupInterstitialsAndFixPlayers, 800);
+
   const observer = new MutationObserver(() => {
     scanMediaElements();
     scanYandexVideoPlayer();
     scanVkVideoPlayer();
+    cleanupInterstitialsAndFixPlayers();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 })();

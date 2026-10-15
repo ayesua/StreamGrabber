@@ -15,6 +15,40 @@
   if (window.__STREAMGRABBER_PAGE_HOOK__) return;
   window.__STREAMGRABBER_PAGE_HOOK__ = true;
 
+
+
+  function detectQualityFromUrl(url) {
+    if (!url || typeof url !== 'string') return 'Auto HD';
+    const lower = url.toLowerCase();
+    const match = url.match(/(\d{3,4})p/i) || url.match(/(\d{3,4})x(\d{3,4})/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num >= 1080) return `${num}p Full HD`;
+      if (num >= 720) return `${num}p HD`;
+      return `${num}p SD`;
+    }
+    if (lower.includes('_hq') || lower.includes('hq.mp4') || lower.includes('_hd') || lower.includes('hd.mp4') || lower.includes('1080')) return '1080p Full HD';
+    if (lower.includes('720')) return '720p HD';
+    if (lower.includes('_lq') || lower.includes('lq.mp4') || lower.includes('_sd') || lower.includes('sd.mp4') || lower.includes('480')) return '480p SD';
+    return 'Auto HD';
+  }
+
+  const EMPTY_VAST_XML = '<?xml version="1.0" encoding="UTF-8"?><VAST version="4.0"/>';
+  function isVastAdUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    const lower = url.toLowerCase();
+    if (lower.includes('.mp4') || lower.includes('.m3u8') || lower.includes('.mpd') ||
+        lower.includes('.ts') || lower.includes('.webm') || lower.includes('.key')) return false;
+    return (
+      lower.includes('/vast') || lower.includes('vast.xml') || lower.includes('vast=') ||
+      lower.includes('format=vast') || lower.includes('output=vast') || lower.includes('type=vast') ||
+      lower.includes('/vpaid') || lower.includes('in_stream_ad') || lower.includes('jwpreroll') ||
+      lower.includes('vstserv.com') || lower.includes('vstvstsa.com') || lower.includes('katds_ep') ||
+      lower.includes('tsyndicate.com/do2/') || lower.includes('magsrv.com/splash') ||
+      lower.includes('twinrdengine.com/adraw')
+    );
+  }
+
   function broadcastStreamData(data) {
     try {
       if (!data || !data.url) return;
@@ -37,7 +71,7 @@
             broadcastStreamData({
               url: val,
               type: val.includes('.m3u8') ? 'HLS' : 'MP4',
-              quality: 'Auto HD',
+              quality: detectQualityFromUrl(val),
               title: document.title
             });
           }
@@ -47,20 +81,31 @@
     }
   } catch (e) {}
 
-  // Intercept window.fetch to sniff dynamic Yandex/VK stream API responses
+  // Intercept window.fetch to sniff dynamic Yandex/VK stream API responses & defuse VAST ads
   try {
     const origFetch = window.fetch;
     if (origFetch) {
       window.fetch = function (input, init) {
         const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
         if (url && typeof url === 'string') {
+          if (url.includes('vast.yomeno.xyz')) {
+            return Promise.resolve(new Response(JSON.stringify({ campaign: null }), {
+              status: 200, headers: { 'Content-Type': 'application/json' }
+            }));
+          }
+          if (isVastAdUrl(url)) {
+            return Promise.resolve(new Response(EMPTY_VAST_XML, {
+              status: 200, headers: { 'Content-Type': 'application/xml; charset=utf-8' }
+            }));
+          }
+
           const lower = url.toLowerCase();
           const isRealStream = lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('ott-stream.yandex') || (lower.includes('.mp4') && !lower.includes('trailer') && !lower.includes('video-preview'));
           if (isRealStream) {
             broadcastStreamData({
               url: url,
               type: (lower.includes('.m3u8') || lower.includes('strm.yandex')) ? 'HLS' : 'MP4',
-              quality: 'Auto HD',
+              quality: detectQualityFromUrl(url),
               title: document.title
             });
           }
@@ -108,19 +153,25 @@
     }
   } catch (e) {}
 
-  // Intercept XMLHttpRequest to sniff video stream URLs
+  // Intercept XMLHttpRequest to sniff video stream URLs & defuse VAST ad calls
   try {
     const origOpen = XMLHttpRequest.prototype.open;
-    if (origOpen) {
+    const origSend = XMLHttpRequest.prototype.send;
+    if (origOpen && origSend) {
       XMLHttpRequest.prototype.open = function (method, url) {
-        if (url && typeof url === 'string') {
-          const lower = url.toLowerCase();
+        this.__xg_url = typeof url === 'string' ? url : (url ? url.toString() : '');
+        if (this.__xg_url && isVastAdUrl(this.__xg_url)) {
+          this.__xg_is_vast = true;
+        }
+
+        if (this.__xg_url && !this.__xg_is_vast) {
+          const lower = this.__xg_url.toLowerCase();
           const isRealStream = lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('ott-stream.yandex') || (lower.includes('.mp4') && !lower.includes('trailer') && !lower.includes('video-preview'));
           if (isRealStream) {
             broadcastStreamData({
-              url: url,
+              url: this.__xg_url,
               type: (lower.includes('.m3u8') || lower.includes('strm.yandex')) ? 'HLS' : 'MP4',
-              quality: 'Auto HD',
+              quality: detectQualityFromUrl(this.__xg_url),
               title: document.title
             });
           }
@@ -158,6 +209,25 @@
           }
         }
         return origOpen.apply(this, arguments);
+      };
+
+      XMLHttpRequest.prototype.send = function (body) {
+        if (this.__xg_is_vast) {
+          try {
+            Object.defineProperty(this, 'status', { writable: true, value: 200 });
+            Object.defineProperty(this, 'readyState', { writable: true, value: 4 });
+            Object.defineProperty(this, 'responseText', { writable: true, value: EMPTY_VAST_XML });
+            Object.defineProperty(this, 'response', { writable: true, value: EMPTY_VAST_XML });
+            setTimeout(() => {
+              try {
+                if (typeof this.onreadystatechange === 'function') this.onreadystatechange(new Event('readystatechange'));
+                if (typeof this.onload === 'function') this.onload(new Event('load'));
+              } catch (e) {}
+            }, 10);
+            return;
+          } catch (e) {}
+        }
+        return origSend.apply(this, arguments);
       };
     }
   } catch (e) {}
@@ -319,6 +389,191 @@
       _HTML5Player.prototype.loadVideoPreRollAds = function () { return false; };
       _HTML5Player.prototype.loadVideoPostRollAds = function () { return false; };
     }
+  } catch (e) {}
+
+  // 1B. JWPlayer Interceptor & VAST Sanitizer (e.g. voyeurhit, videovoyeurhit, voyeurok)
+  function wrapJWPlayerInstance(player) {
+    if (!player || player.__xg_hooked__) return player;
+    player.__xg_hooked__ = true;
+
+    const origSetup = player.setup;
+    if (origSetup) {
+      player.setup = function (config) {
+        if (config && typeof config === 'object') {
+          // Defuse VAST preroll ads
+          if (config.advertising) {
+            delete config.advertising.tag;
+            delete config.advertising.schedule;
+            config.advertising.client = 'vast';
+            config.advertising.adschedule = [];
+          }
+          // Sniff sources if present
+          if (Array.isArray(config.sources)) {
+            config.sources.forEach(srcItem => {
+              if (srcItem && srcItem.file) {
+                const fullUrl = srcItem.file.startsWith('/') ? location.origin + srcItem.file : srcItem.file;
+                broadcastStreamData({
+                  url: fullUrl,
+                  type: (srcItem.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
+                  quality: srcItem.label || detectQualityFromUrl(fullUrl),
+                  title: config.title || document.title,
+                  poster: config.image || null
+                });
+              }
+            });
+          }
+        }
+        const instance = origSetup.apply(this, arguments);
+        try {
+          Object.defineProperty(instance, 'playAd', {
+            configurable: true,
+            writable: true,
+            value: function () { return false; }
+          });
+        } catch (e) {}
+        return instance;
+      };
+    }
+
+    if (typeof player.on === 'function') {
+      player.on('playlistItem', function (e) {
+        try {
+          if (e && e.item && Array.isArray(e.item.sources)) {
+            e.item.sources.forEach(s => {
+              if (s && s.file) {
+                const fullUrl = s.file.startsWith('/') ? location.origin + s.file : s.file;
+                broadcastStreamData({
+                  url: fullUrl,
+                  type: (s.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
+                  quality: s.label || detectQualityFromUrl(fullUrl),
+                  title: e.item.title || document.title,
+                  poster: e.item.image || null
+                });
+              }
+            });
+          }
+        } catch (err) {}
+      });
+    }
+
+    return player;
+  }
+
+  function hookJWPlayerGlobal(jwFn) {
+    if (typeof jwFn !== 'function') return jwFn;
+    const wrapped = function () {
+      const player = jwFn.apply(this, arguments);
+      return wrapJWPlayerInstance(player);
+    };
+    for (const k in jwFn) {
+      try { wrapped[k] = jwFn[k]; } catch (e) {}
+    }
+    return wrapped;
+  }
+
+  let _jwplayer = window.jwplayer;
+  try {
+    Object.defineProperty(window, 'jwplayer', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return _jwplayer; },
+      set: function (val) {
+        _jwplayer = hookJWPlayerGlobal(val);
+      }
+    });
+    if (_jwplayer) _jwplayer = hookJWPlayerGlobal(_jwplayer);
+  } catch (e) {}
+
+  // 1C. kt_player Interceptor for thisvid.com & KVS Players (Defuses VAST & sniffs HQ streams)
+  function hookKtPlayerGlobal(fn) {
+    if (typeof fn !== 'function') return fn;
+    const wrapped = function (id, swf, w, h, flashvars) {
+      if (flashvars && typeof flashvars === 'object') {
+        // Strip preroll VAST ad lists to prevent player hang / interstitial freeze
+        if (flashvars.adv_pre_vast) flashvars.adv_pre_vast = '';
+        if (flashvars.adv_pre_vast_alt) flashvars.adv_pre_vast_alt = '';
+        if (flashvars.adv_pre_duration) flashvars.adv_pre_duration = '0';
+
+        const sniffUrl = (urlStr, quality) => {
+          if (!urlStr || typeof urlStr !== 'string') return;
+          const clean = urlStr.replace(/^function\/\d+\//i, '');
+          if (clean.startsWith('http')) {
+            broadcastStreamData({
+              url: clean,
+              type: clean.includes('.m3u8') ? 'HLS' : 'MP4',
+              quality: quality || detectQualityFromUrl(clean),
+              title: flashvars.video_title || document.title,
+              poster: flashvars.preview_url || null
+            });
+          }
+        };
+
+        if (flashvars.video_url) sniffUrl(flashvars.video_url, flashvars.video_url_text || 'HQ');
+        if (flashvars.video_alt_url) sniffUrl(flashvars.video_alt_url, flashvars.video_alt_url_text || '240p');
+        for (let i = 1; i <= 7; i++) {
+          if (flashvars['video_alt_url' + i]) {
+            sniffUrl(flashvars['video_alt_url' + i], flashvars['video_alt_url' + i + '_text'] || 'SD');
+          }
+        }
+      }
+      return fn.apply(this, arguments);
+    };
+    for (const k in fn) {
+      try { wrapped[k] = fn[k]; } catch (e) {}
+    }
+    return wrapped;
+  }
+
+  let _kt_player = window.kt_player;
+  try {
+    Object.defineProperty(window, 'kt_player', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return _kt_player; },
+      set: function (val) {
+        _kt_player = hookKtPlayerGlobal(val);
+      }
+    });
+    if (_kt_player) _kt_player = hookKtPlayerGlobal(_kt_player);
+  } catch (e) {}
+
+  // 1D. Flowplayer Interceptor
+  function hookFlowplayerGlobal(fn) {
+    if (typeof fn !== 'function') return fn;
+    const wrapped = function (target, config) {
+      if (config && typeof config === 'object') {
+        if (config.clip && Array.isArray(config.clip.sources)) {
+          config.clip.sources.forEach(s => {
+            if (s && s.src && typeof s.src === 'string' && s.src.startsWith('http')) {
+              broadcastStreamData({
+                url: s.src,
+                type: (s.type && s.type.includes('mpegurl')) || s.src.includes('.m3u8') ? 'HLS' : 'MP4',
+                quality: detectQualityFromUrl(s.src),
+                title: document.title
+              });
+            }
+          });
+        }
+      }
+      return fn.apply(this, arguments);
+    };
+    for (const k in fn) {
+      try { wrapped[k] = fn[k]; } catch (e) {}
+    }
+    return wrapped;
+  }
+
+  let _flowplayer = window.flowplayer;
+  try {
+    Object.defineProperty(window, 'flowplayer', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return _flowplayer; },
+      set: function (val) {
+        _flowplayer = hookFlowplayerGlobal(val);
+      }
+    });
+    if (_flowplayer) _flowplayer = hookFlowplayerGlobal(_flowplayer);
   } catch (e) {}
 
   // 2. Generic In-Page Pre-Roll Video Ad Fast-Forward & Skip Button Clicker
