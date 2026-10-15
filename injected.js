@@ -18,19 +18,40 @@
   const isVoyeurDomain = ['voyeurhit', 'videovoyeurhit', 'voyeurok'].some(d => hostname.includes(d));
   if (isVoyeurDomain) {
     console.log('[XtremeShld:Debug] Injected into Voyeur domain:', hostname, '(isTop:', window === window.top, ')');
-    try {
-      let meta = document.querySelector('meta[name="referrer"]');
-      if (!meta) {
-        meta = document.createElement('meta');
-        meta.name = 'referrer';
-        meta.content = 'no-referrer';
-        (document.head || document.documentElement).appendChild(meta);
-      } else {
-        meta.content = 'no-referrer';
+    const setMetaReferrer = () => {
+      try {
+        let meta = document.querySelector('meta[name="referrer"]');
+        const target = document.head || document.documentElement;
+        if (!meta) {
+          if (!target) return false;
+          meta = document.createElement('meta');
+          meta.name = 'referrer';
+          meta.content = 'no-referrer';
+          target.appendChild(meta);
+          console.log('[XtremeShld:Debug] Referrer-policy successfully set to no-referrer on', hostname);
+          return true;
+        } else {
+          meta.content = 'no-referrer';
+          console.log('[XtremeShld:Debug] Referrer-policy updated to no-referrer on', hostname);
+          return true;
+        }
+      } catch (e) {
+        console.warn('[XtremeShld:Debug] Error setting meta referrer:', e);
       }
-      console.log('[XtremeShld:Debug] Referrer-policy successfully set to no-referrer on', hostname);
-    } catch (e) {
-      console.warn('[XtremeShld:Debug] Error setting meta referrer:', e);
+      return false;
+    };
+
+    if (!setMetaReferrer()) {
+      if (document.readyState === 'loading') {
+        const obs = new MutationObserver(() => {
+          if (setMetaReferrer()) obs.disconnect();
+        });
+        obs.observe(document, { childList: true, subtree: true });
+        document.addEventListener('DOMContentLoaded', () => {
+          setMetaReferrer();
+          obs.disconnect();
+        }, { once: true });
+      }
     }
   }
 
@@ -1062,14 +1083,16 @@
     function sanitizeKvsFlashvars(fv) {
       if (!fv || typeof fv !== 'object') return fv;
       try {
+        console.log('[XtremeShld:Debug] Sanitizing KVS flashvars prerolls/ads');
         const adKeys = [
           'adv_pre', 'adv_pre_vast', 'adv_pre_vast_alt', 'adv_pre_duration',
           'adv_pre_skip_duration', 'adv_pre_click_url', 'adv_pre_url',
           'adv_pre_alternative', 'adv_pre_alternative_type',
           'adv_post', 'adv_post_vast', 'adv_post_vast_alt', 'adv_post_duration',
           'adv_post_skip_duration', 'adv_post_click_url', 'adv_post_url',
-          'adv_pause', 'adv_pause_vast',
-          'protect_block', 'protect_block_html', 'protect_block_html_after'
+          'adv_pause', 'adv_pause_vast', 'adv_pause_vast_alt', 'adv_pause_duration',
+          'adv_text', 'adv_img', 'adv_block', 'vast_timeout1', 'vast_timeout2', 'vast_timeout',
+          'protect_block', 'protect_block_timeout', 'protect_block_html', 'protect_block_html_after'
         ];
         for (const k of adKeys) {
           if (k in fv) {
@@ -1080,17 +1103,77 @@
       return fv;
     }
 
-    let _ktPlayer = window.kt_player;
-    Object.defineProperty(window, 'kt_player', {
-      get: () => function (container, swf, width, height, flashvars) {
+    function wrapKtPlayer(orig) {
+      if (!orig || typeof orig !== 'function' || orig.__xtremeshld_wrapped__) return orig;
+      const wrapped = function (container, swf, width, height, flashvars) {
+        console.log('[XtremeShld:Debug] Wrapped kt_player called with flashvars:', Boolean(flashvars));
         if (config.blockMediaPrerolls && flashvars) {
           sanitizeKvsFlashvars(flashvars);
         }
-        return _ktPlayer ? _ktPlayer.apply(this, arguments) : null;
+        return orig.apply(this, arguments);
+      };
+      wrapped.__xtremeshld_wrapped__ = true;
+      try {
+        for (const prop of Object.keys(orig)) {
+          wrapped[prop] = orig[prop];
+        }
+      } catch (_) {}
+      return wrapped;
+    }
+
+    // Intercept inline `var flashvars = { ... }` assignments
+    let _flashvars = window.flashvars;
+    Object.defineProperty(window, 'flashvars', {
+      get: () => _flashvars,
+      set: (fv) => {
+        if (config.blockMediaPrerolls && fv && typeof fv === 'object') {
+          sanitizeKvsFlashvars(fv);
+        }
+        _flashvars = fv;
       },
-      set: (fn) => { _ktPlayer = fn; },
       configurable: true
     });
+
+    // Intercept kt_player definition & wrap
+    let _ktPlayer = window.kt_player;
+    if (typeof _ktPlayer === 'function') {
+      _ktPlayer = wrapKtPlayer(_ktPlayer);
+    }
+    Object.defineProperty(window, 'kt_player', {
+      get: () => _ktPlayer,
+      set: (fn) => {
+        _ktPlayer = wrapKtPlayer(fn);
+      },
+      configurable: true
+    });
+
+    // Intercept flowplayer initialization and ensure kt_player is wrapped
+    let _flowplayer = window.flowplayer;
+    Object.defineProperty(window, 'flowplayer', {
+      get: () => _flowplayer,
+      set: (fn) => {
+        _flowplayer = fn;
+        if (typeof window.kt_player === 'function' && !window.kt_player.__xtremeshld_wrapped__) {
+          window.kt_player = wrapKtPlayer(window.kt_player);
+        }
+      },
+      configurable: true
+    });
+
+    // Ensure Flowplayer player container is never hidden by failed ad state
+    try {
+      const fpStyle = document.createElement('style');
+      fpStyle.textContent = `
+        #kt_player .fp-player[style*="visibility: hidden"],
+        #kt_player .fp-player[style*="position: absolute"],
+        .flowplayer .fp-player[style*="visibility: hidden"],
+        .flowplayer .fp-player[style*="position: absolute"] {
+          visibility: visible !important;
+          position: relative !important;
+        }
+      `;
+      (document.head || document.documentElement).appendChild(fpStyle);
+    } catch (_) {}
   } catch (_) {}
 
   /* ==========================================================================
