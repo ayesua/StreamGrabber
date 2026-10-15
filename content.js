@@ -25,6 +25,7 @@
     '/announce', '/anuncio', 'preroll', 'pre-roll', 'midroll', 'postroll',
     'vast', 'vpaid', 'popunder', 'ad_banner',
     'trailer.mp4', 'teaser.mp4', 'promo_video', 'ad_video',
+    '_tr.mp4', '_preview.mp4', '_trailer.mp4', '/preview.mp4',
     'interstitial', '/ads/video/', '/sponsor/', 'exo_ad', 'ad_media',
     'video-preview.s3.yandex', 'video-preview'
   ];
