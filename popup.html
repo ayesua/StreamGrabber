@@ -17,6 +17,15 @@
       </div>
     </div>
 
+    <!-- Master Power Toggle Switch (Quick ON / OFF) -->
+    <div class="vdh-master-switch-wrap" title="Enable or Disable XtremeGrbr directly">
+      <label class="master-switch" title="Turn XtremeGrbr ON / OFF Globally">
+        <input type="checkbox" id="masterPowerToggle" checked>
+        <span class="master-slider"></span>
+      </label>
+      <span class="master-power-label" id="masterPowerLabel">ON</span>
+    </div>
+
     <!-- Top Donation Block: Support & Donate button -->
     <div class="top-donation-block">
       <button id="btnHeaderDonate" class="btn-donate-top" title="Support XtremeGrbr" data-i18n-title="topDonate">
@@ -36,7 +45,7 @@
         <span id="themeIcon">🌙</span>
       </button>
       <button id="btnToggleVideoControls" class="icon-btn" title="Toggle / Force Native Video Controls on Page (Play/Pause, Seekbar, Volume)" data-i18n-title="btnToggleControls">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="5 3 19 12 5 21 5 3"></polygon>
           <line x1="19" y1="5" x2="19" y2="19" stroke-width="2"></line>
         </svg>
@@ -67,10 +76,13 @@
     <button id="btnEnableExtension" class="btn-enable-action" data-i18n="btnEnableAction">Turn On</button>
   </div>
 
-  <!-- Subbar with Active Tab Info -->
+  <!-- Subbar with Active Tab Info & Quick Status Pill -->
   <div class="vdh-subbar">
     <div class="vdh-tab-title" id="currentTabTitle" data-i18n="loadingTab">Loading tab...</div>
-    <div class="vdh-media-count" id="mediaCount">0 detected</div>
+    <div class="vdh-subbar-right">
+      <button id="btnSubbarToggle" class="subbar-toggle-pill enabled" title="Click to disable XtremeGrbr">🟢 Active</button>
+      <div class="vdh-media-count" id="mediaCount">0 detected</div>
+    </div>
   </div>
 
   <!-- Filter Pills Bar (All | Videos | Audio Only) -->

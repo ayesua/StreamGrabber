@@ -86,6 +86,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let isExtensionEnabled = true;
 
   function updateExtensionStatusUI() {
+    const masterPowerToggle = document.getElementById('masterPowerToggle');
+    const masterPowerLabel = document.getElementById('masterPowerLabel');
+    const btnSubbarToggle = document.getElementById('btnSubbarToggle');
     const btnToggle = document.getElementById('btnToggleExtension');
     const disabledBanner = document.getElementById('disabledBanner');
     const mediaListContainer = document.getElementById('mediaListContainer');
@@ -93,6 +96,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterPills = document.querySelector('.filter-pills-bar');
     const mediaCount = document.getElementById('mediaCount');
 
+    // 1. Sync header slider switch & label
+    if (masterPowerToggle) {
+      masterPowerToggle.checked = isExtensionEnabled;
+    }
+    if (masterPowerLabel) {
+      masterPowerLabel.textContent = isExtensionEnabled ? 'ON' : 'OFF';
+      masterPowerLabel.classList.toggle('disabled', !isExtensionEnabled);
+    }
+
+    // 2. Sync subbar toggle pill
+    if (btnSubbarToggle) {
+      btnSubbarToggle.textContent = isExtensionEnabled ? '🟢 Active' : '🔴 Disabled';
+      btnSubbarToggle.className = isExtensionEnabled ? 'subbar-toggle-pill enabled' : 'subbar-toggle-pill disabled';
+      btnSubbarToggle.setAttribute('title', isExtensionEnabled ? 'Click to disable XtremeGrbr' : 'Click to enable XtremeGrbr');
+    }
+
+    // 3. Sync header icon button
     if (btnToggle) {
       if (isExtensionEnabled) {
         btnToggle.classList.remove('disabled');
@@ -105,10 +125,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
+    // 4. Sync paused banner
     if (disabledBanner) {
       disabledBanner.style.display = isExtensionEnabled ? 'none' : 'flex';
     }
 
+    // 5. Sync media listing and badge state
     if (!isExtensionEnabled) {
       if (mediaCount) {
         mediaCount.textContent = 'Paused';
@@ -128,8 +150,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function toggleExtensionEnabled() {
-    isExtensionEnabled = !isExtensionEnabled;
+  function toggleExtensionEnabled(forcedState = null) {
+    if (typeof forcedState === 'boolean') {
+      isExtensionEnabled = forcedState;
+    } else {
+      isExtensionEnabled = !isExtensionEnabled;
+    }
+
     chrome.storage.local.set({ extensionEnabled: isExtensionEnabled }, () => {
       chrome.runtime.sendMessage({ action: 'SET_EXTENSION_ENABLED', enabled: isExtensionEnabled }, () => {
         if (chrome.runtime.lastError) {}
@@ -146,13 +173,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateExtensionStatusUI();
   });
 
+  // Attach event listeners for all toggle elements
+  const masterPowerToggle = document.getElementById('masterPowerToggle');
+  if (masterPowerToggle) {
+    masterPowerToggle.addEventListener('change', (e) => {
+      toggleExtensionEnabled(e.target.checked);
+    });
+  }
+  const btnSubbarToggle = document.getElementById('btnSubbarToggle');
+  if (btnSubbarToggle) {
+    btnSubbarToggle.addEventListener('click', () => toggleExtensionEnabled());
+  }
   const btnToggleExtension = document.getElementById('btnToggleExtension');
   if (btnToggleExtension) {
-    btnToggleExtension.addEventListener('click', toggleExtensionEnabled);
+    btnToggleExtension.addEventListener('click', () => toggleExtensionEnabled());
   }
   const btnEnableExtension = document.getElementById('btnEnableExtension');
   if (btnEnableExtension) {
-    btnEnableExtension.addEventListener('click', toggleExtensionEnabled);
+    btnEnableExtension.addEventListener('click', () => toggleExtensionEnabled(true));
   }
 
   // 1. Get Active Tab
