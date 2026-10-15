@@ -229,11 +229,13 @@
   }
 
   function isExcludedUrl(url) {
-    if (!url) return true;
+    if (!url || typeof url !== 'string') return true;
     const lower = url.toLowerCase();
 
-    if (lower.match(/\.(html|htm|php|asp|aspx|jsp|shtml|cgi)(\?.*)?$/)) return true;
     if (lower.startsWith('data:') || lower.startsWith('javascript:')) return true;
+
+    // Exclude static web assets and HTML extensions
+    if (lower.match(/\.(html|htm|php|asp|aspx|jsp|shtml|cgi|json|css|js)(\?.*)?$/)) return true;
 
     // Filter out isolated fragment chunks (.ts / .m4s / .aac)
     if (lower.match(/\.(ts|m4s)(\?.*)?$/) || lower.includes('/segment') || lower.includes('/seg-') || lower.includes('/fragment-')) {
@@ -244,6 +246,24 @@
     if (isAdOrAnnounceUrl(lower)) {
       return true;
     }
+
+    // A valid media item MUST be a stream, media file, or dynamic media route
+    const isStreamOrMedia = lower.startsWith('blob:') ||
+                            lower.match(/\.(mp4|m3u8|webm|mpd|flv|mp3|m4a|aac|ogg|wav)(\/|\?.*)?$/i) ||
+                            lower.includes('/get_file/') ||
+                            lower.includes('/get_video') ||
+                            lower.includes('/videofile.php') ||
+                            lower.includes('strm.yandex.') ||
+                            lower.includes('ott-stream.yandex.');
+
+    if (!isStreamOrMedia) return true;
+
+    // Never report the page's own HTML URL as a media item!
+    try {
+      const pageLoc = (window.location.href || '').split('?')[0].split('#')[0].replace(/\/+$/, '');
+      const testLoc = url.split('?')[0].split('#')[0].replace(/\/+$/, '');
+      if (pageLoc && testLoc === pageLoc) return true;
+    } catch (e) {}
 
     return false;
   }
@@ -455,10 +475,59 @@
         });
       }
 
-      // High Resolution MP4 (1080p, 720p, HQ)
-      const highMp4Match = fullHtml.match(/["']?(?:video_url_high|video_url_hq|video_url_1080p|video_url_720p|video_alt_url|video_alt_url2)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i);
+      // 2. Dedicated KVS / Flashvars / Tube Player Extractor (ThisVid, Tube sites)
+      const flashvarsMatch = fullHtml.match(/var\s+flashvars\s*=\s*\{([\s\S]*?)\};/i);
+      if (flashvarsMatch && flashvarsMatch[1]) {
+        const fvBlock = flashvarsMatch[1];
+        const videoTitle = (fvBlock.match(/video_title\s*:\s*['"]([^'"]+)['"]/i)?.[1]) || getPageTitle();
+        const fvPoster = (fvBlock.match(/preview_url\s*:\s*['"]([^'"]+)['"]/i)?.[1]) || poster;
+
+        // Primary video_url (HQ / 1080p / 720p)
+        const mainVideoMatch = fvBlock.match(/video_url\s*:\s*['"]([^'"]+)['"]/i);
+        const mainTextMatch = fvBlock.match(/video_url_text\s*:\s*['"]([^'"]+)['"]/i);
+        if (mainVideoMatch && mainVideoMatch[1]) {
+          let mainUrl = mainVideoMatch[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
+          if (mainUrl.startsWith('//')) mainUrl = location.protocol + mainUrl;
+          else if (mainUrl.startsWith('/')) mainUrl = location.origin + mainUrl;
+          if (mainUrl.startsWith('http') && !isExcludedUrl(mainUrl)) {
+            reportMedia({
+              url: mainUrl,
+              quality: mainTextMatch?.[1] || detectQualityFromUrl(mainUrl, '1080p Full HD'),
+              type: mainUrl.includes('.m3u8') ? 'HLS' : 'MP4',
+              title: videoTitle,
+              poster: fvPoster
+            });
+          }
+        }
+
+        // Alternative qualities (video_alt_url, video_alt_url1, video_alt_url2...)
+        const altRegex = /(video_alt_url\d*)\s*:\s*['"]([^'"]+)['"]/gi;
+        let altM;
+        while ((altM = altRegex.exec(fvBlock)) !== null) {
+          const key = altM[1];
+          const rawAltUrl = altM[2];
+          const labelMatch = fvBlock.match(new RegExp(key + '_text\\s*:\\s*[\'"]([^\'"]+)[\'"]', 'i'));
+          let altUrl = rawAltUrl.replace(/\\/g, '').replace(/^function\/\d+\//i, '');
+          if (altUrl.startsWith('//')) altUrl = location.protocol + altUrl;
+          else if (altUrl.startsWith('/')) altUrl = location.origin + altUrl;
+          if (altUrl.startsWith('http') && !isExcludedUrl(altUrl)) {
+            reportMedia({
+              url: altUrl,
+              quality: labelMatch?.[1] || detectQualityFromUrl(altUrl, 'Auto SD'),
+              type: altUrl.includes('.m3u8') ? 'HLS' : 'MP4',
+              title: videoTitle,
+              poster: fvPoster
+            });
+          }
+        }
+      }
+
+      // 3. Fallback High Resolution & Standard MP4 regexes
+      const highMp4Match = fullHtml.match(/["']?(?:video_url_high|video_url_hq|video_url_1080p|video_url_720p)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i);
       if (highMp4Match && highMp4Match[1]) {
         let u = highMp4Match[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
+        if (u.startsWith('//')) u = location.protocol + u;
+        else if (u.startsWith('/')) u = location.origin + u;
         if (u.startsWith('http') && !isExcludedUrl(u)) {
           reportMedia({
             url: u,
@@ -469,11 +538,12 @@
         }
       }
 
-      // Standard MP4
-      const stdMp4Match = fullHtml.match(/["']?(?:video_url|video_alt_url3|video_alt_url4|video_url_text)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i) ||
+      const stdMp4Match = fullHtml.match(/["']?(?:video_url|video_alt_url3|video_alt_url4)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i) ||
                           fullHtml.match(/sources\s*:\s*\[\s*\{[^}]*file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
       if (stdMp4Match && stdMp4Match[1]) {
         let u = stdMp4Match[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
+        if (u.startsWith('//')) u = location.protocol + u;
+        else if (u.startsWith('/')) u = location.origin + u;
         if (u.startsWith('http') && !isExcludedUrl(u)) {
           reportMedia({
             url: u,
@@ -771,7 +841,7 @@
         const name = r.name;
         if (name && typeof name === 'string') {
           const lower = name.toLowerCase();
-          if (lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('.mp4') || lower.includes('.webm') || lower.includes('/video/') || lower.includes('get-video') || lower.includes('strm.yandex')) {
+          if (lower.match(/\.(m3u8|mpd|mp4|webm|flv|mp3|m4a)(\/|\?.*)?$/i) || lower.includes('/get_file/') || lower.includes('get-video') || lower.includes('strm.yandex') || lower.includes('ott-stream.yandex')) {
             if (!isExcludedUrl(name) && !isAdOrAnnounceUrl(name)) {
               reportMedia({
                 url: name,

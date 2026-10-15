@@ -67,13 +67,18 @@
         enumerable: true,
         get: origSrcDesc.get,
         set: function (val) {
-          if (val && typeof val === 'string' && val.startsWith('http') && !val.includes('blob:')) {
-            broadcastStreamData({
-              url: val,
-              type: val.includes('.m3u8') ? 'HLS' : 'MP4',
-              quality: detectQualityFromUrl(val),
-              title: document.title
-            });
+          if (val && typeof val === 'string') {
+            let cleanVal = val.replace(/^function\/\d+\//i, '');
+            if (cleanVal.startsWith('//')) cleanVal = location.protocol + cleanVal;
+            else if (cleanVal.startsWith('/')) cleanVal = location.origin + cleanVal;
+            if (cleanVal.startsWith('http') && !cleanVal.includes('blob:') && !cleanVal.match(/\.(html|htm|php|js|css)(\?.*)?$/i)) {
+              broadcastStreamData({
+                url: cleanVal,
+                type: cleanVal.includes('.m3u8') ? 'HLS' : 'MP4',
+                quality: detectQualityFromUrl(cleanVal),
+                title: document.title
+              });
+            }
           }
           return origSrcDesc.set.call(this, val);
         }
@@ -553,20 +558,17 @@
     if (_jwplayer) _jwplayer = hookJWPlayerGlobal(_jwplayer);
   } catch (e) {}
 
-  // 1C. kt_player Interceptor for thisvid.com & KVS Players (Defuses VAST & sniffs HQ streams)
+  // 1C. kt_player Interceptor for thisvid.com & KVS Players (Sniffs HQ streams)
   function hookKtPlayerGlobal(fn) {
     if (typeof fn !== 'function') return fn;
     const wrapped = function (id, swf, w, h, flashvars) {
       if (flashvars && typeof flashvars === 'object') {
-        // Strip preroll VAST ad lists to prevent player hang / interstitial freeze
-        if (flashvars.adv_pre_vast) flashvars.adv_pre_vast = '';
-        if (flashvars.adv_pre_vast_alt) flashvars.adv_pre_vast_alt = '';
-        if (flashvars.adv_pre_duration) flashvars.adv_pre_duration = '0';
-
         const sniffUrl = (urlStr, quality) => {
           if (!urlStr || typeof urlStr !== 'string') return;
-          const clean = urlStr.replace(/^function\/\d+\//i, '');
-          if (clean.startsWith('http')) {
+          let clean = urlStr.replace(/^function\/\d+\//i, '');
+          if (clean.startsWith('//')) clean = location.protocol + clean;
+          else if (clean.startsWith('/')) clean = location.origin + clean;
+          if (clean.startsWith('http') && !clean.match(/\.(html|htm|php|js|css)(\?.*)?$/i)) {
             broadcastStreamData({
               url: clean,
               type: clean.includes('.m3u8') ? 'HLS' : 'MP4',

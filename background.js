@@ -269,6 +269,25 @@ function isExcludedNetworkUrl(url, contentType) {
   if (lowerType.includes('text/html') || lowerType.includes('xhtml+xml')) return true;
   if (lowerUrl.match(/\.(html|htm|php|asp|aspx|jsp|js|css|json)(\?.*)?$/)) return true;
 
+  // 1B. Validate that URL is an actual media file, stream, or media route
+  const isMediaMime = lowerType.includes('video/') ||
+                      lowerType.includes('audio/') ||
+                      lowerType.includes('mpegurl') ||
+                      lowerType.includes('dash+xml');
+
+  const hasMediaExtOrEndpoint = lowerUrl.startsWith('blob:') ||
+                                lowerUrl.match(/\.(mp4|m3u8|webm|mpd|flv|mp3|m4a|aac|ogg|wav)(\/|\?.*)?$/i) ||
+                                lowerUrl.includes('/get_file/') ||
+                                lowerUrl.includes('/get_video') ||
+                                lowerUrl.includes('/videofile.php') ||
+                                lowerUrl.includes('strm.yandex.') ||
+                                lowerUrl.includes('ott-stream.yandex.');
+
+  // If neither media MIME nor media URL signature, reject (prevents web page URLs from being treated as media)
+  if (!isMediaMime && !hasMediaExtOrEndpoint) {
+    return true;
+  }
+
   // 2. Exclude range-based chunks (e.g. range=0-1000000, bytestart=1000)
   if (lowerUrl.match(/[?&](range|bytestart|byteend)=\d+/i)) return true;
 
@@ -828,7 +847,9 @@ chrome.webRequest.onHeadersReceived.addListener(
       contentType.includes('application/vnd.apple.mpegurl') ||
       contentType.includes('application/dash+xml');
 
-    const isMediaUrl = url.match(/\.(m3u8|mp4|webm|mpd|flv|mp3|aac|m4a)(\?.*)?$/i);
+    const isMediaUrl = url.match(/\.(m3u8|mp4|webm|mpd|flv|mp3|aac|m4a)(\/|\?.*)?$/i) ||
+      url.includes('/get_file/') ||
+      url.includes('/get_video');
 
     if (isMediaContent || isMediaUrl) {
       // Ignore tiny fragments under 100KB unless it's an m3u8 playlist
