@@ -795,7 +795,10 @@
         lower.includes('ad_preroll') ||
         lower.includes('magsrv.com/splash') ||
         lower.includes('twinrdengine.com/adraw') ||
-        lower.includes('tsyndicate.com/do2/')
+        lower.includes('tsyndicate.com/do2/') ||
+        lower.includes('vstserv.com') ||
+        lower.includes('vstvstsa.com') ||
+        lower.includes('katds_ep')
       );
     }
 
@@ -873,6 +876,19 @@
           p.on('ready', () => {
             console.log('[XtremeShld:JWPlayer:Debug] Player event: ready');
           });
+          p.on('beforePlay', () => {
+            console.log('[XtremeShld:JWPlayer:Debug] Player event: beforePlay');
+            try {
+              const item = typeof p.getPlaylistItem === 'function' ? p.getPlaylistItem() : null;
+              const file = item && (item.file || (Array.isArray(item.sources) && item.sources[0] && item.sources[0].file));
+              const container = typeof p.getContainer === 'function' ? p.getContainer() : null;
+              const v = (container ? container.querySelector('video') : null) || document.querySelector('video');
+              if (file && v && (!v.src || v.src === window.location.href || v.src === 'about:blank' || v.src.endsWith('/'))) {
+                console.log('[XtremeShld:JWPlayer:Debug] Binding stream directly to HTML5 video tag beforePlay:', file);
+                v.src = file;
+              }
+            } catch (_) {}
+          });
           p.on('play', () => {
             console.log('[XtremeShld:JWPlayer:Debug] Player event: play');
           });
@@ -881,6 +897,19 @@
           });
           p.on('buffer', (e) => {
             console.log('[XtremeShld:JWPlayer:Debug] Player event: buffer', e);
+            try {
+              const container = typeof p.getContainer === 'function' ? p.getContainer() : null;
+              const v = (container ? container.querySelector('video') : null) || document.querySelector('video');
+              if (v && (!v.src || v.src === window.location.href || v.src === 'about:blank' || v.src.endsWith('/'))) {
+                const item = typeof p.getPlaylistItem === 'function' ? p.getPlaylistItem() : null;
+                const file = item && (item.file || (Array.isArray(item.sources) && item.sources[0] && item.sources[0].file));
+                if (file) {
+                  console.warn('[XtremeShld:JWPlayer:Debug] Player stuck in buffer with empty video src. Restoring stream:', file);
+                  v.src = file;
+                  if (typeof p.play === 'function') p.play();
+                }
+              }
+            } catch (_) {}
           });
           p.on('adError', (e) => {
             console.warn('[XtremeShld:JWPlayer:Debug] Handled JWPlayer adError, resuming main content', e);
@@ -957,9 +986,9 @@
 
       attachPlayerGuards(player);
 
-      if (typeof player.playAd === 'function') {
-        player.playAd = function (tag) {
-          console.warn('[XtremeShld:JWPlayer:Debug] JWPlayer playAd defused to prevent Error 224003:', tag);
+      try {
+        const defusedPlayAd = function (tag) {
+          console.warn('[XtremeShld:JWPlayer:Debug] JWPlayer playAd defused to prevent Error 224003 / buffering hang:', tag);
           setTimeout(() => {
             try {
               if (typeof player.play === 'function') {
@@ -969,7 +998,14 @@
           }, 30);
           return false;
         };
-      }
+        Object.defineProperty(player, 'playAd', {
+          get: () => defusedPlayAd,
+          set: () => {
+            console.log('[XtremeShld:JWPlayer:Debug] Blocked attempt to overwrite player.playAd');
+          },
+          configurable: true
+        });
+      } catch (_) {}
 
       return player;
     }
@@ -1177,6 +1213,19 @@
               visibility: visible !important;
               position: relative !important;
             }
+            .jwplayer .jw-display-icon-container,
+            .jwplayer .jw-display-icon-display,
+            .jwplayer .jw-icon-display {
+              display: flex !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              pointer-events: auto !important;
+            }
+            .jwplayer.jw-flag-user-inactive .jw-display-icon-container {
+              opacity: 1 !important;
+              display: flex !important;
+            }
+            .jw-preplay { display: none !important; }
             iframe[id*="interstitial" i],
             iframe[id^="tr-"],
             div[id*="interstitial" i],

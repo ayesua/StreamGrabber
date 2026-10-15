@@ -599,7 +599,7 @@
       }
     }
 
-    // 3D. Defuse Referer-Checking Video Embeds (voyeurok, videovoyeurhit, voyeurhit)
+    // 3D. Defuse Referer-Checking Video Embeds & Ensure VoyeurOK Player Mounts Cleanly
     if (targetRoot.querySelectorAll) {
       const voyeurIframes = targetRoot.querySelectorAll('iframe[src*="voyeurhit"], iframe[data-src*="voyeurhit"], iframe[src*="voyeurok"], iframe[data-src*="voyeurok"]');
       for (let i = 0; i < voyeurIframes.length; i++) {
@@ -607,6 +607,19 @@
         if (ifr.getAttribute('referrerpolicy') !== 'no-referrer') {
           ifr.setAttribute('referrerpolicy', 'no-referrer');
           console.log('[XtremeShld:Content:Debug] Enforced referrerpolicy="no-referrer" on iframe:', ifr.src || ifr.getAttribute('data-src'));
+        }
+        if (ifr.src && ifr.src.includes('videovoyeurhit.com')) {
+          ifr.src = ifr.src.replace('videovoyeurhit.com', 'voyeurhit.tube');
+          console.log('[XtremeShld:Content:Debug] Rewrote iframe src to voyeurhit.tube:', ifr.src);
+        }
+      }
+
+      // If on VoyeurOK, ensure player placeholder points directly to voyeurhit.tube and mounts if blocked
+      const voyeurHolder = targetRoot.querySelector ? targetRoot.querySelector('#player[data-src], .video__player[data-src]') : null;
+      if (voyeurHolder) {
+        const dataSrc = voyeurHolder.getAttribute('data-src');
+        if (dataSrc && dataSrc.includes('videovoyeurhit.com')) {
+          voyeurHolder.setAttribute('data-src', dataSrc.replace('videovoyeurhit.com', 'voyeurhit.tube'));
         }
       }
     }
