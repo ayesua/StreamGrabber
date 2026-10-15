@@ -15,7 +15,9 @@
   }
 
   // Defuse referer-checking CDN blocks (e.g. Error 224003 on voyeurok, videovoyeurhit, voyeurhit)
-  if (['videovoyeurhit.com', 'voyeurhit.com', 'voyeurok.com'].some(d => hostname === d || hostname.endsWith('.' + d))) {
+  const isVoyeurDomain = ['voyeurhit', 'videovoyeurhit', 'voyeurok'].some(d => hostname.includes(d));
+  if (isVoyeurDomain) {
+    console.log('[XtremeShld:Debug] Injected into Voyeur domain:', hostname, '(isTop:', window === window.top, ')');
     try {
       let meta = document.querySelector('meta[name="referrer"]');
       if (!meta) {
@@ -26,7 +28,10 @@
       } else {
         meta.content = 'no-referrer';
       }
-    } catch (_) {}
+      console.log('[XtremeShld:Debug] Referrer-policy successfully set to no-referrer on', hostname);
+    } catch (e) {
+      console.warn('[XtremeShld:Debug] Error setting meta referrer:', e);
+    }
   }
 
   // Active configuration received from content script
@@ -779,6 +784,7 @@
         if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
           const urlStr = String(typeof resource === 'string' ? resource : (resource?.url || ''));
           if (urlStr.includes('vast.yomeno.xyz')) {
+            console.log('[XtremeShld:Fetch:Debug] Intercepted vast.yomeno.xyz, returning empty campaign JSON');
             return Promise.resolve(new Response(JSON.stringify({ campaign: null }), {
               status: 200,
               statusText: 'OK',
@@ -786,7 +792,7 @@
             }));
           }
           if (isVastAdUrl(urlStr)) {
-            console.warn('[XtremeShld] Returning empty VAST XML response to prevent Error 224003:', urlStr);
+            console.warn('[XtremeShld:Fetch:Debug] Returning empty VAST XML response to prevent Error 224003:', urlStr);
             return Promise.resolve(new Response(EMPTY_VAST_XML, {
               status: 200,
               statusText: 'OK',
@@ -812,7 +818,7 @@
     const origXHRSend = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.send = function () {
       if (this._is_vast_ad) {
-        console.warn('[XtremeShld] Intercepted XHR VAST ad request, returning empty VAST:', this._vast_target_url);
+        console.warn('[XtremeShld:XHR:Debug] Intercepted XHR VAST ad request, returning empty VAST:', this._vast_target_url);
         Object.defineProperty(this, 'responseText', { value: EMPTY_VAST_XML, writable: true, configurable: true });
         try {
           const doc = new DOMParser().parseFromString(EMPTY_VAST_XML, 'text/xml');
@@ -838,33 +844,69 @@
     function wrapJWPlayerInstance(player) {
       if (!player || typeof player !== 'object' || player.__es_wrapped__) return player;
       player.__es_wrapped__ = true;
+      console.log('[XtremeShld:JWPlayer:Debug] Wrapped JWPlayer instance');
 
       function attachPlayerGuards(p) {
         if (!p || typeof p.on !== 'function') return;
         try {
-          p.on('adError', () => {
-            console.warn('[XtremeShld] Handled JWPlayer adError, resuming main content');
+          p.on('ready', () => {
+            console.log('[XtremeShld:JWPlayer:Debug] Player event: ready');
+          });
+          p.on('play', () => {
+            console.log('[XtremeShld:JWPlayer:Debug] Player event: play');
+          });
+          p.on('pause', () => {
+            console.log('[XtremeShld:JWPlayer:Debug] Player event: pause');
+          });
+          p.on('buffer', (e) => {
+            console.log('[XtremeShld:JWPlayer:Debug] Player event: buffer', e);
+          });
+          p.on('adError', (e) => {
+            console.warn('[XtremeShld:JWPlayer:Debug] Handled JWPlayer adError, resuming main content', e);
             try { p.play(); } catch (_) {}
           });
           p.on('setupError', (e) => {
-            console.warn('[XtremeShld] Handled JWPlayer setupError:', e);
+            console.warn('[XtremeShld:JWPlayer:Debug] Handled JWPlayer setupError:', e);
           });
           p.on('error', (e) => {
-            console.warn('[XtremeShld] JWPlayer error event intercepted:', e);
+            console.error('[XtremeShld:JWPlayer:Debug] JWPlayer error event intercepted:', {
+              code: e && e.code,
+              message: e && e.message,
+              sourceError: e && e.sourceError
+            });
+
+            // Inspect underlying HTML5 video tag
+            const container = typeof p.getContainer === 'function' ? p.getContainer() : null;
+            const videoEl = container ? container.querySelector('video') : document.querySelector('video');
+            if (videoEl) {
+              console.error('[XtremeShld:JWPlayer:Debug] Native <video> tag state on error:', {
+                src: videoEl.src,
+                currentSrc: videoEl.currentSrc,
+                readyState: videoEl.readyState,
+                networkState: videoEl.networkState,
+                error: videoEl.error ? { code: videoEl.error.code, message: videoEl.error.message } : null
+              });
+            }
+
             // Automatic recovery for transient Error 224003 / 224001 media load failures
             if (e && (e.code === 224003 || e.code === 224001 || (typeof e.message === 'string' && (e.message.includes('224003') || e.message.includes('224001'))))) {
-              console.warn('[XtremeShld] Attempting automated playback recovery for Error 224003');
+              console.warn('[XtremeShld:JWPlayer:Debug] Attempting automated playback recovery for Error 224003');
               setTimeout(() => {
                 try {
                   const item = typeof p.getPlaylistItem === 'function' ? p.getPlaylistItem() : null;
+                  console.log('[XtremeShld:JWPlayer:Debug] Recovery playlist item:', item);
                   const hasMedia = item && (item.file || (Array.isArray(item.sources) && item.sources.length > 0));
                   if (hasMedia && typeof p.load === 'function') {
+                    console.log('[XtremeShld:JWPlayer:Debug] Reloading media item and calling play()');
                     p.load([item]);
                     p.play();
                   } else if (typeof p.play === 'function') {
+                    console.log('[XtremeShld:JWPlayer:Debug] Calling play() directly');
                     p.play();
                   }
-                } catch (_) {}
+                } catch (recErr) {
+                  console.error('[XtremeShld:JWPlayer:Debug] Recovery attempt error:', recErr);
+                }
               }, 400);
             }
           });
@@ -874,10 +916,14 @@
       if (typeof player.setup === 'function') {
         const origSetup = player.setup;
         player.setup = function (options) {
+          console.log('[XtremeShld:JWPlayer:Debug] player.setup() invoked with options:', {
+            hasAdvertising: Boolean(options && options.advertising),
+            playlist: options && options.playlist
+          });
           if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
             if (options && typeof options === 'object') {
               if (options.advertising) {
-                console.warn('[XtremeShld] Sanitizing JWPlayer advertising config to prevent Error 224003');
+                console.warn('[XtremeShld:JWPlayer:Debug] Sanitizing JWPlayer advertising config to prevent Error 224003');
                 delete options.advertising;
               }
             }
@@ -891,8 +937,8 @@
       attachPlayerGuards(player);
 
       if (typeof player.playAd === 'function') {
-        player.playAd = function () {
-          console.warn('[XtremeShld] JWPlayer playAd defused to prevent Error 224003');
+        player.playAd = function (tag) {
+          console.warn('[XtremeShld:JWPlayer:Debug] JWPlayer playAd defused to prevent Error 224003:', tag);
           setTimeout(() => {
             try {
               if (typeof player.play === 'function') {
@@ -906,6 +952,22 @@
 
       return player;
     }
+
+    // Listen to native video element errors at document level for full observability
+    try {
+      document.addEventListener('error', (evt) => {
+        if (evt.target && evt.target.tagName === 'VIDEO') {
+          const v = evt.target;
+          console.error('[XtremeShld:Video:Debug] Global <video> error event captured:', {
+            src: v.src,
+            currentSrc: v.currentSrc,
+            readyState: v.readyState,
+            networkState: v.networkState,
+            error: v.error ? { code: v.error.code, message: v.error.message } : null
+          });
+        }
+      }, true);
+    } catch (_) {}
 
     let _jwplayer = window.jwplayer;
     if (_jwplayer && typeof _jwplayer === 'function') {

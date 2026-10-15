@@ -8,6 +8,7 @@
 
   const hostname = window.location.hostname;
   const normalizedDomain = hostname.replace(/^www\./i, '');
+  console.log('[XtremeShld:Content:Debug] Content script initialized on:', hostname, '(isTop:', window === window.top, ')');
 
   // Protect critical web applications (Google Workspace, accounts) from invasive scriptlet alterations
   const PROTECTED_SYSTEM_DOMAINS = [
@@ -598,6 +599,7 @@
         const ifr = voyeurIframes[i];
         if (ifr.getAttribute('referrerpolicy') !== 'no-referrer') {
           ifr.setAttribute('referrerpolicy', 'no-referrer');
+          console.log('[XtremeShld:Content:Debug] Enforced referrerpolicy="no-referrer" on iframe:', ifr.src || ifr.getAttribute('data-src'));
         }
       }
     }

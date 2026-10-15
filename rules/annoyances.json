@@ -270,5 +270,33 @@
       "urlFilter": "||voyeurok.com^",
       "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
     }
+  },
+  {
+    "id": 4024,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||voyeurhit.tube^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
+  },
+  {
+    "id": 4025,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||videovoyeurhit.tube^",
+      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
+    }
   }
 ]
