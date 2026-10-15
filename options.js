@@ -28,6 +28,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const updateBtnIcon = document.getElementById('update-btn-icon');
   const updateBtnText = document.getElementById('update-btn-text');
 
+  // Dynamic Version Display from Manifest
+  try {
+    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.0.38';
+    const verBadge = document.getElementById('xtremeshld-version');
+    if (verBadge) verBadge.textContent = `v${manifestVer}`;
+  } catch (_) {}
+
   // Checkbox Elements
   const toggles = {
     blockPopups: document.getElementById('opt-blockPopups'),
