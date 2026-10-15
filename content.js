@@ -444,7 +444,14 @@
     '#webpushBanner-eluniversal',
     '.fc-consent-root',
     '.fc-dialog-overlay',
-    '.privacy-modal'
+    '.privacy-modal',
+    'iframe[id*="interstitial" i]',
+    'iframe[id^="tr-"]',
+    'div[id*="interstitial" i]',
+    '[class*="interstitial" i]',
+    '[id*="interstitial" i]',
+    '#tr-interstitial',
+    '[id^="tr-interstitial"]'
   ];
 
   const processedNodes = new WeakSet();
@@ -825,8 +832,23 @@
       const added = m.addedNodes;
       if (added && added.length > 0) {
         for (let j = 0; j < added.length; j++) {
-          if (added[j].nodeType === Node.ELEMENT_NODE) {
-            scheduleScan(added[j]);
+          const n = added[j];
+          if (n.nodeType === Node.ELEMENT_NODE) {
+            const nid = (n.id || '').toLowerCase();
+            const ncls = (n.className || '').toString().toLowerCase();
+            if (nid.includes('interstitial') || nid.startsWith('tr-') || ncls.includes('interstitial')) {
+              console.warn('[XtremeShld] Instantly eliminated interstitial overlay:', n.id || n.className);
+              try { n.remove(); } catch (_) {}
+              unlockScroll();
+              continue;
+            }
+            if (n.matches && n.matches('iframe[id*="interstitial" i], iframe[id^="tr-"], [class*="interstitial" i]')) {
+              console.warn('[XtremeShld] Instantly eliminated matching interstitial:', n.id || n.className);
+              try { n.remove(); } catch (_) {}
+              unlockScroll();
+              continue;
+            }
+            scheduleScan(n);
           }
         }
       }

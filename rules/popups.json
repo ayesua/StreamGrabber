@@ -646,5 +646,68 @@
       "urlFilter": "||kartel69^",
       "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
     }
+  },
+  {
+    "id": 2073,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||twinrdengine.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2074,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||trafficstars.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2075,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||twinrdsrv.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2076,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||trmob.com^",
+      "resourceTypes": ["main_frame", "sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2077,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||tsyndicate.com^",
+      "resourceTypes": ["sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2078,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||magsrv.com^",
+      "resourceTypes": ["sub_frame", "script", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2079,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||sacdnssedge.com^",
+      "resourceTypes": ["sub_frame", "script", "xmlhttprequest", "media", "other"]
+    }
   }
 ]

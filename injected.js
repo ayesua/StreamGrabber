@@ -1160,19 +1160,49 @@
       configurable: true
     });
 
-    // Ensure Flowplayer player container is never hidden by failed ad state
+    // Ensure Flowplayer player container is never hidden and interstitial overlays are defused
     try {
-      const fpStyle = document.createElement('style');
-      fpStyle.textContent = `
-        #kt_player .fp-player[style*="visibility: hidden"],
-        #kt_player .fp-player[style*="position: absolute"],
-        .flowplayer .fp-player[style*="visibility: hidden"],
-        .flowplayer .fp-player[style*="position: absolute"] {
-          visibility: visible !important;
-          position: relative !important;
+      const injectSafeStyle = () => {
+        const target = document.head || document.documentElement;
+        if (!target) return false;
+        let fpStyle = document.getElementById('xtremeshld-player-styles');
+        if (!fpStyle) {
+          fpStyle = document.createElement('style');
+          fpStyle.id = 'xtremeshld-player-styles';
+          fpStyle.textContent = `
+            #kt_player .fp-player[style*="visibility: hidden"],
+            #kt_player .fp-player[style*="position: absolute"],
+            .flowplayer .fp-player[style*="visibility: hidden"],
+            .flowplayer .fp-player[style*="position: absolute"] {
+              visibility: visible !important;
+              position: relative !important;
+            }
+            iframe[id*="interstitial" i],
+            iframe[id^="tr-"],
+            div[id*="interstitial" i],
+            [class*="interstitial" i],
+            [id*="interstitial" i],
+            #tr-interstitial,
+            [id^="tr-interstitial"] {
+              display: none !important;
+              visibility: hidden !important;
+              pointer-events: none !important;
+              width: 0 !important;
+              height: 0 !important;
+              opacity: 0 !important;
+              z-index: -99999 !important;
+            }
+          `;
+          target.appendChild(fpStyle);
         }
-      `;
-      (document.head || document.documentElement).appendChild(fpStyle);
+        return true;
+      };
+
+      if (!injectSafeStyle()) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', injectSafeStyle, { once: true });
+        }
+      }
     } catch (_) {}
   } catch (_) {}
 
