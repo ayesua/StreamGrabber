@@ -113,8 +113,12 @@
     if (origFetch) {
       window.fetch = function (input, init) {
         const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-        if (url && typeof url === 'string') {
           if (url.includes('vast.yomeno.xyz')) {
+            if (url.includes('/vast') || url.includes('.xml')) {
+              return Promise.resolve(new Response(EMPTY_VAST_XML, {
+                status: 200, headers: { 'Content-Type': 'application/xml; charset=utf-8' }
+              }));
+            }
             return Promise.resolve(new Response(JSON.stringify({ campaign: null }), {
               status: 200, headers: { 'Content-Type': 'application/json' }
             }));
@@ -474,38 +478,29 @@
     if (origSetup) {
       player.setup = function (config) {
         if (config && typeof config === 'object') {
-          // Defuse VAST preroll ads
+          // Cleanly remove advertising so JWPlayer never triggers Error 224003
           if (config.advertising) {
-            delete config.advertising.tag;
-            delete config.advertising.schedule;
-            config.advertising.client = 'vast';
-            config.advertising.adschedule = [];
+            delete config.advertising;
           }
-          // Sniff sources if present
-          if (Array.isArray(config.sources)) {
-            config.sources.forEach(srcItem => {
+          // Sniff sources if present directly in config
+          const sources = Array.isArray(config.sources) ? config.sources :
+            (Array.isArray(config.playlist) && config.playlist[0] && Array.isArray(config.playlist[0].sources) ? config.playlist[0].sources : null);
+          if (sources) {
+            sources.forEach(srcItem => {
               if (srcItem && srcItem.file) {
                 const fullUrl = srcItem.file.startsWith('/') ? location.origin + srcItem.file : srcItem.file;
                 broadcastStreamData({
                   url: fullUrl,
                   type: (srcItem.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
                   quality: srcItem.label || detectQualityFromUrl(fullUrl),
-                  title: config.title || document.title,
-                  poster: config.image || null
+                  title: config.title || (config.playlist && config.playlist[0] && config.playlist[0].title) || document.title,
+                  poster: config.image || (config.playlist && config.playlist[0] && config.playlist[0].image) || null
                 });
               }
             });
           }
         }
-        const instance = origSetup.apply(this, arguments);
-        try {
-          Object.defineProperty(instance, 'playAd', {
-            configurable: true,
-            writable: true,
-            value: function () { return false; }
-          });
-        } catch (e) {}
-        return instance;
+        return origSetup.apply(this, arguments);
       };
     }
 
