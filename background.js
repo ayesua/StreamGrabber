@@ -107,6 +107,86 @@ function refreshExtensionIcons() {
   } catch (_) {}
 }
 
+const WHITELIST_RULE_ID_OFFSET = 900000;
+
+async function syncDnrRulesets() {
+  try {
+    const isPaused = Boolean(pauseUntilTimestamp && Date.now() < pauseUntilTimestamp);
+    const isActive = isMasterEnabled && !isPaused;
+
+    const enableRulesetIds = [];
+    const disableRulesetIds = [];
+
+    const rulesetMap = {
+      ruleset_trackers: isActive && currentSettings.blockTrackers !== false,
+      ruleset_popups: isActive && currentSettings.blockPopups !== false,
+      ruleset_query_stripping: isActive && currentSettings.stripParams !== false,
+      ruleset_annoyances: isActive && (currentSettings.dismissCookieBanners !== false || currentSettings.removeOverlays !== false)
+    };
+
+    for (const [id, shouldEnable] of Object.entries(rulesetMap)) {
+      if (shouldEnable) enableRulesetIds.push(id);
+      else disableRulesetIds.push(id);
+    }
+
+    await chrome.declarativeNetRequest.updateEnabledRulesets({
+      enableRulesetIds,
+      disableRulesetIds
+    });
+  } catch (err) {
+    console.warn('[XtremeShld] Error syncing DNR rulesets:', err);
+  }
+}
+
+async function syncWhitelistDnrRules(domains = currentWhitelistedDomains) {
+  try {
+    if (!chrome.declarativeNetRequest?.updateDynamicRules) return;
+    const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const removeRuleIds = existingRules
+      .filter(r => r.id >= WHITELIST_RULE_ID_OFFSET && r.id < WHITELIST_RULE_ID_OFFSET + 50000)
+      .map(r => r.id);
+
+    const cleanDomains = Array.from(new Set(
+      (domains || [])
+        .map(d => String(d || '').trim().toLowerCase().replace(/^www\./, ''))
+        .filter(Boolean)
+    ));
+
+    const addRules = [];
+    cleanDomains.forEach((domain, idx) => {
+      addRules.push({
+        id: WHITELIST_RULE_ID_OFFSET + (idx * 2) + 1,
+        priority: 100000,
+        action: { type: 'allow' },
+        condition: {
+          initiatorDomains: [domain],
+          resourceTypes: [
+            'main_frame', 'sub_frame', 'stylesheet', 'script', 'image',
+            'font', 'object', 'xmlhttprequest', 'ping', 'csp_report',
+            'media', 'websocket', 'webtransport', 'webbundle', 'other'
+          ]
+        }
+      });
+      addRules.push({
+        id: WHITELIST_RULE_ID_OFFSET + (idx * 2) + 2,
+        priority: 100000,
+        action: { type: 'allowAllRequests' },
+        condition: {
+          requestDomains: [domain],
+          resourceTypes: ['main_frame', 'sub_frame']
+        }
+      });
+    });
+
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds,
+      addRules
+    });
+  } catch (err) {
+    console.warn('[XtremeShld] Error syncing dynamic whitelist DNR rules:', err);
+  }
+}
+
 async function initBackgroundState() {
   try {
     const data = await chrome.storage.local.get([
@@ -120,6 +200,15 @@ async function initBackgroundState() {
     if (data.settings) currentSettings = { ...DEFAULT_SETTINGS, ...data.settings };
     if (data.whitelistedDomains) currentWhitelistedDomains = data.whitelistedDomains;
 
+    // Automatically recover if a timed pause expired while Service Worker or browser was asleep
+    if (pauseUntilTimestamp && Date.now() >= pauseUntilTimestamp) {
+      isMasterEnabled = true;
+      pauseUntilTimestamp = 0;
+      await chrome.storage.local.set({ masterEnabled: true, pauseUntil: 0 });
+    }
+
+    await syncDnrRulesets();
+    await syncWhitelistDnrRules(currentWhitelistedDomains);
     refreshExtensionIcons();
 
     const isPaused = Boolean(pauseUntilTimestamp && Date.now() < pauseUntilTimestamp);
@@ -138,10 +227,26 @@ initBackgroundState();
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local') {
-    if (changes.masterEnabled !== undefined) isMasterEnabled = changes.masterEnabled.newValue !== false;
-    if (changes.pauseUntil !== undefined) pauseUntilTimestamp = changes.pauseUntil.newValue || 0;
-    if (changes.settings !== undefined) currentSettings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
-    if (changes.whitelistedDomains !== undefined) currentWhitelistedDomains = changes.whitelistedDomains.newValue || [];
+    let shouldSyncDnr = false;
+    if (changes.masterEnabled !== undefined) {
+      isMasterEnabled = changes.masterEnabled.newValue !== false;
+      shouldSyncDnr = true;
+    }
+    if (changes.pauseUntil !== undefined) {
+      pauseUntilTimestamp = changes.pauseUntil.newValue || 0;
+      shouldSyncDnr = true;
+    }
+    if (changes.settings !== undefined) {
+      currentSettings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
+      shouldSyncDnr = true;
+    }
+    if (changes.whitelistedDomains !== undefined) {
+      currentWhitelistedDomains = changes.whitelistedDomains.newValue || [];
+      syncWhitelistDnrRules(currentWhitelistedDomains);
+    }
+    if (shouldSyncDnr) {
+      syncDnrRulesets();
+    }
     refreshExtensionIcons();
   }
 });
@@ -153,7 +258,8 @@ function isTabWatchdogActive(openerTabId) {
 
   if (openerTabId && tabHostnames.has(openerTabId)) {
     const openerHost = tabHostnames.get(openerTabId);
-    if (currentWhitelistedDomains.some(d => openerHost === d || openerHost.endsWith('.' + d))) {
+    const normOpener = openerHost.replace(/^www\./i, '');
+    if (currentWhitelistedDomains.some(d => openerHost === d || openerHost.endsWith('.' + d) || normOpener === d || normOpener.endsWith('.' + d))) {
       return false;
     }
   }
@@ -200,6 +306,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   // Setup WebRTC IP Leak Defense
   applyWebRTCProtection(initialData.settings?.blockWebRTCLeaks ?? true);
 
+  // Sync DNR rulesets and dynamic whitelist rules
+  await syncDnrRulesets();
+  await syncWhitelistDnrRules(data.whitelistedDomains || []);
+
   // Setup Context Menus
   setupContextMenus();
 
@@ -222,12 +332,14 @@ function runMemoryGarbageCollection() {
   });
 }
 
-// Service Worker Alarm + Interval for persistent GC
+// Service Worker Alarm + Interval for persistent GC & Timed Pause Resume
 try {
   chrome.alarms?.create('memory_gc', { periodInMinutes: 10 });
-  chrome.alarms?.onAlarm.addListener((alarm) => {
+  chrome.alarms?.onAlarm.addListener(async (alarm) => {
     if (alarm.name === 'memory_gc') {
       runMemoryGarbageCollection();
+    } else if (alarm.name === 'resume_protection') {
+      await setGlobalProtection(true);
     }
   });
 } catch (_) {}
@@ -435,13 +547,6 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'bbangads.b-cdn.net',
   'buddhabangxxx.com',
   'infinity.js',
-  'stripchat.com',
-  'stripcash.com',
-  'chaturbate.com',
-  'camsoda.com',
-  'bongacams.com',
-  'livejasmin.com',
-  'cam4.com',
   'orbsrv.com',
   'pjs.js',
   'smartpopbucketid=',
@@ -450,7 +555,6 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'rtb-4.xgroovy.com',
   'lazyload.io',
   'st.pussyspace.com',
-  'strpchat.com',
   'xhamsterlive.com',
   'stripchat',
   'stripcash',
@@ -460,14 +564,11 @@ const KNOWN_AD_POPUP_PATTERNS = [
   'livejasmin',
   'camsoda',
   'cam4.com',
-  'svradv.com',
-  'go.svradv.com',
   'svradv',
   'amateurok.net',
   'cherrytale',
   'ero-labs',
   'mybid',
-  'ero-labs.art',
   'kartela.ink',
   'kartel69'
 ];
@@ -651,20 +752,18 @@ function categorizeTracker(url) {
 async function setGlobalProtection(enabled) {
   isMasterEnabled = enabled;
   pauseUntilTimestamp = 0;
+  try {
+    chrome.alarms?.clear('resume_protection');
+  } catch (_) {}
   await chrome.storage.local.set({ masterEnabled: enabled, pauseUntil: 0 });
+  await syncDnrRulesets();
 
   if (enabled) {
-    await chrome.declarativeNetRequest.updateEnabledRulesets({
-      enableRulesetIds: ALL_RULESETS
-    });
     applyWebRTCProtection(currentSettings.blockWebRTCLeaks !== false);
     chrome.action.setBadgeText({ text: '' });
     refreshExtensionIcons();
     console.log('[XtremeShld] Global protection: ENABLED');
   } else {
-    await chrome.declarativeNetRequest.updateEnabledRulesets({
-      disableRulesetIds: ALL_RULESETS
-    });
     applyWebRTCProtection(false);
     chrome.action.setBadgeText({ text: 'OFF' });
     chrome.action.setBadgeBackgroundColor({ color: '#64748b' });
@@ -678,43 +777,45 @@ async function pauseProtectionForMinutes(minutes) {
   isMasterEnabled = false;
   pauseUntilTimestamp = pauseUntil;
   await chrome.storage.local.set({ masterEnabled: false, pauseUntil });
-  await chrome.declarativeNetRequest.updateEnabledRulesets({ disableRulesetIds: ALL_RULESETS });
+  await syncDnrRulesets();
   applyWebRTCProtection(false);
   chrome.action.setBadgeText({ text: 'PAUSE' });
   chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
   refreshExtensionIcons();
 
-  // Schedule auto-reactivation
-  setTimeout(async () => {
-    const data = await chrome.storage.local.get(['pauseUntil']);
-    if (data.pauseUntil && Date.now() >= data.pauseUntil) {
-      await setGlobalProtection(true);
-    }
-  }, minutes * 60 * 1000);
+  // Schedule persistent MV3 alarm for auto-reactivation even if Service Worker sleeps
+  try {
+    chrome.alarms?.create('resume_protection', { when: pauseUntil });
+  } catch (_) {}
 }
 
 async function whitelistDomain(domain) {
   if (!domain) return;
+  const clean = domain.trim().toLowerCase();
   const data = await chrome.storage.local.get(['whitelistedDomains']);
   const list = data.whitelistedDomains || [];
-  if (!list.includes(domain)) {
-    list.push(domain);
+  if (!list.includes(clean)) {
+    list.push(clean);
     await chrome.storage.local.set({ whitelistedDomains: list });
     currentWhitelistedDomains = list;
+    await syncWhitelistDnrRules(list);
     refreshExtensionIcons();
-    console.log(`[XtremeShld] Whitelisted domain: ${domain}`);
+    console.log(`[XtremeShld] Whitelisted domain: ${clean}`);
   }
 }
 
 async function removeWhitelistedDomain(domain) {
   if (!domain) return;
+  const clean = domain.trim().toLowerCase();
+  const canonical = clean.replace(/^www\./, '');
   const data = await chrome.storage.local.get(['whitelistedDomains']);
   let list = data.whitelistedDomains || [];
-  list = list.filter(d => d !== domain);
+  list = list.filter(d => d !== clean && d !== canonical && d !== 'www.' + canonical);
   await chrome.storage.local.set({ whitelistedDomains: list });
   currentWhitelistedDomains = list;
+  await syncWhitelistDnrRules(list);
   refreshExtensionIcons();
-  console.log(`[XtremeShld] Removed whitelist for domain: ${domain}`);
+  console.log(`[XtremeShld] Removed whitelist for domain: ${clean}`);
 }
 
 /* ==========================================================================

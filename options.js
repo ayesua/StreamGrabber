@@ -64,8 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnAddWhitelist = document.getElementById('btn-add-whitelist');
   const whitelistContainer = document.getElementById('whitelist-container');
 
-  // Cosmetic Rules Element
+  // Cosmetic Rules Elements
   const cosmeticContainer = document.getElementById('cosmetic-container');
+  const inputCosmeticDomain = document.getElementById('input-cosmetic-domain');
+  const inputCosmeticSelector = document.getElementById('input-cosmetic-selector');
+  const btnAddCosmetic = document.getElementById('btn-add-cosmetic');
+  const btnClearCosmetic = document.getElementById('btn-clear-cosmetic');
 
   // Logs Element
   const logsContainer = document.getElementById('logs-container');
@@ -424,16 +428,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const removeText = dict.btn_remove || 'Remove';
     let html = '';
+    const seenPairs = new Set();
     domains.forEach(domain => {
+      const canonical = domain === '*' ? '*' : domain.replace(/^www\./i, '');
       const selectors = rulesMap[domain] || [];
       selectors.forEach(sel => {
+        const pairKey = `${canonical}||${sel}`;
+        if (seenPairs.has(pairKey)) return;
+        seenPairs.add(pairKey);
+        const escapedSel = sel.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         html += `
-          <div class="list-item">
-            <div>
-              <span style="color: var(--accent-emerald); font-weight: 600;">${domain}</span>
-              <span style="color: var(--text-secondary); margin-left: 8px;">${sel}</span>
+          <div class="list-item" style="gap: 10px;">
+            <div style="overflow: hidden; text-overflow: ellipsis;">
+              <span style="color: var(--accent-emerald); font-weight: 600;">${canonical === '*' ? '🌐 All Sites (*)' : canonical}</span>
+              <code style="color: var(--text-secondary); margin-left: 8px; font-family: monospace; font-size: 11px;">${escapedSel}</code>
             </div>
-            <button class="btn-delete" data-cosmetic-domain="${domain}" data-cosmetic-sel="${sel}">&times; ${removeText}</button>
+            <div style="display: flex; gap: 6px; flex-shrink: 0;">
+              <button class="btn-delete btn-edit-cosmetic" style="background: rgba(56, 189, 248, 0.14); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);" data-cosmetic-domain="${canonical}" data-cosmetic-sel="${escapedSel}">✎ Edit</button>
+              <button class="btn-delete btn-remove-cosmetic" data-cosmetic-domain="${canonical}" data-cosmetic-sel="${escapedSel}">&times; ${removeText}</button>
+            </div>
           </div>
         `;
       });
@@ -441,16 +454,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     cosmeticContainer.innerHTML = html;
 
-    cosmeticContainer.querySelectorAll('.btn-delete').forEach(btn => {
+    cosmeticContainer.querySelectorAll('.btn-edit-cosmetic').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const domain = btn.getAttribute('data-cosmetic-domain');
+        const selector = btn.getAttribute('data-cosmetic-sel');
+        if (inputCosmeticDomain) inputCosmeticDomain.value = domain;
+        if (inputCosmeticSelector) {
+          inputCosmeticSelector.value = selector;
+          inputCosmeticSelector.focus();
+        }
+        // Remove the old entry so saving replaces it cleanly
+        const data = await chrome.storage.local.get(['customCosmeticRules']);
+        const customRules = data.customCosmeticRules || {};
+        const canonical = domain === '*' ? '*' : domain.replace(/^www\./i, '');
+        const domainsToClean = canonical === '*' ? ['*'] : Array.from(new Set([domain, canonical, 'www.' + canonical]));
+        domainsToClean.forEach(d => {
+          if (customRules[d]) {
+            customRules[d] = customRules[d].filter(s => s !== selector);
+            if (customRules[d].length === 0) delete customRules[d];
+          }
+        });
+        await chrome.storage.local.set({ customCosmeticRules: customRules });
+        renderCosmeticRules(customRules);
+      });
+    });
+
+    cosmeticContainer.querySelectorAll('.btn-remove-cosmetic').forEach(btn => {
       btn.addEventListener('click', async () => {
         const domain = btn.getAttribute('data-cosmetic-domain');
         const selector = btn.getAttribute('data-cosmetic-sel');
 
         const data = await chrome.storage.local.get(['customCosmeticRules']);
         const customRules = data.customCosmeticRules || {};
-        const canonical = domain.replace(/^www\./i, '');
-        const domains = Array.from(new Set([domain, canonical, 'www.' + canonical]));
-        domains.forEach(d => {
+        const canonical = domain === '*' ? '*' : domain.replace(/^www\./i, '');
+        const domainsToClean = canonical === '*' ? ['*'] : Array.from(new Set([domain, canonical, 'www.' + canonical]));
+        domainsToClean.forEach(d => {
           if (customRules[d]) {
             customRules[d] = customRules[d].filter(s => s !== selector);
             if (customRules[d].length === 0) delete customRules[d];
@@ -461,6 +499,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
   }
+
+  btnAddCosmetic?.addEventListener('click', async () => {
+    let domain = (inputCosmeticDomain?.value || '').trim().toLowerCase();
+    const selector = (inputCosmeticSelector?.value || '').trim();
+    if (!domain) domain = '*';
+    if (!selector) return;
+
+    // Validate CSS selector syntax
+    try {
+      document.querySelectorAll(selector);
+    } catch (_) {
+      alert('Invalid CSS selector syntax. Please check your selector and try again.');
+      return;
+    }
+
+    try {
+      if (domain !== '*' && (domain.startsWith('http://') || domain.startsWith('https://'))) {
+        domain = new URL(domain).hostname;
+      }
+    } catch (_) {}
+
+    const canonical = domain === '*' ? '*' : domain.replace(/^www\./i, '');
+    const data = await chrome.storage.local.get(['customCosmeticRules']);
+    const customRules = data.customCosmeticRules || {};
+    const targetDomains = canonical === '*' ? ['*'] : Array.from(new Set([canonical, 'www.' + canonical]));
+
+    targetDomains.forEach(d => {
+      if (!customRules[d]) customRules[d] = [];
+      if (!customRules[d].includes(selector)) {
+        customRules[d].push(selector);
+      }
+    });
+
+    await chrome.storage.local.set({ customCosmeticRules: customRules });
+    if (inputCosmeticDomain) inputCosmeticDomain.value = '';
+    if (inputCosmeticSelector) inputCosmeticSelector.value = '';
+    renderCosmeticRules(customRules);
+  });
+
+  btnClearCosmetic?.addEventListener('click', async () => {
+    await chrome.storage.local.set({ customCosmeticRules: {} });
+    renderCosmeticRules({});
+  });
 
   /* ==========================================================================
      8. ACTIVITY LOGS

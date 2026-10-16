@@ -374,8 +374,17 @@
       </div>
 
       <div class="setting-card">
-        <h2 style="font-size: 16px; margin-bottom: 8px; color: var(--accent-emerald);" data-i18n="zapped_title">Zapped Elements (Custom Cosmetic Filters)</h2>
-        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;" data-i18n="zapped_desc">Selectors hidden permanently using the Element Zapper tool.</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <h2 style="font-size: 16px; margin: 0; color: var(--accent-emerald);" data-i18n="zapped_title">Zapped Elements (Custom Cosmetic Filters)</h2>
+          <button class="btn-primary" id="btn-clear-cosmetic" style="background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.35); padding: 5px 10px; font-size: 11px;">Clear All Rules</button>
+        </div>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;" data-i18n="zapped_desc">Selectors hidden permanently using the Element Zapper tool or added manually below (use <code>*</code> as domain for all sites).</p>
+
+        <div class="input-group" style="margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <input type="text" id="input-cosmetic-domain" class="text-input" style="flex: 1; min-width: 150px;" placeholder="Domain (e.g. example.com or *)">
+          <input type="text" id="input-cosmetic-selector" class="text-input" style="flex: 2; min-width: 220px; font-family: monospace;" placeholder="CSS Selector (e.g. div.spot or .ad-banner)">
+          <button class="btn-primary" id="btn-add-cosmetic">Add Rule</button>
+        </div>
 
         <div class="items-list" id="cosmetic-container">
           <div style="color: var(--text-muted); font-size: 12px;" data-i18n="zapped_empty">No custom hidden elements saved yet.</div>

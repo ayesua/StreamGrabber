@@ -107,14 +107,7 @@
     'xhamsterlive.com',
     'pornbaker.com/tag',
     'pornbaker.com/category',
-    'stripchat.com',
-    'stripcash.com',
-    'strpchat.com',
     'stripchat.org',
-    'cam4.com',
-    'bongacams.com',
-    'chaturbate.com',
-    'livejasmin.com',
     'svradv.com',
     'go.svradv.com',
     'svradv',
@@ -169,7 +162,12 @@
     'twitter.com',
     'x.com',
     'paypal.com',
-    'stripe.com'
+    'stripe.com',
+    'checkout.stripe.com',
+    'mercadopago.com',
+    'auth0.com',
+    'okta.com',
+    'login.microsoftonline.com'
   ];
 
   function isAllowedPopupDomain(targetUrl) {
@@ -435,8 +433,9 @@
         const href = this.getAttribute('href') || '';
         const isCrossDomain = !isSameDomainOrSubdomain(href);
         const isOAuth = isAllowedPopupDomain(href);
+        const isDetachedOrNewTab = !this.isConnected || target === '_blank' || isRecentMediaAction();
 
-        if (!isRecentUserAction() || isTrackerOrRedirectUrl(href) || (isCrossDomain && !isOAuth)) {
+        if (!isRecentUserAction() || isTrackerOrRedirectUrl(href) || (isCrossDomain && !isOAuth && isDetachedOrNewTab)) {
           notifyBlocked('popup', { url: href, target: target || '_self' });
           return;
         }
@@ -454,7 +453,9 @@
       if (config.blockPopups && !config.whitelisted && event && event.type === 'click' && this instanceof HTMLElement) {
         if (this.tagName === 'A') {
           const href = this.getAttribute('href') || '';
-          if (isTrackerOrRedirectUrl(href) || (!isSameDomainOrSubdomain(href) && !isAllowedPopupDomain(href))) {
+          const target = this.getAttribute('target');
+          const isDetachedOrNewTab = !this.isConnected || target === '_blank' || isRecentMediaAction();
+          if (isTrackerOrRedirectUrl(href) || (!isSameDomainOrSubdomain(href) && !isAllowedPopupDomain(href) && (!isRecentUserAction() || isDetachedOrNewTab))) {
             notifyBlocked('popup', { url: href });
             return false;
           }
@@ -470,7 +471,9 @@
     HTMLFormElement.prototype.submit = function () {
       if (config.blockPopups && !config.whitelisted) {
         const action = this.getAttribute('action') || '';
-        if (isTrackerOrRedirectUrl(action) || (!isSameDomainOrSubdomain(action) && !isAllowedPopupDomain(action))) {
+        const target = this.getAttribute('target');
+        const isSuspiciousForm = !this.isConnected || target === '_blank' || !isRecentUserAction() || isRecentMediaAction();
+        if (isTrackerOrRedirectUrl(action) || (!isSameDomainOrSubdomain(action) && !isAllowedPopupDomain(action) && isSuspiciousForm)) {
           notifyBlocked('popup', { url: action });
           return;
         }
@@ -769,6 +772,13 @@
         if (!config.whitelisted && (config.defuseAntiAdblock || config.blockMediaPrerolls)) {
           const urlStr = String(typeof resource === 'string' ? resource : (resource?.url || ''));
           if (urlStr.includes('vast.yomeno.xyz')) {
+            if (urlStr.includes('/vast') || urlStr.includes('.xml')) {
+              return Promise.resolve(new Response(EMPTY_VAST_XML, {
+                status: 200,
+                statusText: 'OK',
+                headers: { 'Content-Type': 'application/xml; charset=utf-8' }
+              }));
+            }
             console.log('[XtremeShld:Fetch:Debug] Intercepted vast.yomeno.xyz, returning empty campaign JSON');
             return Promise.resolve(new Response(JSON.stringify({ campaign: null }), {
               status: 200,
@@ -898,28 +908,6 @@
                 error: videoEl.error ? { code: videoEl.error.code, message: videoEl.error.message } : null
               });
             }
-
-            // Automatic recovery for transient Error 224003 / 224001 media load failures
-            if (e && (e.code === 224003 || e.code === 224001 || (typeof e.message === 'string' && (e.message.includes('224003') || e.message.includes('224001'))))) {
-              console.warn('[XtremeShld:JWPlayer:Debug] Attempting automated playback recovery for Error 224003');
-              setTimeout(() => {
-                try {
-                  const item = typeof p.getPlaylistItem === 'function' ? p.getPlaylistItem() : null;
-                  console.log('[XtremeShld:JWPlayer:Debug] Recovery playlist item:', item);
-                  const hasMedia = item && (item.file || (Array.isArray(item.sources) && item.sources.length > 0));
-                  if (hasMedia && typeof p.load === 'function') {
-                    console.log('[XtremeShld:JWPlayer:Debug] Reloading media item and calling play()');
-                    p.load([item]);
-                    p.play();
-                  } else if (typeof p.play === 'function') {
-                    console.log('[XtremeShld:JWPlayer:Debug] Calling play() directly');
-                    p.play();
-                  }
-                } catch (recErr) {
-                  console.error('[XtremeShld:JWPlayer:Debug] Recovery attempt error:', recErr);
-                }
-              }, 400);
-            }
           });
         } catch (_) {}
       }
@@ -946,27 +934,6 @@
       }
 
       attachPlayerGuards(player);
-
-      try {
-        const defusedPlayAd = function (tag) {
-          console.warn('[XtremeShld:JWPlayer:Debug] JWPlayer playAd defused to prevent Error 224003 / buffering hang:', tag);
-          setTimeout(() => {
-            try {
-              if (typeof player.play === 'function') {
-                player.play();
-              }
-            } catch (_) {}
-          }, 30);
-          return false;
-        };
-        Object.defineProperty(player, 'playAd', {
-          get: () => defusedPlayAd,
-          set: () => {
-            console.log('[XtremeShld:JWPlayer:Debug] Blocked attempt to overwrite player.playAd');
-          },
-          configurable: true
-        });
-      } catch (_) {}
 
       return player;
     }

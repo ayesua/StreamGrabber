@@ -8,7 +8,6 @@
 
   const hostname = window.location.hostname;
   const normalizedDomain = hostname.replace(/^www\./i, '');
-  console.log('[XtremeShld:Content:Debug] Content script initialized on:', hostname, '(isTop:', window === window.top, ')');
 
   // Protect critical web applications (Google Workspace, accounts) from invasive scriptlet alterations
   const PROTECTED_SYSTEM_DOMAINS = [
@@ -49,7 +48,29 @@
      COSMETIC FILTERING STATE (Declared early to eliminate TDZ ReferenceErrors)
      ========================================================================== */
   let cosmeticStyleTag = null;
-  const BUILTIN_COSMETIC_SELECTORS = [];
+  const BUILTIN_COSMETIC_SELECTORS = [
+    '.adsbyexoclick',
+    '.exo-native-widget',
+    'ins.eas6a97888e2',
+    'ins.eas6a97888e20',
+    'ins.adsbyjuicy',
+    '[id^="div-gpt-ad"]',
+    'ins.adsbygoogle',
+    '.taboola-widget',
+    '.OUTBRAIN',
+    '.bottom-spots',
+    '.spot > iframe[src*="zone="]',
+    '.spot:has(iframe)',
+    '.happy-under-player',
+    'iframe[src*="exoclick.com"]',
+    'iframe[src*="magsrv.com"]',
+    'iframe[src*="tsyndicate.com"]',
+    'iframe[src*="trafficstars.com"]',
+    'iframe[src*="juicyads.com"]',
+    'iframe[src*="realsrv.com"]',
+    'iframe[src*="clickadu.com"]',
+    'iframe[src*="adsterra.com"]'
+  ];
   let activeCosmeticSelectors = [];
 
   /* ==========================================================================
@@ -278,14 +299,7 @@
     'xhamsterlive.com',
     'pornbaker.com/tag',
     'pornbaker.com/category',
-    'stripchat.com',
-    'stripcash.com',
-    'strpchat.com',
     'stripchat.org',
-    'cam4.com',
-    'bongacams.com',
-    'chaturbate.com',
-    'livejasmin.com',
     'svradv.com',
     'go.svradv.com',
     'svradv',
@@ -301,12 +315,7 @@
   function isSearchOrAdRedirect(href) {
     if (!href || typeof href !== 'string') return false;
     const lower = href.toLowerCase();
-    if (SUSPICIOUS_AD_HREFS.some(p => lower.includes(p))) return true;
-    const isSearchEngine = lower.includes('google.') || lower.includes('bing.com') || lower.includes('search.yahoo.com') || lower.includes('duckduckgo.com');
-    if (isSearchEngine) {
-      return SUSPICIOUS_AD_HREFS.some(p => lower.includes(p));
-    }
-    return false;
+    return SUSPICIOUS_AD_HREFS.some(p => lower.includes(p));
   }
 
   function isMediaTarget(el) {
@@ -1010,9 +1019,10 @@
       return;
     }
 
+    const globalRules = (customRules && customRules['*']) || [];
     const hostRules = (customRules && customRules[hostname]) || [];
     const normRules = (customRules && normalizedDomain !== hostname && customRules[normalizedDomain]) || [];
-    const userRules = Array.from(new Set([...hostRules, ...normRules]));
+    const userRules = Array.from(new Set([...globalRules, ...hostRules, ...normRules]));
     const allRules = Array.from(new Set([...BUILTIN_COSMETIC_SELECTORS, ...userRules]));
     activeCosmeticSelectors = allRules;
 
@@ -1042,23 +1052,49 @@
   applyCustomCosmeticRules({});
 
   /* ==========================================================================
-     8. INTERACTIVE ELEMENT ZAPPER (Always-Visible Lever, Preview & Undo)
+     8. INTERACTIVE ELEMENT ZAPPER (Smart/Exact Mode, Lever, Preview & Undo)
      ========================================================================== */
   let pickerActive = false;
   let isLocked = false;
+  let pickerSmartMode = true; // Default: Smart/Similar cross-page selector generation
+  let customEditedSelector = '';
   let hoveredElement = null;
   let selectedElement = null;
   let ancestryChain = [];
   let selectedIndex = 0;
   let previewActive = false;
   let pickerToolbar = null;
+  let highlightedMatches = [];
   const sessionZapHistory = [];
+
+  const GENERIC_LAYOUT_CLASSES = new Set([
+    'wrapper', 'main', 'container', 'content', 'row', 'col', 'column', 'columns',
+    'inner', 'outer', 'clearfix', 'clear', 'block', 'box', 'section', 'layout',
+    'page', 'site', 'body', 'grid', 'flex', 'wrap', 'holder', 'panel', 'frame'
+  ]);
+
+  const AD_WRAPPER_CLASS_REGEX = /(^|[-_])(spot|spots|bottom-spots|ad|ads|adv|advert|advertisement|banner|banners|sponsor|sponsored|promo|exo|juicy|outbrain|taboola|widget-ad|happy-under-player)($|[-_])/i;
 
   function isExtensionElement(el) {
     if (!el) return false;
     return el.id?.startsWith('pureshield-') ||
            el.classList?.contains('pureshield-toast') ||
            el.closest?.('#pureshield-picker-toolbar, #pureshield-toast-container, #pureshield-cosmetic-styles');
+  }
+
+  function isDedicatedAdWrapper(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    if (el === document.body || el === document.documentElement) return false;
+    const cls = typeof el.className === 'string' ? el.className : '';
+    const id = el.id || '';
+    if (AD_WRAPPER_CLASS_REGEX.test(cls) || AD_WRAPPER_CLASS_REGEX.test(id)) {
+      // Ensure it is not wrapping the entire page or main video player
+      if (el.querySelector && el.querySelector('video, #video, .video-player, .player-holder')) return false;
+      const rect = el.getBoundingClientRect();
+      if (rect.width > window.innerWidth * 0.95 && rect.height > window.innerHeight * 0.85) return false;
+      return true;
+    }
+    return false;
   }
 
   function buildAncestryChain(el) {
@@ -1075,12 +1111,33 @@
     return chain;
   }
 
-  function getUniqueSelector(el) {
+  function getInitialChainIndex(chain) {
+    if (!chain || chain.length <= 1) return 0;
+    // If user clicked an inner iframe/img/ins/a inside a dedicated ad wrapper (e.g. div.spot),
+    // automatically select the dedicated ad wrapper so the entire ad slot is zapped cleanly.
+    for (let i = 1; i < Math.min(chain.length, 4); i++) {
+      if (isDedicatedAdWrapper(chain[i])) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  function getValidElementClasses(el) {
+    if (!el || !el.className || typeof el.className !== 'string') return [];
+    return el.className.split(/\s+/).filter(c =>
+      c && !c.startsWith('pureshield-') && !c.includes(':') && !c.includes('[') &&
+      !/^(is-|has-|active|open|hover|focus|playing|paused|mouseover|splash|clearfix)/i.test(c)
+    );
+  }
+
+  function getUniqueSelector(el, smartMode = pickerSmartMode) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag = el.nodeName.toLowerCase();
 
     // 1. Stable, non-dynamic ID check
     if (el.id && !el.id.startsWith('pureshield-')) {
-      const isDynamicId = /[a-f0-9]{12,}|[0-9]{7,}|interstitial|overlay/i.test(el.id);
+      const isDynamicId = /[a-f0-9]{10,}|[0-9]{5,}|interstitial|overlay/i.test(el.id);
       if (!isDynamicId) {
         try {
           const idSel = '#' + CSS.escape(el.id);
@@ -1091,17 +1148,69 @@
       }
     }
 
-    // 2. High-specificity attributes for links (href)
-    const tag = el.nodeName.toLowerCase();
+    // 2. Meaningful custom ad/widget attributes (data-ad-slot, data-zone-id, data-widget-id, name)
+    const distinctAttrs = ['data-ad-slot', 'data-zone-id', 'data-widget-id', 'name'];
+    for (const attr of distinctAttrs) {
+      const val = el.getAttribute(attr);
+      if (val && !val.includes('"') && !val.includes("'")) {
+        try {
+          if (smartMode && (attr === 'data-ad-slot' || attr === 'data-zone-id')) {
+            return `${tag}[${attr}]`;
+          }
+          const attrSel = `${tag}[${attr}="${CSS.escape(val)}"]`;
+          if (document.querySelectorAll(attrSel).length >= 1) {
+            return attrSel;
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 3. High-specificity attributes for iframes
+    if (tag === 'iframe' && el.getAttribute('src')) {
+      const src = el.getAttribute('src').trim();
+      if (src && src !== 'about:blank') {
+        try {
+          const url = new URL(src, window.location.href);
+          if (smartMode) {
+            if (url.hostname && url.hostname !== hostname) {
+              const hostParts = url.hostname.split('.');
+              const baseDomain = hostParts.length >= 2 ? hostParts.slice(-2).join('.') : url.hostname;
+              return `iframe[src*="${CSS.escape(baseDomain)}"]`;
+            }
+            if (url.search.includes('zone=')) {
+              return 'iframe[src*="zone="]';
+            }
+            if (url.pathname && url.pathname.length > 1) {
+              return `iframe[src*="${CSS.escape(url.pathname)}"]`;
+            }
+          } else {
+            const zoneMatch = url.search.match(/zone=([0-9]+)/);
+            if (zoneMatch) {
+              return 'iframe[src*="zone=' + zoneMatch[1] + '"]';
+            }
+            if (url.hostname) {
+              return `iframe[src*="${CSS.escape(url.hostname)}"]`;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 4. High-specificity attributes for links (href)
     if (tag === 'a' && el.getAttribute('href')) {
       const href = el.getAttribute('href').trim();
       if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
         try {
           const url = new URL(href, window.location.href);
+          if (smartMode && url.hostname && url.hostname !== hostname) {
+            const hostParts = url.hostname.split('.');
+            const baseDomain = hostParts.length >= 2 ? hostParts.slice(-2).join('.') : url.hostname;
+            return `a[href*="${CSS.escape(baseDomain)}"]`;
+          }
           const pathPart = url.pathname.replace(/\/$/, '').split('/').pop();
           if (pathPart && pathPart.length > 3) {
             const hrefSel = 'a[href*="' + CSS.escape(pathPart) + '"]';
-            if (document.querySelectorAll(hrefSel).length === 1) {
+            if (!smartMode && document.querySelectorAll(hrefSel).length === 1) {
               return hrefSel;
             }
           }
@@ -1109,43 +1218,65 @@
       }
     }
 
-    // 3. High-specificity attributes for iframes (src zone/id)
-    if (tag === 'iframe' && el.getAttribute('src')) {
-      const src = el.getAttribute('src').trim();
-      if (src && src !== 'about:blank') {
+    // 5. SMART MODE: Cross-page reusable semantic selector (avoids div.wrapper > div.main > div.container chains)
+    if (smartMode) {
+      const classes = getValidElementClasses(el);
+      const semanticClasses = classes.filter(c => !GENERIC_LAYOUT_CLASSES.has(c.toLowerCase()));
+
+      if (semanticClasses.length > 0) {
+        const classSel = tag + '.' + semanticClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
         try {
-          const url = new URL(src, window.location.href);
-          const zoneMatch = url.search.match(/zone=([0-9]+)/);
-          if (zoneMatch) {
-            const ifrSel = 'iframe[src*="zone=' + zoneMatch[1] + '"]';
-            if (document.querySelectorAll(ifrSel).length === 1) {
-              return ifrSel;
+          const matches = document.querySelectorAll(classSel);
+          if (matches.length >= 1 && matches.length <= 25) {
+            return classSel;
+          }
+        } catch (_) {}
+      }
+
+      // Check if this element has a parent with a semantic class (1-2 levels up)
+      let parent = el.parentElement;
+      let hop = 0;
+      while (parent && parent !== document.body && parent !== document.documentElement && hop < 2) {
+        const pClasses = getValidElementClasses(parent).filter(c => !GENERIC_LAYOUT_CLASSES.has(c.toLowerCase()));
+        if (pClasses.length > 0) {
+          const pTag = parent.nodeName.toLowerCase();
+          const pSel = pTag + '.' + pClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
+          const childPart = classes.length > 0 ? `${tag}.${CSS.escape(classes[0])}` : tag;
+          const combined = hop === 0 ? `${pSel} > ${childPart}` : `${pSel} ${childPart}`;
+          try {
+            const matches = document.querySelectorAll(combined);
+            if (matches.length >= 1 && matches.length <= 25) {
+              return combined;
             }
-          }
-        } catch (_) {}
+          } catch (_) {}
+        }
+        parent = parent.parentElement;
+        hop++;
       }
+
+      // If container holds an ad iframe, generate a structural :has() selector
+      try {
+        const innerIframe = el.querySelector && el.querySelector('iframe');
+        if (innerIframe) {
+          const basePart = classes.length > 0 ? `${tag}.${CSS.escape(classes[0])}` : tag;
+          const src = innerIframe.getAttribute('src') || '';
+          if (src.includes('zone=')) {
+            const hasSel = `${basePart}:has(iframe[src*="zone="])`;
+            if (document.querySelectorAll(hasSel).length >= 1) return hasSel;
+          }
+          const hasGeneric = `${basePart}:has(iframe)`;
+          const matches = document.querySelectorAll(hasGeneric);
+          if (matches.length >= 1 && matches.length <= 15) return hasGeneric;
+        }
+      } catch (_) {}
     }
 
-    // 4. Meaningful custom attributes (e.g. data-ad-slot, data-zone-id, name)
-    const distinctAttrs = ['data-ad-slot', 'data-zone-id', 'data-widget-id', 'name'];
-    for (const attr of distinctAttrs) {
-      const val = el.getAttribute(attr);
-      if (val && !val.includes('"') && !val.includes("'")) {
-        try {
-          const attrSel = `${tag}[${attr}="${CSS.escape(val)}"]`;
-          if (document.querySelectorAll(attrSel).length === 1) {
-            return attrSel;
-          }
-        } catch (_) {}
-      }
-    }
-
-    // 5. Hierarchical traversal with sibling disambiguation (:nth-of-type)
+    // 6. EXACT MODE (or fallback): Hierarchical traversal with true :nth-child() disambiguation
     let path = [];
     let curr = el;
     while (curr && curr.nodeType === Node.ELEMENT_NODE && curr !== document.body && curr !== document.documentElement) {
       if (curr.id && !curr.id.startsWith('pureshield-')) {
-        const isDyn = /[a-f0-9]{12,}|[0-9]{7,}|interstitial|overlay/i.test(curr.id);
+        const isDyn = /[a-f0-9]{10,}|[0-9]{5,}|interstitial|overlay/i.test(curr.id);
         if (!isDyn) {
           try {
             const idSel = '#' + CSS.escape(curr.id);
@@ -1158,36 +1289,33 @@
       }
 
       let selector = curr.nodeName.toLowerCase();
-      if (curr.className && typeof curr.className === 'string') {
-        const validClasses = curr.className.split(/\s+/).filter(c => 
-          c && !c.startsWith('pureshield-') && !c.includes(':') && !c.includes('[') &&
-          !/^(is-|has-|active|open|hover|focus|playing|paused|mouseover|splash)/i.test(c)
-        );
-        if (validClasses.length > 0) {
-          selector += '.' + validClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
-        }
+      const validClasses = getValidElementClasses(curr);
+      if (validClasses.length > 0) {
+        selector += '.' + validClasses.slice(0, 2).map(c => CSS.escape(c)).join('.');
       }
 
-      // Sibling disambiguation with :nth-of-type
+      // True DOM child index disambiguation with :nth-child(N)
       if (curr.parentElement) {
         try {
-          const siblings = Array.from(curr.parentElement.children).filter(child => {
+          const allChildren = Array.from(curr.parentElement.children);
+          const sameSelectorSiblings = allChildren.filter(child => {
             if (child.nodeName.toLowerCase() !== curr.nodeName.toLowerCase()) return false;
-            if (selector.includes('.')) {
-              const classes = selector.split('.').slice(1);
-              return classes.every(cls => child.classList.contains(cls));
+            if (validClasses.length > 0) {
+              return validClasses.slice(0, 2).every(cls => child.classList.contains(cls));
             }
             return true;
           });
-          if (siblings.length > 1) {
-            const index = siblings.indexOf(curr) + 1;
-            selector += ':nth-of-type(' + index + ')';
+          if (sameSelectorSiblings.length > 1) {
+            const actualIndex = allChildren.indexOf(curr) + 1;
+            if (actualIndex > 0) {
+              selector += ':nth-child(' + actualIndex + ')';
+            }
           }
         } catch (_) {}
       }
 
       path.unshift(selector);
-      if (path.length >= 5) break;
+      if (path.length >= 4) break;
 
       // Early stop if partial path already uniquely matches this element
       try {
@@ -1205,11 +1333,22 @@
     return fullSelector || (el.nodeName ? el.nodeName.toLowerCase() : '');
   }
 
+  function getActiveSelector() {
+    if (customEditedSelector && customEditedSelector.trim()) {
+      return customEditedSelector.trim();
+    }
+    const currEl = ancestryChain[selectedIndex] || selectedElement || hoveredElement;
+    if (!currEl || currEl.nodeType !== Node.ELEMENT_NODE) return '';
+    return getUniqueSelector(currEl, pickerSmartMode);
+  }
+
   function activateElementPicker() {
     if (window !== window.top) return;
     if (pickerActive) return;
     pickerActive = true;
     isLocked = false;
+    pickerSmartMode = true;
+    customEditedSelector = '';
     previewActive = false;
     selectedIndex = 0;
     ancestryChain = [];
@@ -1236,6 +1375,7 @@
     pickerActive = false;
     isLocked = false;
     previewActive = false;
+    customEditedSelector = '';
 
     document.documentElement.classList.remove('pureshield-picking-active');
     clearHighlightsAndPreviews();
@@ -1254,7 +1394,20 @@
     document.removeEventListener('keydown', handlePickerKeyDown, true);
   }
 
+  function clearMatchedElementStyles() {
+    if (highlightedMatches.length > 0) {
+      highlightedMatches.forEach(el => {
+        if (el && el.classList && typeof el.classList.remove === 'function') {
+          el.classList.remove('pureshield-picker-highlight');
+          el.classList.remove('pureshield-preview-hidden');
+        }
+      });
+      highlightedMatches = [];
+    }
+  }
+
   function clearHighlightsAndPreviews() {
+    clearMatchedElementStyles();
     if (hoveredElement && hoveredElement.classList && typeof hoveredElement.classList.remove === 'function') {
       hoveredElement.classList.remove('pureshield-picker-highlight');
       hoveredElement = null;
@@ -1290,17 +1443,21 @@
           <button class="pureshield-btn-step" id="pureshield-btn-narrow" title="Narrow selection to child element (←)">➖</button>
           <input type="range" class="pureshield-lever" id="pureshield-picker-lever" min="0" max="1" step="1" value="0" title="Slide to adjust selection scope / container depth">
           <button class="pureshield-btn-step" id="pureshield-btn-expand" title="Expand selection to parent container (→)">➕</button>
+          <button class="pureshield-btn-mode smart" id="pureshield-picker-mode" title="Toggle between Smart (blocks similar ad slots across all pages) and Exact (only this exact position) mode (M)">
+            🧠 Smart Mode
+          </button>
         </div>
         <div class="pureshield-selector-row">
-          <code class="pureshield-selector-badge" id="pureshield-selector-badge" title="CSS Selector">Click any element on page</code>
+          <input type="text" class="pureshield-selector-badge" id="pureshield-selector-badge" value="" placeholder="Click any element on page" title="Editable CSS Selector">
+          <span class="pureshield-match-badge" id="pureshield-match-badge" title="Number of elements matched on this page">0 matches</span>
         </div>
       </div>
 
       <div class="pureshield-toolbar-actions">
-        <button class="pureshield-btn-preview" id="pureshield-picker-preview" title="Preview page with element hidden (P)">
+        <button class="pureshield-btn-preview" id="pureshield-picker-preview" title="Preview page with matched elements hidden (P)">
           👁️ Preview
         </button>
-        <button class="pureshield-btn-zap" id="pureshield-picker-zap" title="Permanently vaporize this element (Enter)">
+        <button class="pureshield-btn-zap" id="pureshield-picker-zap" title="Permanently vaporize matched elements (Enter)">
           ⚡ Vaporize (Enter)
         </button>
         <button class="pureshield-btn-repick" id="pureshield-picker-repick" style="display:none;" title="Unlock and pick another element">
@@ -1336,6 +1493,31 @@
       });
     }
 
+    const modeBtn = pickerToolbar.querySelector('#pureshield-picker-mode');
+    if (modeBtn) {
+      modeBtn.addEventListener('click', togglePickerMode);
+    }
+
+    const selectorInput = pickerToolbar.querySelector('#pureshield-selector-badge');
+    if (selectorInput) {
+      selectorInput.addEventListener('input', (e) => {
+        isLocked = true;
+        customEditedSelector = e.target.value;
+        updateHighlightAndPreview();
+        updateToolbarUI(true);
+      });
+      selectorInput.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAcceptZap();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          selectorInput.blur();
+        }
+      });
+    }
+
     const previewBtn = pickerToolbar.querySelector('#pureshield-picker-preview');
     if (previewBtn) {
       previewBtn.addEventListener('click', togglePreview);
@@ -1362,12 +1544,21 @@
     }
   }
 
-  function updateToolbarUI() {
+  function togglePickerMode() {
+    pickerSmartMode = !pickerSmartMode;
+    customEditedSelector = '';
+    updateHighlightAndPreview();
+    updateToolbarUI();
+  }
+
+  function updateToolbarUI(skipSelectorInputUpdate = false) {
     if (!pickerToolbar) return;
 
     const statusPill = pickerToolbar.querySelector('#pureshield-status-pill');
     const depthBadge = pickerToolbar.querySelector('#pureshield-depth-badge');
     const selectorBadge = pickerToolbar.querySelector('#pureshield-selector-badge');
+    const matchBadge = pickerToolbar.querySelector('#pureshield-match-badge');
+    const modeBtn = pickerToolbar.querySelector('#pureshield-picker-mode');
     const lever = pickerToolbar.querySelector('#pureshield-picker-lever');
     const btnNarrow = pickerToolbar.querySelector('#pureshield-btn-narrow');
     const btnExpand = pickerToolbar.querySelector('#pureshield-btn-expand');
@@ -1386,23 +1577,51 @@
       }
     }
 
+    if (modeBtn) {
+      if (pickerSmartMode) {
+        modeBtn.className = 'pureshield-btn-mode smart';
+        modeBtn.innerHTML = '🧠 Smart (All Similar)';
+      } else {
+        modeBtn.className = 'pureshield-btn-mode exact';
+        modeBtn.innerHTML = '🎯 Exact (Single)';
+      }
+    }
+
     if (repickBtn) {
       repickBtn.style.display = isLocked ? 'inline-flex' : 'none';
     }
 
     // Update active element details
     const currEl = ancestryChain[selectedIndex] || selectedElement || hoveredElement;
-    if (currEl && currEl.nodeType === Node.ELEMENT_NODE) {
-      const tag = currEl.tagName.toLowerCase();
-      const selector = getUniqueSelector(currEl);
+    const selector = getActiveSelector();
+
+    if ((currEl && currEl.nodeType === Node.ELEMENT_NODE) || selector) {
+      const tag = currEl ? currEl.tagName.toLowerCase() : 'custom';
       const totalLevels = Math.max(1, ancestryChain.length);
 
       if (depthBadge) {
-        depthBadge.textContent = `Level ${selectedIndex + 1}/${totalLevels} <${tag}>`;
+        depthBadge.textContent = currEl ? `Level ${selectedIndex + 1}/${totalLevels} <${tag}>` : 'Custom Selector';
       }
-      if (selectorBadge) {
-        selectorBadge.textContent = selector;
+      if (selectorBadge && !skipSelectorInputUpdate) {
+        selectorBadge.value = selector;
         selectorBadge.title = selector;
+      }
+      if (matchBadge) {
+        let count = 0;
+        if (selector) {
+          try {
+            count = document.querySelectorAll(selector).length;
+          } catch (_) {
+            count = -1;
+          }
+        }
+        if (count === -1) {
+          matchBadge.textContent = 'Invalid CSS';
+          matchBadge.className = 'pureshield-match-badge invalid';
+        } else {
+          matchBadge.textContent = count === 1 ? '1 match' : `${count} matches`;
+          matchBadge.className = count > 1 ? 'pureshield-match-badge multi' : 'pureshield-match-badge';
+        }
       }
       if (lever) {
         lever.max = Math.max(0, ancestryChain.length - 1);
@@ -1412,7 +1631,14 @@
       if (btnExpand) btnExpand.disabled = (selectedIndex >= ancestryChain.length - 1 || ancestryChain.length <= 1);
     } else {
       if (depthBadge) depthBadge.textContent = 'Click an element to adjust';
-      if (selectorBadge) selectorBadge.textContent = 'Click any element to tune size';
+      if (selectorBadge && !skipSelectorInputUpdate) {
+        selectorBadge.value = '';
+        selectorBadge.placeholder = 'Click any element to tune size';
+      }
+      if (matchBadge) {
+        matchBadge.textContent = '0 matches';
+        matchBadge.className = 'pureshield-match-badge';
+      }
       if (lever) {
         lever.max = 0;
         lever.value = 0;
@@ -1461,9 +1687,10 @@
     }
 
     hoveredElement = target;
+    customEditedSelector = '';
     ancestryChain = buildAncestryChain(target);
-    selectedIndex = 0;
-    selectedElement = ancestryChain[0];
+    selectedIndex = getInitialChainIndex(ancestryChain);
+    selectedElement = ancestryChain[selectedIndex] || ancestryChain[0];
 
     updateHighlightAndPreview();
     updateToolbarUI();
@@ -1491,9 +1718,10 @@
       hoveredElement = null;
     }
 
+    customEditedSelector = '';
     ancestryChain = buildAncestryChain(target);
-    selectedIndex = 0;
-    selectedElement = ancestryChain[0];
+    selectedIndex = getInitialChainIndex(ancestryChain);
+    selectedElement = ancestryChain[selectedIndex] || ancestryChain[0];
     isLocked = true;
     previewActive = false;
 
@@ -1505,6 +1733,7 @@
     if (newIndex < 0 || newIndex >= ancestryChain.length) return;
     selectedIndex = newIndex;
     selectedElement = ancestryChain[selectedIndex];
+    customEditedSelector = '';
     isLocked = true; // Lock onto element so user can tune depth smoothly
 
     updateHighlightAndPreview();
@@ -1518,7 +1747,7 @@
   }
 
   function updateHighlightAndPreview() {
-    // Clear previous highlights and preview styles on chain
+    clearMatchedElementStyles();
     ancestryChain.forEach(el => {
       if (el && el.classList && typeof el.classList.remove === 'function') {
         el.classList.remove('pureshield-picker-highlight');
@@ -1527,32 +1756,54 @@
     });
 
     const activeEl = ancestryChain[selectedIndex] || selectedElement || hoveredElement;
-    if (!activeEl || !activeEl.classList || typeof activeEl.classList.add !== 'function') return;
+    const selector = getActiveSelector();
+    const classToAdd = previewActive ? 'pureshield-preview-hidden' : 'pureshield-picker-highlight';
 
-    if (previewActive) {
-      activeEl.classList.add('pureshield-preview-hidden');
-    } else {
-      activeEl.classList.add('pureshield-picker-highlight');
+    if (selector) {
+      try {
+        const matches = Array.from(document.querySelectorAll(selector)).filter(el => !isExtensionElement(el));
+        if (matches.length > 0 && matches.length <= 50) {
+          matches.forEach(el => {
+            if (el.classList) {
+              el.classList.add(classToAdd);
+              highlightedMatches.push(el);
+            }
+          });
+          return;
+        }
+      } catch (_) {}
+    }
+
+    if (activeEl && activeEl.classList && typeof activeEl.classList.add === 'function') {
+      activeEl.classList.add(classToAdd);
+      highlightedMatches.push(activeEl);
     }
   }
 
   function handleUnlockSelection() {
     isLocked = false;
     previewActive = false;
+    customEditedSelector = '';
     updateHighlightAndPreview();
     updateToolbarUI();
   }
 
   function handleAcceptZap() {
     const targetEl = ancestryChain[selectedIndex] || selectedElement || hoveredElement;
-    if (!targetEl) return;
-
-    const selector = getUniqueSelector(targetEl);
+    const selector = getActiveSelector();
     if (!selector) return;
+
+    // Validate CSS selector before saving
+    try {
+      document.querySelectorAll(selector);
+    } catch (_) {
+      showZapperToast('⚠️ Invalid Selector', 'Please enter a valid CSS selector.');
+      return;
+    }
 
     // 1. Immediately hide the target element & matching elements in the DOM
     const hideNode = (node) => {
-      if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+      if (!node || node.nodeType !== Node.ELEMENT_NODE || isExtensionElement(node)) return;
       node.style.setProperty('display', 'none', 'important');
       node.style.setProperty('visibility', 'hidden', 'important');
       node.style.setProperty('pointer-events', 'none', 'important');
@@ -1562,9 +1813,12 @@
       node.setAttribute('data-pureshield-zapped', 'true');
     };
 
-    hideNode(targetEl);
+    if (targetEl) hideNode(targetEl);
+    let matchCount = 0;
     try {
-      document.querySelectorAll(selector).forEach(hideNode);
+      const matchedNodes = document.querySelectorAll(selector);
+      matchCount = matchedNodes.length;
+      matchedNodes.forEach(hideNode);
     } catch (_) {}
 
     // 2. Synchronously append rule to cosmetic style sheet
@@ -1579,7 +1833,8 @@
     deactivateElementPicker();
 
     // 4. Show friendly feedback toast with immediate undo
-    showZapperToast('⚡ Element Vaporized', selector, () => {
+    const toastTitle = matchCount > 1 ? `⚡ ${matchCount} Elements Vaporized` : '⚡ Element Vaporized';
+    showZapperToast(toastTitle, selector, () => {
       handleUndoZap();
     });
 
@@ -1667,6 +1922,7 @@
   }
 
   function handlePickerKeyDown(e) {
+    if (e.target && e.target.id === 'pureshield-selector-badge') return;
     if (e.key === 'Escape') {
       if (isLocked) {
         handleUnlockSelection();
@@ -1688,6 +1944,9 @@
       } else if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
         togglePreview();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        togglePickerMode();
       } else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         handleUndoZap();
