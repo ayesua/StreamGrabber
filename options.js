@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Dynamic Version Display from Manifest
   try {
-    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.0.38';
+    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.0.39';
     const verBadge = document.getElementById('xtremeshld-version');
     if (verBadge) verBadge.textContent = `v${manifestVer}`;
   } catch (_) {}
