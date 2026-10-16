@@ -1786,4 +1786,49 @@ body.theme-dark .subbar-toggle-pill.disabled {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
+/* ==========================================================================
+   Watched / Seen Videos Dimming Styles
+   ========================================================================== */
+
+.xg-video-seen {
+  opacity: 0.38 !important;
+  filter: grayscale(85%) contrast(85%) brightness(85%) !important;
+  transition: opacity 0.25s ease, filter 0.25s ease !important;
+  position: relative !important;
+}
+
+.xg-video-seen:hover {
+  opacity: 0.85 !important;
+  filter: grayscale(20%) contrast(95%) brightness(95%) !important;
+}
+
+.xg-video-seen-badge {
+  position: absolute !important;
+  top: 8px !important;
+  left: 8px !important;
+  z-index: 9999 !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.6px !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+  pointer-events: none !important;
+  text-transform: uppercase !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+.xg-video-seen-badge::before {
+  content: '✓';
+  color: #4ade80;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 

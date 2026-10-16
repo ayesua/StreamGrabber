@@ -1153,6 +1153,19 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
 
     const downloadId = passedDownloadId || ('dl_' + Date.now());
 
+    // Mark this video as watched / seen in persistent history
+    try {
+      const pageKey = item.pageUrl ? cleanVideoUrlKey(item.pageUrl) : '';
+      const streamKey = item.url ? cleanVideoUrlKey(item.url) : '';
+      chrome.storage.local.get({ seenVideosMap: {} }, (res) => {
+        const seenMap = res.seenVideosMap || {};
+        const meta = { title: item.title || sanitizedTitle, seenAt: Date.now() };
+        if (pageKey) seenMap[pageKey] = meta;
+        if (streamKey) seenMap[streamKey] = meta;
+        chrome.storage.local.set({ seenVideosMap: seenMap });
+      });
+    } catch (_) {}
+
     // Immediately unblock caller with success and downloadId
     if (callback) callback({ success: true, downloadId });
 
@@ -1420,7 +1433,59 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
     }
     return true;
   }
+
+  if (message.action === 'MARK_VIDEO_SEEN') {
+    const key = message.key || (message.url ? cleanVideoUrlKey(message.url) : null);
+    if (key) {
+      chrome.storage.local.get({ seenVideosMap: {} }, (res) => {
+        const seenMap = res.seenVideosMap || {};
+        seenMap[key] = {
+          title: message.title || 'Video',
+          seenAt: Date.now()
+        };
+        // Cap map size to last 5,000 entries
+        const keys = Object.keys(seenMap);
+        if (keys.length > 5000) {
+          const sorted = keys.sort((a, b) => (seenMap[a].seenAt || 0) - (seenMap[b].seenAt || 0));
+          for (let i = 0; i < keys.length - 5000; i++) {
+            delete seenMap[sorted[i]];
+          }
+        }
+        chrome.storage.local.set({ seenVideosMap: seenMap }, () => {
+          sendResponse({ success: true, key });
+        });
+      });
+    } else {
+      sendResponse({ success: false });
+    }
+    return true;
+  }
+
+  if (message.action === 'GET_SEEN_VIDEOS') {
+    chrome.storage.local.get({ seenVideosMap: {} }, (res) => {
+      sendResponse({ seenVideosMap: res.seenVideosMap || {} });
+    });
+    return true;
+  }
+
+  if (message.action === 'CLEAR_SEEN_VIDEOS') {
+    chrome.storage.local.set({ seenVideosMap: {} }, () => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
 });
+
+function cleanVideoUrlKey(url) {
+  if (!url || typeof url !== 'string') return '';
+  try {
+    const u = new URL(url);
+    // Remove query params and hash to get the pure resource path key
+    return (u.origin + u.pathname).toLowerCase().replace(/\/+$/, '');
+  } catch (e) {
+    return url.split('?')[0].split('#')[0].toLowerCase().replace(/\/+$/, '');
+  }
+}
 
 /**
  * Sets up DeclarativeNetRequest dynamic rules to bypass anti-hotlinking protections.

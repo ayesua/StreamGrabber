@@ -91,9 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const dimSeenVideosInput = document.getElementById('dimSeenVideos');
+  const btnClearSeenVideos = document.getElementById('btnClearSeenVideos');
+
   chrome.storage.sync.get({
     askFilename: false,
     showFloatingBtn: true,
+    dimSeenVideos: true,
     minSizeKB: 100,
     maxThreads: 5,
     defaultFormat: 'mp4',
@@ -101,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, (items) => {
     if (askFilenameInput) askFilenameInput.checked = Boolean(items.askFilename);
     if (showFloatingBtnInput) showFloatingBtnInput.checked = Boolean(items.showFloatingBtn ?? true);
+    if (dimSeenVideosInput) dimSeenVideosInput.checked = Boolean(items.dimSeenVideos !== false);
     if (minSizeInput) minSizeInput.value = items.minSizeKB;
     if (maxThreadsInput) maxThreadsInput.value = items.maxThreads;
     if (defaultFormatInput) defaultFormatInput.value = items.defaultFormat || 'mp4';
@@ -110,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveOptions(showToast = true) {
     const askFilename = askFilenameInput ? askFilenameInput.checked : false;
     const showFloatingBtn = showFloatingBtnInput ? showFloatingBtnInput.checked : true;
+    const dimSeenVideos = dimSeenVideosInput ? dimSeenVideosInput.checked : true;
     const minSizeKB = parseInt(minSizeInput.value, 10) || 100;
     const maxThreads = parseInt(maxThreadsInput.value, 10) || 5;
     const defaultFormat = defaultFormatInput ? defaultFormatInput.value : 'mp4';
@@ -118,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set({
       askFilename,
       showFloatingBtn,
+      dimSeenVideos,
       minSizeKB,
       maxThreads,
       defaultFormat,
@@ -132,7 +139,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  if (btnClearSeenVideos) {
+    btnClearSeenVideos.addEventListener('click', () => {
+      chrome.storage.local.set({ seenVideosMap: {} }, () => {
+        if (toast) {
+          toast.textContent = 'Watched video history cleared!';
+          toast.style.display = 'block';
+          setTimeout(() => {
+            toast.style.display = 'none';
+            toast.textContent = 'Preferences saved successfully!';
+          }, 2000);
+        }
+      });
+    });
+  }
+
   // Auto-save immediately when user toggles or changes any preference
+  if (dimSeenVideosInput) dimSeenVideosInput.addEventListener('change', () => saveOptions(true));
   if (askFilenameInput) askFilenameInput.addEventListener('change', () => saveOptions(true));
   if (showFloatingBtnInput) showFloatingBtnInput.addEventListener('change', () => saveOptions(true));
   if (minSizeInput) minSizeInput.addEventListener('change', () => saveOptions(true));

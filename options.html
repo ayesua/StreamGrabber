@@ -148,7 +148,7 @@
   <div class="options-card">
     <div class="options-title">
       <span data-i18n="optionsHeading">XtremeGrbr Settings</span>
-      <span style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.2</span>
+      <span id="optionsVersionLabel" style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.3</span>
     </div>
 
     <!-- Language & Theme Selectors at the Top of Configuration -->
@@ -190,6 +190,21 @@
           <span class="slider" style="background-color: #00a63d;"></span>
         </label>
       </div>
+      <!-- Dim Watched / Seen Videos Toggle Option -->
+      <div class="form-group toggle-group" style="background: #f8fafc; border: 1.5px solid #cbd5e1; margin-bottom: 14px;">
+        <div class="toggle-label-wrap">
+          <label for="dimSeenVideos" style="margin-bottom: 2px; color: #334155; font-size: 14px; font-weight: 700;" data-i18n="dimSeenVideosLabel">Dim watched / seen videos on web pages</label>
+          <div class="form-help" data-i18n="dimSeenVideosHelp">Remembers which videos have already been watched, played, or downloaded, and displays their thumbnails dimmed and grayed out on websites with a "SEEN" badge.</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button type="button" id="btnClearSeenVideos" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; color: #475569; cursor: pointer;" title="Reset watched videos history">Clear History</button>
+          <label class="switch">
+            <input type="checkbox" id="dimSeenVideos" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
       <!-- Ask File Name Toggle Option -->
       <div class="form-group toggle-group">
         <div class="toggle-label-wrap">

@@ -1465,11 +1465,139 @@
 
   setInterval(cleanupInterstitialsAndFixPlayers, 800);
 
+  /* ==========================================================================
+     Watched / Seen Videos Dimmer Module
+     Dims thumbnails of videos that have already been played or downloaded
+     ========================================================================== */
+
+  let isDimSeenVideosEnabled = true;
+  let seenVideosMap = {};
+
+  function normalizeUrlKey(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    try {
+      const u = new URL(raw, location.href);
+      return (u.origin + u.pathname).toLowerCase().replace(/\/+$/, '');
+    } catch (_) {
+      return raw.split('?')[0].split('#')[0].toLowerCase().replace(/\/+$/, '');
+    }
+  }
+
+  function markCurrentPageAsSeen() {
+    if (!isDimSeenVideosEnabled) return;
+    const pageKey = normalizeUrlKey(location.href);
+    if (!pageKey) return;
+
+    chrome.runtime.sendMessage({
+      action: 'MARK_VIDEO_SEEN',
+      key: pageKey,
+      title: getPageTitle()
+    }, () => {
+      if (chrome.runtime.lastError) {}
+    });
+
+    // Also mark in local cache
+    seenVideosMap[pageKey] = { title: getPageTitle(), seenAt: Date.now() };
+  }
+
+  function applyDimmedSeenVideos() {
+    if (!isDimSeenVideosEnabled || !seenVideosMap || Object.keys(seenVideosMap).length === 0) {
+      // Remove any previously applied dimming classes if disabled
+      if (!isDimSeenVideosEnabled) {
+        document.querySelectorAll('.xg-video-seen').forEach(el => {
+          el.classList.remove('xg-video-seen');
+          const badge = el.querySelector('.xg-video-seen-badge');
+          if (badge) badge.remove();
+        });
+      }
+      return;
+    }
+
+    const seenKeys = Object.keys(seenVideosMap);
+    if (seenKeys.length === 0) return;
+
+    // Fast check: scan all video thumb cards and links
+    const candidateLinks = document.querySelectorAll(
+      'a[href*="/watch/"], a[href*="/video/"], a[href*="/videos/"], a[href*="view_video.php"], ' +
+      'article.thumb, div.thumb, .item-video, .video-card, .video-thumb, .thumb-block'
+    );
+
+    candidateLinks.forEach(el => {
+      let href = el.tagName === 'A' ? el.getAttribute('href') : '';
+      if (!href) {
+        const innerLink = el.querySelector('a[href]');
+        if (innerLink) href = innerLink.getAttribute('href');
+      }
+      if (!href || href === '#' || href.startsWith('javascript:')) return;
+
+      const normKey = normalizeUrlKey(href);
+      if (!normKey) return;
+
+      // Extract video ID (e.g. /watch/1181863/ or /videos/218441/)
+      const idMatch = normKey.match(/(?:watch|video|videos|embed)\/(\d+)/i) || normKey.match(/viewkey=([a-z0-9]+)/i);
+      const vidId = idMatch ? idMatch[1] : null;
+
+      const isSeen = Boolean(seenVideosMap[normKey]) || (vidId && seenKeys.some(k => k.includes(vidId)));
+
+      if (isSeen) {
+        const targetContainer = el.closest('article, .thumb, .item-video, .video-card, .video-thumb') || el;
+        if (!targetContainer.classList.contains('xg-video-seen')) {
+          targetContainer.classList.add('xg-video-seen');
+          // Add visible 'SEEN' pill badge if not already present
+          if (!targetContainer.querySelector('.xg-video-seen-badge')) {
+            const badge = document.createElement('div');
+            badge.className = 'xg-video-seen-badge';
+            badge.textContent = 'SEEN';
+            badge.title = 'You have already watched or downloaded this video';
+            const imgWrap = targetContainer.querySelector('.thumb__img, .thumb-image, .video-thumb-img, .thumbnail') || targetContainer;
+            if (getComputedStyle(imgWrap).position === 'static') {
+              imgWrap.style.position = 'relative';
+            }
+            imgWrap.appendChild(badge);
+          }
+        }
+      }
+    });
+  }
+
+  // Load seen videos map and preference
+  chrome.storage.sync.get({ dimSeenVideos: true }, (syncRes) => {
+    isDimSeenVideosEnabled = syncRes.dimSeenVideos !== false;
+    if (isDimSeenVideosEnabled) {
+      chrome.storage.local.get({ seenVideosMap: {} }, (localRes) => {
+        seenVideosMap = localRes.seenVideosMap || {};
+        applyDimmedSeenVideos();
+      });
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'sync' && changes.dimSeenVideos !== undefined) {
+      isDimSeenVideosEnabled = changes.dimSeenVideos.newValue !== false;
+      applyDimmedSeenVideos();
+    }
+    if (area === 'local' && changes.seenVideosMap !== undefined) {
+      seenVideosMap = changes.seenVideosMap.newValue || {};
+      applyDimmedSeenVideos();
+    }
+  });
+
+  // Track video plays on the active page
+  document.addEventListener('play', (e) => {
+    if (e.target && e.target.tagName === 'VIDEO' && !isAdVideoElement(e.target)) {
+      markCurrentPageAsSeen();
+    }
+  }, true);
+
+  // Periodically check and apply dimming as dynamic gallery items lazy-load
+  setInterval(applyDimmedSeenVideos, 1200);
+
   const observer = new MutationObserver(() => {
     scanMediaElements();
     scanYandexVideoPlayer();
     scanVkVideoPlayer();
     cleanupInterstitialsAndFixPlayers();
+    applyDimmedSeenVideos();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 })();

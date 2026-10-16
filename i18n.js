@@ -14,7 +14,7 @@ const SG_I18N = {
     // General / Branding
     appName: 'Video Downloader - XtremeGrbr',
     appShortName: 'XtremeGrbr',
-    appVersion: 'v3.5.2',
+    appVersion: 'v3.5.3',
     settingsTitle: 'Settings - Video Downloader - XtremeGrbr',
     optionsHeading: 'XtremeGrbr Settings',
     languageSelectorLabel: 'Language / Idioma / 语言 / Язык',
@@ -26,6 +26,8 @@ const SG_I18N = {
     // Options Form
     extensionEnabledLabel: 'Enable XtremeGrbr Extension',
     extensionEnabledHelp: 'Master switch to turn XtremeGrbr video detection and downloads on or off without disabling the extension in Chrome.',
+    dimSeenVideosLabel: 'Dim watched / seen videos on web pages',
+    dimSeenVideosHelp: 'Remembers which videos have already been watched, played, or downloaded, and displays their thumbnails dimmed and grayed out on websites with a "SEEN" badge.',
     askFilenameLabel: 'Ask for file name before downloading',
     askFilenameHelp: 'When enabled, you will be prompted to enter or customize the file name before saving.',
     showFloatingBtnLabel: 'Show floating download button on video players',
@@ -50,12 +52,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: 'Updates & Version',
-    currentVersionLabel: 'Current Version: v3.5.2',
+    currentVersionLabel: 'Current Version: v3.5.3',
     btnCheckUpdates: 'Check for Updates',
     checkingUpdates: 'Checking for updates...',
-    upToDate: 'XtremeGrbr is up to date! (v3.5.2)',
+    upToDate: 'XtremeGrbr is up to date! (v3.5.3)',
     updateAvailable: 'A new update is available! Updating...',
-    updateThrottled: 'Checked recently. You are on the latest version (v3.5.2).',
+    updateThrottled: 'Checked recently. You are on the latest version (v3.5.3).',
     updateError: 'Unable to check at this moment. Please check the Web Store.',
 
     // ExtremeShield Promo
@@ -112,7 +114,7 @@ const SG_I18N = {
     // General / Branding
     appName: 'Video Downloader - XtremeGrbr',
     appShortName: 'XtremeGrbr',
-    appVersion: 'v3.5.2',
+    appVersion: 'v3.5.3',
     settingsTitle: 'Configuración - Video Downloader - XtremeGrbr',
     optionsHeading: 'Configuración de XtremeGrbr',
     languageSelectorLabel: 'Idioma / Language / 语言 / Язык',
@@ -124,6 +126,8 @@ const SG_I18N = {
     // Options Form
     extensionEnabledLabel: 'Habilitar extensión XtremeGrbr',
     extensionEnabledHelp: 'Interruptor principal para activar o desactivar la detección y descargas de XtremeGrbr sin desactivar la extensión en Chrome.',
+    dimSeenVideosLabel: 'Atenuar videos ya vistos en páginas web',
+    dimSeenVideosHelp: 'Recuerda qué videos ya han sido reproducidos o descargados, mostrándolos atenuados y desaturados con una etiqueta "VISTO" en los sitios web.',
     askFilenameLabel: 'Preguntar el nombre del archivo antes de descargar',
     askFilenameHelp: 'Al activarlo, se le pedirá ingresar o personalizar el nombre del archivo antes de guardarlo.',
     showFloatingBtnLabel: 'Mostrar botón flotante de descarga en reproductores de video',
@@ -148,12 +152,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: 'Actualizaciones y Versión',
-    currentVersionLabel: 'Versión actual: v3.5.2',
+    currentVersionLabel: 'Versión actual: v3.5.3',
     btnCheckUpdates: 'Buscar actualizaciones',
     checkingUpdates: 'Buscando actualizaciones...',
-    upToDate: '¡XtremeGrbr está actualizado! (v3.5.2)',
+    upToDate: '¡XtremeGrbr está actualizado! (v3.5.3)',
     updateAvailable: '¡Hay una nueva versión disponible! Actualizando...',
-    updateThrottled: 'Comprobado recientemente. Tienes la última versión (v3.5.2).',
+    updateThrottled: 'Comprobado recientemente. Tienes la última versión (v3.5.3).',
     updateError: 'No se pudo comprobar en este momento. Revisa la Chrome Web Store.',
 
     // ExtremeShield Promo
@@ -210,7 +214,7 @@ const SG_I18N = {
     // General / Branding
     appName: 'Video Downloader - XtremeGrbr',
     appShortName: 'XtremeGrbr',
-    appVersion: 'v3.5.2',
+    appVersion: 'v3.5.3',
     settingsTitle: '设置 - Video Downloader - XtremeGrbr',
     optionsHeading: 'XtremeGrbr 设置',
     languageSelectorLabel: '语言 / Language / Idioma / Язык',
@@ -222,6 +226,8 @@ const SG_I18N = {
     // Options Form
     extensionEnabledLabel: '启用 XtremeGrbr 扩展',
     extensionEnabledHelp: '总开关，直接开启或关闭 XtremeGrbr 视频嗅探与下载，无需在 Chrome 扩展管理中停用。',
+    dimSeenVideosLabel: '在网页中灰度显示已看过的视频',
+    dimSeenVideosHelp: '自动记住已播放或已下载的视频，在网页中将这些视频封面变暗并添加“已看”标志。',
     askFilenameLabel: '下载前询问文件名',
     askFilenameHelp: '启用后，在保存前系统会提示您输入或自定义文件名。',
     showFloatingBtnLabel: '在视频播放器上显示悬浮下载按钮',
@@ -246,12 +252,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: '更新与版本信息',
-    currentVersionLabel: '当前版本：v3.5.2',
+    currentVersionLabel: '当前版本：v3.5.3',
     btnCheckUpdates: '检查更新',
     checkingUpdates: '正在检查更新...',
-    upToDate: 'XtremeGrbr 已是最新版本！(v3.5.2)',
+    upToDate: 'XtremeGrbr 已是最新版本！(v3.5.3)',
     updateAvailable: '发现新版本！正在更新...',
-    updateThrottled: '最近已检查。您当前使用的是最新版本 (v3.5.2)。',
+    updateThrottled: '最近已检查。您当前使用的是最新版本 (v3.5.3)。',
     updateError: '当前无法检查更新，请前往 Chrome 网上应用店查看。',
 
     // ExtremeShield Promo
@@ -308,7 +314,7 @@ const SG_I18N = {
     // General / Branding
     appName: 'Video Downloader - XtremeGrbr',
     appShortName: 'XtremeGrbr',
-    appVersion: 'v3.5.2',
+    appVersion: 'v3.5.3',
     settingsTitle: 'Настройки - Video Downloader - XtremeGrbr',
     optionsHeading: 'Настройки XtremeGrbr',
     languageSelectorLabel: 'Язык / Language / Idioma / 语言',
@@ -320,6 +326,8 @@ const SG_I18N = {
     // Options Form
     extensionEnabledLabel: 'Включить расширение XtremeGrbr',
     extensionEnabledHelp: 'Главный переключатель для включения или отключения обнаружения и скачивания видео без отключения расширения в настройках Chrome.',
+    dimSeenVideosLabel: 'Затемнять просмотренные видео на веб-страницах',
+    dimSeenVideosHelp: 'Запоминает видео, которые уже воспроизводились или скачивались, отображая их обложки затемненными с пометкой «ПРОСМОТРЕНО».',
     askFilenameLabel: 'Запрашивать имя файла перед загрузкой',
     askFilenameHelp: 'Если включено, перед сохранением появится окно для ввода или изменения имени файла.',
     showFloatingBtnLabel: 'Показывать плавающую кнопку загрузки на видеоплеерах',
@@ -344,12 +352,12 @@ const SG_I18N = {
 
     // Updates
     updatesCardTitle: 'Обновления и версия',
-    currentVersionLabel: 'Текущая версия: v3.5.2',
+    currentVersionLabel: 'Текущая версия: v3.5.3',
     btnCheckUpdates: 'Проверить обновления',
     checkingUpdates: 'Проверка обновлений...',
-    upToDate: 'XtremeGrbr обновлен до актуальной версии! (v3.5.2)',
+    upToDate: 'XtremeGrbr обновлен до актуальной версии! (v3.5.3)',
     updateAvailable: 'Доступно обновление! Обновление...',
-    updateThrottled: 'Проверка уже выполнялась недавно. У вас последняя версия (v3.5.2).',
+    updateThrottled: 'Проверка уже выполнялась недавно. У вас последняя версия (v3.5.3).',
     updateError: 'Не удалось проверить сейчас. Проверьте Chrome Web Store.',
 
     // ExtremeShield Promo
