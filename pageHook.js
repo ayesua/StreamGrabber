@@ -541,11 +541,20 @@
     if (!player || player.__xg_hooked__) return player;
     player.__xg_hooked__ = true;
 
-    // Neutralize preroll ads: bypass playAd and continue playback on ad error
+    // Neutralize preroll ads: bypass playAd with clean adSkipped/adComplete events
     try {
-      player.playAd = function () {
-        try { player.play(); } catch (e) {}
-        return false;
+      player.playAd = function (tag) {
+        console.warn('[XtremeGrbr:JWPlayer] playAd bypassed to prevent Error 224003:', tag);
+        setTimeout(() => {
+          try {
+            if (typeof player.trigger === 'function') {
+              player.trigger('adSkipped', { tag: tag });
+              player.trigger('adComplete', { tag: tag });
+            }
+          } catch (_) {}
+          try { player.play(); } catch (_) {}
+        }, 0);
+        return this;
       };
       if (typeof player.on === 'function') {
         player.on('adError', function () {
@@ -564,6 +573,9 @@
           // Cleanly remove advertising so JWPlayer never triggers Error 224003
           if (config.advertising) {
             delete config.advertising;
+          }
+          if (config.components && config.components.ad_preroll) {
+            config.components.ad_preroll.enabled = false;
           }
           // Sniff sources if present directly in config
           const sources = Array.isArray(config.sources) ? config.sources :
@@ -636,7 +648,7 @@
     if (_jwplayer) _jwplayer = hookJWPlayerGlobal(_jwplayer);
   } catch (e) {}
 
-  // Neutralize VoyeurHit / Videovoyeurhit preroll ad calls before they can block playback
+  // Neutralize VoyeurHit / Videovoyeurhit preroll ad calls and VAST structures
   try {
     Object.defineProperty(window, 'ad_preroll', {
       configurable: true,
@@ -650,66 +662,125 @@
       get: function () { return function () {}; },
       set: function () {}
     });
+    let _vadv2 = window.videoadvertising2;
+    Object.defineProperty(window, 'videoadvertising2', {
+      configurable: true,
+      enumerable: true,
+      get: () => _vadv2 || { tag: '', rtb: [] },
+      set: (v) => {
+        _vadv2 = (v && typeof v === 'object') ? { ...v, tag: '', rtb: [] } : { tag: '', rtb: [] };
+      }
+    });
   } catch (e) {}
 
-  // 1C. kt_player Interceptor for thisvid.com & KVS Players (Sniffs HQ streams)
+  // Ensure VoyeurHit CDN media elements do not send cross-origin VoyeurOK Referer (which triggers HTTP 403 / Error 224003)
+  try {
+    const sanitizeVideoElement = (v) => {
+      if (!v) return;
+      const src = v.src || v.currentSrc || '';
+      if (src && (src.includes('ahcdn.com') || src.includes('nv7s.com') || src.includes('voyeurhit.com'))) {
+        if (v.getAttribute('referrerpolicy') !== 'no-referrer') {
+          v.setAttribute('referrerpolicy', 'no-referrer');
+        }
+      }
+    };
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'childList') {
+          m.addedNodes.forEach(node => {
+            if (node.nodeType === 1) {
+              if (node.tagName === 'VIDEO') sanitizeVideoElement(node);
+              else node.querySelectorAll?.('video').forEach(sanitizeVideoElement);
+            }
+          });
+        } else if (m.type === 'attributes' && m.target.tagName === 'VIDEO') {
+          sanitizeVideoElement(m.target);
+        }
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  } catch (e) {}
+
+  // 1C. KVS / Flashvars / kt_player Interceptor for thisvid.com & Tube Players (Sniffs HQ streams)
+  function sniffFlashvars(flashvars) {
+    if (!flashvars || typeof flashvars !== 'object') return;
+    const licenseCode = flashvars.license_code || '';
+    const sniffUrl = (urlStr, quality) => {
+      if (!urlStr || typeof urlStr !== 'string') return;
+      let clean = urlStr;
+      if (clean.startsWith('function/0/')) {
+        clean = kvsGetRealUrl(clean, licenseCode);
+      } else if (clean.startsWith('function/')) {
+        return; // Wait for runtime deobfuscation
+      }
+      if (clean.startsWith('//')) clean = location.protocol + clean;
+      else if (clean.startsWith('/')) clean = location.origin + clean;
+      if (clean.startsWith('http') && !clean.match(/\.(html|htm|php|js|css)(\?.*)?$/i)) {
+        broadcastStreamData({
+          url: clean,
+          type: clean.includes('.m3u8') ? 'HLS' : 'MP4',
+          quality: quality || detectQualityFromUrl(clean),
+          title: flashvars.video_title || document.title,
+          poster: flashvars.preview_url || null
+        });
+      }
+    };
+
+    if (flashvars.video_url) sniffUrl(flashvars.video_url, flashvars.video_url_text || 'HQ');
+    if (flashvars.video_alt_url) sniffUrl(flashvars.video_alt_url, flashvars.video_alt_url_text || '240p');
+    for (let i = 1; i <= 7; i++) {
+      if (flashvars['video_alt_url' + i]) {
+        sniffUrl(flashvars['video_alt_url' + i], flashvars['video_alt_url' + i + '_text'] || 'SD');
+      }
+    }
+
+    // Define reactive setter on flashvars.video_url for asynchronous KVS deobfuscator
+    let currentVideoUrl = flashvars.video_url;
+    try {
+      Object.defineProperty(flashvars, 'video_url', {
+        configurable: true,
+        enumerable: true,
+        get: function () { return currentVideoUrl; },
+        set: function (newVal) {
+          currentVideoUrl = newVal;
+          if (newVal && typeof newVal === 'string') {
+            sniffUrl(newVal, flashvars.video_url_text || 'HQ');
+          }
+        }
+      });
+    } catch (e) {}
+
+    // Fallback polling for asynchronous KVS deobfuscator
+    [50, 100, 200, 400, 800, 1500, 3000].forEach(delay => {
+      setTimeout(() => {
+        if (flashvars.video_url) sniffUrl(flashvars.video_url, flashvars.video_url_text || 'HQ');
+        if (flashvars.video_alt_url) sniffUrl(flashvars.video_alt_url, flashvars.video_alt_url_text || '240p');
+      }, delay);
+    });
+  }
+
+  // Hook global window.flashvars directly
+  let _flashvars = window.flashvars;
+  try {
+    Object.defineProperty(window, 'flashvars', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return _flashvars; },
+      set: function (fv) {
+        _flashvars = fv;
+        sniffFlashvars(fv);
+      }
+    });
+    if (_flashvars && typeof _flashvars === 'object') {
+      sniffFlashvars(_flashvars);
+    }
+  } catch (e) {}
+
   function hookKtPlayerGlobal(fn) {
     if (typeof fn !== 'function') return fn;
     const wrapped = function (id, swf, w, h, flashvars) {
       if (flashvars && typeof flashvars === 'object') {
-        const licenseCode = flashvars.license_code || '';
-        const sniffUrl = (urlStr, quality) => {
-          if (!urlStr || typeof urlStr !== 'string') return;
-          let clean = urlStr;
-          if (clean.startsWith('function/0/')) {
-            clean = kvsGetRealUrl(clean, licenseCode);
-          } else if (clean.startsWith('function/')) {
-            return; // Wait for runtime deobfuscation
-          }
-          if (clean.startsWith('//')) clean = location.protocol + clean;
-          else if (clean.startsWith('/')) clean = location.origin + clean;
-          if (clean.startsWith('http') && !clean.match(/\.(html|htm|php|js|css)(\?.*)?$/i)) {
-            broadcastStreamData({
-              url: clean,
-              type: clean.includes('.m3u8') ? 'HLS' : 'MP4',
-              quality: quality || detectQualityFromUrl(clean),
-              title: flashvars.video_title || document.title,
-              poster: flashvars.preview_url || null
-            });
-          }
-        };
-
-        if (flashvars.video_url) sniffUrl(flashvars.video_url, flashvars.video_url_text || 'HQ');
-        if (flashvars.video_alt_url) sniffUrl(flashvars.video_alt_url, flashvars.video_alt_url_text || '240p');
-        for (let i = 1; i <= 7; i++) {
-          if (flashvars['video_alt_url' + i]) {
-            sniffUrl(flashvars['video_alt_url' + i], flashvars['video_alt_url' + i + '_text'] || 'SD');
-          }
-        }
-
-        // Define reactive setter on flashvars.video_url for asynchronous KVS deobfuscator
-        let currentVideoUrl = flashvars.video_url;
-        try {
-          Object.defineProperty(flashvars, 'video_url', {
-            configurable: true,
-            enumerable: true,
-            get: function () { return currentVideoUrl; },
-            set: function (newVal) {
-              currentVideoUrl = newVal;
-              if (newVal && typeof newVal === 'string') {
-                sniffUrl(newVal, flashvars.video_url_text || 'HQ');
-              }
-            }
-          });
-        } catch (e) {}
-
-        // Fallback polling for asynchronous KVS deobfuscator
-        [50, 100, 200, 400, 800, 1500, 3000].forEach(delay => {
-          setTimeout(() => {
-            if (flashvars.video_url) sniffUrl(flashvars.video_url, flashvars.video_url_text || 'HQ');
-            if (flashvars.video_alt_url) sniffUrl(flashvars.video_alt_url, flashvars.video_alt_url_text || '240p');
-          }, delay);
-        });
+        sniffFlashvars(flashvars);
       }
       return fn.apply(this, arguments);
     };

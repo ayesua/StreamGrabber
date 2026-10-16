@@ -637,21 +637,56 @@ async function resolveVoyeurHitStream(videoId, tabId, pageTitle, poster, pageUrl
   }
 
   try {
-    const res = await fetch(`https://voyeurhit.com/api/videofile.php?video_id=${videoId}&lifetime=8640000`, {
-      headers: { 'Referer': `https://voyeurhit.com/embed/${videoId}/` }
+    let effectiveVideoId = videoId;
+    // Check if on a voyeurok.com page with an aggregator embed
+    if (pageUrl && pageUrl.includes('voyeurok.com')) {
+      try {
+        const pageRes = await fetch(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (pageRes.ok) {
+          const pageHtml = await pageRes.text();
+          const embedM = pageHtml.match(/(?:videovoyeurhit|voyeurhit)\.com\/embed\/(\d+)/i);
+          if (embedM && embedM[1]) {
+            effectiveVideoId = embedM[1];
+          }
+        }
+      } catch (_) {}
+    }
+
+    let res = await fetch(`https://voyeurhit.com/api/videofile.php?video_id=${effectiveVideoId}&lifetime=8640000`, {
+      headers: { 'Referer': `https://voyeurhit.com/embed/${effectiveVideoId}/` }
     });
     if (!res.ok) return;
-    const files = await res.json();
+    let files = await res.json();
+
+    if ((!Array.isArray(files) || files.length === 0 || files.error) && pageUrl) {
+      try {
+        const pageRes = await fetch(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (pageRes.ok) {
+          const pageHtml = await pageRes.text();
+          const embedM = pageHtml.match(/(?:videovoyeurhit|voyeurhit)\.com\/embed\/(\d+)/i);
+          if (embedM && embedM[1]) {
+            effectiveVideoId = embedM[1];
+            res = await fetch(`https://voyeurhit.com/api/videofile.php?video_id=${effectiveVideoId}&lifetime=8640000`, {
+              headers: { 'Referer': `https://voyeurhit.com/embed/${effectiveVideoId}/` }
+            });
+            if (res.ok) files = await res.json();
+          }
+        }
+      } catch (_) {}
+    }
+
     if (Array.isArray(files) && files.length > 0 && files[0].video_url) {
       const decodedPath = decodeVoyeurHitPath(files[0].video_url);
       if (decodedPath && decodedPath.startsWith('/')) {
         const rawStream = 'https://voyeurhit.com' + decodedPath;
+        // Make sure DNR rules are active so CDN redirects negotiate 200 OK Content-Length
+        await setDownloadRefererRules(rawStream, 'https://voyeurhit.com/');
         const resolved = await resolveFinalDirectUrl(rawStream, 'https://voyeurhit.com/');
         const finalUrl = (typeof resolved === 'object' && resolved.url) ? resolved.url : (typeof resolved === 'string' ? resolved : rawStream);
         const resolvedSize = (typeof resolved === 'object' && resolved.size) ? resolved.size : null;
 
         addMediaItem(tabId, {
-          id: 'voyeur_' + videoId,
+          id: 'voyeur_' + effectiveVideoId,
           url: finalUrl,
           title: targetTitle,
           type: 'MP4',
@@ -1567,7 +1602,15 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
         action: {
           type: 'modifyHeaders',
           requestHeaders: [
-            { header: 'Referer', operation: 'set', value: (refererUrl && refererUrl.includes('voyeur')) ? 'https://voyeurhit.com/' : (refererUrl || 'https://xhamster.com/') }
+            {
+              header: 'Referer',
+              operation: 'set',
+              value: (mediaUrl && mediaUrl.includes('/vh/') || refererUrl && refererUrl.includes('voyeur'))
+                ? 'https://voyeurhit.com/'
+                : ((mediaUrl && mediaUrl.includes('thisvid') || refererUrl && refererUrl.includes('thisvid'))
+                  ? 'https://thisvid.com/'
+                  : (refererUrl || 'https://xhamster.com/'))
+            }
           ]
         },
         condition: {
@@ -1640,6 +1683,77 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
     console.warn('[XtremeGrbr] DNR error:', e);
   }
 }
+
+async function initStandingDnrRules() {
+  if (!chrome.declarativeNetRequest) return;
+  try {
+    const standingRules = [
+      {
+        id: 9910,
+        priority: 25,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [
+            { header: 'Referer', operation: 'set', value: 'https://voyeurhit.com/' }
+          ],
+          responseHeaders: [
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' }
+          ]
+        },
+        condition: {
+          urlFilter: '*://*.ahcdn.com/*/vh/*',
+          resourceTypes: ['media', 'xmlhttprequest', 'sub_frame', 'other']
+        }
+      },
+      {
+        id: 9911,
+        priority: 25,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [
+            { header: 'Referer', operation: 'set', value: 'https://voyeurhit.com/' }
+          ],
+          responseHeaders: [
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' }
+          ]
+        },
+        condition: {
+          urlFilter: '*://*.nv7s.com/*',
+          resourceTypes: ['media', 'xmlhttprequest', 'sub_frame', 'other']
+        }
+      },
+      {
+        id: 9912,
+        priority: 25,
+        action: {
+          type: 'modifyHeaders',
+          requestHeaders: [
+            { header: 'Referer', operation: 'set', value: 'https://thisvid.com/' }
+          ],
+          responseHeaders: [
+            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
+            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' }
+          ]
+        },
+        condition: {
+          urlFilter: '*://*.ahcdn.com/*',
+          initiatorDomains: ['thisvid.com'],
+          resourceTypes: ['media', 'xmlhttprequest', 'sub_frame', 'other']
+        }
+      }
+    ];
+
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: [9910, 9911, 9912],
+      addRules: standingRules
+    });
+  } catch (e) {
+    console.warn('[XtremeGrbr] initStandingDnrRules notice:', e);
+  }
+}
+initStandingDnrRules();
 
 /**
  * Resolves HTTP redirects (302, 301, 307) upfront before calling chrome.downloads.download.

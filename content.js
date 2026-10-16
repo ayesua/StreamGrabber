@@ -543,7 +543,8 @@
       }
 
       // 2. Dedicated KVS / Flashvars / Tube Player Extractor (ThisVid, Tube sites)
-      const flashvarsMatch = fullHtml.match(/var\s+flashvars\s*=\s*\{([\s\S]*?)\};/i);
+      const flashvarsMatch = fullHtml.match(/(?:var\s+|window\.)?flashvars\s*=\s*\{([\s\S]*?)\}(?:;|\s*<\/script>|\s*\n)/i) ||
+                             fullHtml.match(/flashvars\s*=\s*\{([\s\S]*?)\}/i);
       if (flashvarsMatch && flashvarsMatch[1]) {
         const fvBlock = flashvarsMatch[1];
         const videoTitle = (fvBlock.match(/video_title\s*:\s*['"]([^'"]+)['"]/i)?.[1]) || getPageTitle();
@@ -654,7 +655,7 @@
 
       // VoyeurOK / VoyeurHit / VideoVoyeurHit Direct Stream Resolver
       let voyeurVidId = null;
-      const voyeurEl = document.querySelector('#player[data-src], iframe[src*="voyeurhit"], iframe[data-src*="voyeurhit"], iframe[src*="videovoyeurhit"], iframe[data-src*="videovoyeurhit"], [data-remote*="videovoyeurhit"]');
+      const voyeurEl = document.querySelector('#player[data-src], .video__player[data-src], iframe[src*="voyeurhit"], iframe[data-src*="voyeurhit"], iframe[src*="videovoyeurhit"], iframe[data-src*="videovoyeurhit"], [data-remote*="videovoyeurhit"]');
       if (voyeurEl) {
         const elSrc = voyeurEl.src || voyeurEl.getAttribute('data-src') || voyeurEl.getAttribute('data-remote') || '';
         const m = elSrc.match(/(?:embed|videos)\/(\d+)/i);
@@ -664,8 +665,18 @@
         const voyeurMatch = fullHtml.match(/https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
                             location.href.match(/(?:voyeurhit|videovoyeurhit)[^"']*\/(?:embed|videos)\/(\d+)/i) ||
                             fullHtml.match(/data-src=["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
-                            fullHtml.match(/["']embedUrl["']\s*:\s*["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i);
-        if (voyeurMatch && voyeurMatch[1]) voyeurVidId = voyeurMatch[1];
+                            fullHtml.match(/["']embedUrl["']\s*:\s*["']https?:\/\/[^"']*(?:voyeurhit|videovoyeurhit)[^"']*\/embed\/(\d+)\/?["']/i) ||
+                            fullHtml.match(/["']embedUrl["']\s*:\s*["']([^"']+)["']/i);
+        if (voyeurMatch) {
+          const rawEmbed = voyeurMatch[1];
+          const embedIdMatch = rawEmbed.match(/(?:embed|videos)\/(\d+)/i);
+          if (embedIdMatch) voyeurVidId = embedIdMatch[1];
+          else if (/^\d+$/.test(rawEmbed)) voyeurVidId = rawEmbed;
+        }
+      }
+      if (!voyeurVidId && typeof window.vpage_data === 'object' && window.vpage_data?.vid) {
+        const embedCheck = fullHtml.match(/videovoyeurhit\.com\/embed\/(\d+)/i) || fullHtml.match(/voyeurhit\.com\/embed\/(\d+)/i);
+        if (embedCheck && embedCheck[1]) voyeurVidId = embedCheck[1];
       }
       if (voyeurVidId) {
         chrome.runtime.sendMessage({
