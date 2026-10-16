@@ -501,14 +501,15 @@ function openPreview(item) {
     }
   };
 
-  const startPlayback = () => {
-    if (item.type === 'HLS' || streamUrl.includes('.m3u8')) {
+  const startPlayback = (playUrl) => {
+    const activeUrl = playUrl || streamUrl;
+    if (item.type === 'HLS' || activeUrl.includes('.m3u8')) {
       if (window.Hls && window.Hls.isSupported()) {
         currentHlsInstance = new window.Hls({
           maxBufferLength: 15,
           enableWorker: true
         });
-        currentHlsInstance.loadSource(streamUrl);
+        currentHlsInstance.loadSource(activeUrl);
         currentHlsInstance.attachMedia(player);
         currentHlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
           player.play().catch(() => {});
@@ -522,7 +523,7 @@ function openPreview(item) {
           }
         });
       } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = streamUrl;
+        player.src = activeUrl;
         player.play().catch(() => {});
       } else {
         if (statusMsg) {
@@ -531,7 +532,7 @@ function openPreview(item) {
         }
       }
     } else {
-      player.src = streamUrl;
+      player.src = activeUrl;
       player.play().catch(() => {});
     }
   };
@@ -540,8 +541,9 @@ function openPreview(item) {
     action: 'PREPARE_PREVIEW_RULES',
     url: streamUrl,
     pageUrl: item.pageUrl || ''
-  }, () => {
-    startPlayback();
+  }, (resp) => {
+    const playUrl = (resp && resp.finalUrl) ? resp.finalUrl : streamUrl;
+    startPlayback(playUrl);
   });
 }
 

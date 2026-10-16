@@ -423,6 +423,73 @@
     });
   }
 
+  function kvsGetLicenseToken(licenseCode) {
+    if (!licenseCode || typeof licenseCode !== 'string') return [];
+    licenseCode = licenseCode.replace(/\$/g, '');
+    const licenseValues = licenseCode.split('').map(c => parseInt(c, 10));
+
+    const modlicense = licenseCode.replace(/0/g, '1');
+    const center = Math.floor(modlicense.length / 2);
+    const fronthalf = parseInt(modlicense.slice(0, center + 1), 10);
+    const backhalf = parseInt(modlicense.slice(center), 10);
+    const derived = String(4 * Math.abs(fronthalf - backhalf)).slice(0, center + 1);
+
+    const tokens = [];
+    for (let index = 0; index < derived.length; index++) {
+      const current = parseInt(derived[index], 10);
+      for (let offset = 0; offset < 4; offset++) {
+        tokens.push((licenseValues[index + offset] + current) % 10);
+      }
+    }
+    return tokens;
+  }
+
+  function kvsGetRealUrl(videoUrl, licenseCode) {
+    if (!videoUrl || typeof videoUrl !== 'string') return videoUrl;
+    if (!videoUrl.startsWith('function/0/')) {
+      return videoUrl.replace(/^function\/\d+\//i, '');
+    }
+    if (!licenseCode) {
+      return videoUrl.replace(/^function\/\d+\//i, '');
+    }
+
+    try {
+      const rawUrl = videoUrl.slice('function/0/'.length);
+      const u = new URL(rawUrl.startsWith('//') ? location.protocol + rawUrl : (rawUrl.startsWith('/') ? location.origin + rawUrl : rawUrl));
+      const licenseToken = kvsGetLicenseToken(licenseCode);
+      if (!licenseToken.length) return rawUrl;
+      const urlparts = u.pathname.split('/');
+
+      // Path format: /get_file/<storage_id>/<hash>/<dir1>/<dir2>/<filename>.mp4/
+      const hashIdx = urlparts.findIndex(p => p.length >= 32 && /^[0-9a-f]+$/i.test(p));
+      if (hashIdx === -1) return rawUrl;
+
+      const HASH_LENGTH = 32;
+      const hash_ = urlparts[hashIdx].slice(0, HASH_LENGTH);
+      const indices = [];
+      for (let i = 0; i < HASH_LENGTH; i++) indices.push(i);
+
+      let accum = 0;
+      for (let src = HASH_LENGTH - 1; src >= 0; src--) {
+        accum += (licenseToken[src] || 0);
+        const dest = (src + accum) % HASH_LENGTH;
+        const temp = indices[src];
+        indices[src] = indices[dest];
+        indices[dest] = temp;
+      }
+
+      let unscrambled = '';
+      for (let i = 0; i < indices.length; i++) {
+        unscrambled += hash_[indices[i]];
+      }
+      urlparts[hashIdx] = unscrambled + urlparts[hashIdx].slice(HASH_LENGTH);
+      u.pathname = urlparts.join('/');
+      return u.toString();
+    } catch (e) {
+      return videoUrl.replace(/^function\/\d+\//i, '');
+    }
+  }
+
   function scanInlinePlayerScripts() {
     try {
       const fullHtml = document.documentElement ? document.documentElement.innerHTML : '';
@@ -481,22 +548,30 @@
         const fvBlock = flashvarsMatch[1];
         const videoTitle = (fvBlock.match(/video_title\s*:\s*['"]([^'"]+)['"]/i)?.[1]) || getPageTitle();
         const fvPoster = (fvBlock.match(/preview_url\s*:\s*['"]([^'"]+)['"]/i)?.[1]) || poster;
+        const licenseCode = (fvBlock.match(/license_code\s*:\s*['"]([^'"]+)['"]/i)?.[1]) || '';
 
         // Primary video_url (HQ / 1080p / 720p)
         const mainVideoMatch = fvBlock.match(/video_url\s*:\s*['"]([^'"]+)['"]/i);
         const mainTextMatch = fvBlock.match(/video_url_text\s*:\s*['"]([^'"]+)['"]/i);
         if (mainVideoMatch && mainVideoMatch[1]) {
-          let mainUrl = mainVideoMatch[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
-          if (mainUrl.startsWith('//')) mainUrl = location.protocol + mainUrl;
-          else if (mainUrl.startsWith('/')) mainUrl = location.origin + mainUrl;
-          if (mainUrl.startsWith('http') && !isExcludedUrl(mainUrl)) {
-            reportMedia({
-              url: mainUrl,
-              quality: mainTextMatch?.[1] || detectQualityFromUrl(mainUrl, '1080p Full HD'),
-              type: mainUrl.includes('.m3u8') ? 'HLS' : 'MP4',
-              title: videoTitle,
-              poster: fvPoster
-            });
+          let mainUrl = mainVideoMatch[1].replace(/\\/g, '');
+          if (mainUrl.startsWith('function/0/')) {
+            mainUrl = kvsGetRealUrl(mainUrl, licenseCode);
+          } else if (mainUrl.startsWith('function/')) {
+            mainUrl = ''; // Wait for runtime deobfuscation
+          }
+          if (mainUrl) {
+            if (mainUrl.startsWith('//')) mainUrl = location.protocol + mainUrl;
+            else if (mainUrl.startsWith('/')) mainUrl = location.origin + mainUrl;
+            if (mainUrl.startsWith('http') && !isExcludedUrl(mainUrl)) {
+              reportMedia({
+                url: mainUrl,
+                quality: mainTextMatch?.[1] || detectQualityFromUrl(mainUrl, '1080p Full HD'),
+                type: mainUrl.includes('.m3u8') ? 'HLS' : 'MP4',
+                title: videoTitle,
+                poster: fvPoster
+              });
+            }
           }
         }
 
@@ -507,17 +582,24 @@
           const key = altM[1];
           const rawAltUrl = altM[2];
           const labelMatch = fvBlock.match(new RegExp(key + '_text\\s*:\\s*[\'"]([^\'"]+)[\'"]', 'i'));
-          let altUrl = rawAltUrl.replace(/\\/g, '').replace(/^function\/\d+\//i, '');
-          if (altUrl.startsWith('//')) altUrl = location.protocol + altUrl;
-          else if (altUrl.startsWith('/')) altUrl = location.origin + altUrl;
-          if (altUrl.startsWith('http') && !isExcludedUrl(altUrl)) {
-            reportMedia({
-              url: altUrl,
-              quality: labelMatch?.[1] || detectQualityFromUrl(altUrl, 'Auto SD'),
-              type: altUrl.includes('.m3u8') ? 'HLS' : 'MP4',
-              title: videoTitle,
-              poster: fvPoster
-            });
+          let altUrl = rawAltUrl.replace(/\\/g, '');
+          if (altUrl.startsWith('function/0/')) {
+            altUrl = kvsGetRealUrl(altUrl, licenseCode);
+          } else if (altUrl.startsWith('function/')) {
+            altUrl = '';
+          }
+          if (altUrl) {
+            if (altUrl.startsWith('//')) altUrl = location.protocol + altUrl;
+            else if (altUrl.startsWith('/')) altUrl = location.origin + altUrl;
+            if (altUrl.startsWith('http') && !isExcludedUrl(altUrl)) {
+              reportMedia({
+                url: altUrl,
+                quality: labelMatch?.[1] || detectQualityFromUrl(altUrl, 'Auto SD'),
+                type: altUrl.includes('.m3u8') ? 'HLS' : 'MP4',
+                title: videoTitle,
+                poster: fvPoster
+              });
+            }
           }
         }
       }
@@ -525,32 +607,48 @@
       // 3. Fallback High Resolution & Standard MP4 regexes
       const highMp4Match = fullHtml.match(/["']?(?:video_url_high|video_url_hq|video_url_1080p|video_url_720p)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i);
       if (highMp4Match && highMp4Match[1]) {
-        let u = highMp4Match[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
-        if (u.startsWith('//')) u = location.protocol + u;
-        else if (u.startsWith('/')) u = location.origin + u;
-        if (u.startsWith('http') && !isExcludedUrl(u)) {
-          reportMedia({
-            url: u,
-            quality: detectQualityFromUrl(u, '1080p Full HD'),
-            type: 'MP4',
-            poster: poster
-          });
+        let u = highMp4Match[1].replace(/\\/g, '');
+        if (u.startsWith('function/0/')) {
+          const lic = fullHtml.match(/license_code\s*:\s*['"]([^'"]+)['"]/i)?.[1] || '';
+          u = kvsGetRealUrl(u, lic);
+        } else if (u.startsWith('function/')) {
+          u = '';
+        }
+        if (u) {
+          if (u.startsWith('//')) u = location.protocol + u;
+          else if (u.startsWith('/')) u = location.origin + u;
+          if (u.startsWith('http') && !isExcludedUrl(u)) {
+            reportMedia({
+              url: u,
+              quality: detectQualityFromUrl(u, '1080p Full HD'),
+              type: 'MP4',
+              poster: poster
+            });
+          }
         }
       }
 
       const stdMp4Match = fullHtml.match(/["']?(?:video_url|video_alt_url3|video_alt_url4)["']?\s*[:=]\s*["']([^"']+\.mp4[^"']*)["']/i) ||
                           fullHtml.match(/sources\s*:\s*\[\s*\{[^}]*file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
       if (stdMp4Match && stdMp4Match[1]) {
-        let u = stdMp4Match[1].replace(/\\/g, '').replace(/^function\/\d+\//i, '');
-        if (u.startsWith('//')) u = location.protocol + u;
-        else if (u.startsWith('/')) u = location.origin + u;
-        if (u.startsWith('http') && !isExcludedUrl(u)) {
-          reportMedia({
-            url: u,
-            quality: detectQualityFromUrl(u, 'Auto HD'),
-            type: 'MP4',
-            poster: poster
-          });
+        let u = stdMp4Match[1].replace(/\\/g, '');
+        if (u.startsWith('function/0/')) {
+          const lic = fullHtml.match(/license_code\s*:\s*['"]([^'"]+)['"]/i)?.[1] || '';
+          u = kvsGetRealUrl(u, lic);
+        } else if (u.startsWith('function/')) {
+          u = '';
+        }
+        if (u) {
+          if (u.startsWith('//')) u = location.protocol + u;
+          else if (u.startsWith('/')) u = location.origin + u;
+          if (u.startsWith('http') && !isExcludedUrl(u)) {
+            reportMedia({
+              url: u,
+              quality: detectQualityFromUrl(u, 'Auto HD'),
+              type: 'MP4',
+              poster: poster
+            });
+          }
         }
       }
 
@@ -574,6 +672,7 @@
           action: 'RESOLVE_VOYEUR_STREAM',
           videoId: voyeurVidId,
           pageTitle: getPageTitle(),
+          pageUrl: window.location.href,
           poster: poster
         }, () => {
           if (chrome.runtime.lastError) {}

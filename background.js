@@ -343,6 +343,7 @@ function addMediaItem(tabId, item) {
   if (!isExtensionGloballyEnabled) return;
   if (!tabId || tabId < 0) return;
   if (!item || !item.url) return;
+  if (item.url.includes('function/')) return; // Discard raw un-decoded KVS obfuscation placeholders
   if (isExcludedNetworkUrl(item.url, '')) return;
   if (isAdOrAnnounceUrl(item.url)) return;
 
@@ -624,7 +625,7 @@ function decodeVoyeurHitPath(str) {
   }
 }
 
-async function resolveVoyeurHitStream(videoId, tabId, pageTitle, poster) {
+async function resolveVoyeurHitStream(videoId, tabId, pageTitle, poster, pageUrl) {
   if (!videoId || !tabId) return;
   const targetTitle = pageTitle || tabTitles.get(tabId) || 'Video';
   const targetPoster = poster || tabPosters.get(tabId) || null;
@@ -658,6 +659,7 @@ async function resolveVoyeurHitStream(videoId, tabId, pageTitle, poster) {
           size: resolvedSize,
           isStream: false,
           poster: targetPoster,
+          pageUrl: pageUrl || '',
           source: 'VoyeurHit Stream',
           timestamp: Date.now()
         });
@@ -1001,7 +1003,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'RESOLVE_VOYEUR_STREAM') {
     const targetTabId = tabId || message.tabId;
     if (targetTabId && message.videoId) {
-      resolveVoyeurHitStream(message.videoId, targetTabId, message.pageTitle, message.poster);
+      resolveVoyeurHitStream(message.videoId, targetTabId, message.pageTitle, message.poster, message.pageUrl);
     }
     return true;
   }
@@ -1009,12 +1011,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'PREPARE_PREVIEW_RULES') {
     (async () => {
       try {
+        let finalUrl = message.url;
         if (message.url) {
-          await setDownloadRefererRules(message.url, message.pageUrl || '');
+          const effectiveReferer = getEffectiveReferer(message.url, message.pageUrl || '');
+          const resolved = await resolveFinalDirectUrl(message.url, effectiveReferer);
+          finalUrl = (typeof resolved === 'object' && resolved.url) ? resolved.url : (resolved || message.url);
+          await setDownloadRefererRules(finalUrl, effectiveReferer);
         }
-        sendResponse({ success: true });
+        sendResponse({ success: true, finalUrl: finalUrl });
       } catch (e) {
-        sendResponse({ success: false, error: e.message });
+        sendResponse({ success: false, error: e.message, finalUrl: message.url });
       }
     })();
     return true;
@@ -1615,12 +1621,13 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
           type: 'modifyHeaders',
           responseHeaders: [
             { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
-            { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'GET, HEAD, OPTIONS' }
+            { header: 'Access-Control-Allow-Methods', operation: 'set', value: 'GET, HEAD, OPTIONS' },
+            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' }
           ]
         },
         condition: {
-          initiatorDomains: [chrome.runtime.id],
-          urlFilter: '*://*/*'
+          urlFilter: '*://*/*',
+          resourceTypes: ['media', 'xmlhttprequest', 'sub_frame', 'other']
         }
       }
     ];

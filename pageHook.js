@@ -67,8 +67,8 @@
         enumerable: true,
         get: origSrcDesc.get,
         set: function (val) {
-          if (val && typeof val === 'string') {
-            let cleanVal = val.replace(/^function\/\d+\//i, '');
+          if (val && typeof val === 'string' && !val.startsWith('function/')) {
+            let cleanVal = val;
             if (cleanVal.startsWith('//')) cleanVal = location.protocol + cleanVal;
             else if (cleanVal.startsWith('/')) cleanVal = location.origin + cleanVal;
             if (cleanVal.startsWith('http') && !cleanVal.includes('blob:') && !cleanVal.match(/\.(html|htm|php|js|css)(\?.*)?$/i)) {
@@ -85,6 +85,73 @@
       });
     }
   } catch (e) {}
+
+  function kvsGetLicenseToken(licenseCode) {
+    if (!licenseCode || typeof licenseCode !== 'string') return [];
+    licenseCode = licenseCode.replace(/\$/g, '');
+    const licenseValues = licenseCode.split('').map(c => parseInt(c, 10));
+
+    const modlicense = licenseCode.replace(/0/g, '1');
+    const center = Math.floor(modlicense.length / 2);
+    const fronthalf = parseInt(modlicense.slice(0, center + 1), 10);
+    const backhalf = parseInt(modlicense.slice(center), 10);
+    const derived = String(4 * Math.abs(fronthalf - backhalf)).slice(0, center + 1);
+
+    const tokens = [];
+    for (let index = 0; index < derived.length; index++) {
+      const current = parseInt(derived[index], 10);
+      for (let offset = 0; offset < 4; offset++) {
+        tokens.push((licenseValues[index + offset] + current) % 10);
+      }
+    }
+    return tokens;
+  }
+
+  function kvsGetRealUrl(videoUrl, licenseCode) {
+    if (!videoUrl || typeof videoUrl !== 'string') return videoUrl;
+    if (!videoUrl.startsWith('function/0/')) {
+      return videoUrl.replace(/^function\/\d+\//i, '');
+    }
+    if (!licenseCode) {
+      return videoUrl.replace(/^function\/\d+\//i, '');
+    }
+
+    try {
+      const rawUrl = videoUrl.slice('function/0/'.length);
+      const u = new URL(rawUrl.startsWith('//') ? location.protocol + rawUrl : (rawUrl.startsWith('/') ? location.origin + rawUrl : rawUrl));
+      const licenseToken = kvsGetLicenseToken(licenseCode);
+      if (!licenseToken.length) return rawUrl;
+      const urlparts = u.pathname.split('/');
+
+      // Path format: /get_file/<storage_id>/<hash>/<dir1>/<dir2>/<filename>.mp4/
+      const hashIdx = urlparts.findIndex(p => p.length >= 32 && /^[0-9a-f]+$/i.test(p));
+      if (hashIdx === -1) return rawUrl;
+
+      const HASH_LENGTH = 32;
+      const hash_ = urlparts[hashIdx].slice(0, HASH_LENGTH);
+      const indices = [];
+      for (let i = 0; i < HASH_LENGTH; i++) indices.push(i);
+
+      let accum = 0;
+      for (let src = HASH_LENGTH - 1; src >= 0; src--) {
+        accum += (licenseToken[src] || 0);
+        const dest = (src + accum) % HASH_LENGTH;
+        const temp = indices[src];
+        indices[src] = indices[dest];
+        indices[dest] = temp;
+      }
+
+      let unscrambled = '';
+      for (let i = 0; i < indices.length; i++) {
+        unscrambled += hash_[indices[i]];
+      }
+      urlparts[hashIdx] = unscrambled + urlparts[hashIdx].slice(HASH_LENGTH);
+      u.pathname = urlparts.join('/');
+      return u.toString();
+    } catch (e) {
+      return videoUrl.replace(/^function\/\d+\//i, '');
+    }
+  }
 
   function decodeVoyeurHitPath(str) {
     if (!str || typeof str !== 'string') return '';
@@ -474,6 +541,22 @@
     if (!player || player.__xg_hooked__) return player;
     player.__xg_hooked__ = true;
 
+    // Neutralize preroll ads: bypass playAd and continue playback on ad error
+    try {
+      player.playAd = function () {
+        try { player.play(); } catch (e) {}
+        return false;
+      };
+      if (typeof player.on === 'function') {
+        player.on('adError', function () {
+          try { player.play(); } catch (e) {}
+        });
+        player.on('adBlock', function () {
+          try { player.play(); } catch (e) {}
+        });
+      }
+    } catch (e) {}
+
     const origSetup = player.setup;
     if (origSetup) {
       player.setup = function (config) {
@@ -553,14 +636,36 @@
     if (_jwplayer) _jwplayer = hookJWPlayerGlobal(_jwplayer);
   } catch (e) {}
 
+  // Neutralize VoyeurHit / Videovoyeurhit preroll ad calls before they can block playback
+  try {
+    Object.defineProperty(window, 'ad_preroll', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return function () {}; },
+      set: function () {}
+    });
+    Object.defineProperty(window, 'ad_preroll2', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return function () {}; },
+      set: function () {}
+    });
+  } catch (e) {}
+
   // 1C. kt_player Interceptor for thisvid.com & KVS Players (Sniffs HQ streams)
   function hookKtPlayerGlobal(fn) {
     if (typeof fn !== 'function') return fn;
     const wrapped = function (id, swf, w, h, flashvars) {
       if (flashvars && typeof flashvars === 'object') {
+        const licenseCode = flashvars.license_code || '';
         const sniffUrl = (urlStr, quality) => {
           if (!urlStr || typeof urlStr !== 'string') return;
-          let clean = urlStr.replace(/^function\/\d+\//i, '');
+          let clean = urlStr;
+          if (clean.startsWith('function/0/')) {
+            clean = kvsGetRealUrl(clean, licenseCode);
+          } else if (clean.startsWith('function/')) {
+            return; // Wait for runtime deobfuscation
+          }
           if (clean.startsWith('//')) clean = location.protocol + clean;
           else if (clean.startsWith('/')) clean = location.origin + clean;
           if (clean.startsWith('http') && !clean.match(/\.(html|htm|php|js|css)(\?.*)?$/i)) {
@@ -581,6 +686,30 @@
             sniffUrl(flashvars['video_alt_url' + i], flashvars['video_alt_url' + i + '_text'] || 'SD');
           }
         }
+
+        // Define reactive setter on flashvars.video_url for asynchronous KVS deobfuscator
+        let currentVideoUrl = flashvars.video_url;
+        try {
+          Object.defineProperty(flashvars, 'video_url', {
+            configurable: true,
+            enumerable: true,
+            get: function () { return currentVideoUrl; },
+            set: function (newVal) {
+              currentVideoUrl = newVal;
+              if (newVal && typeof newVal === 'string') {
+                sniffUrl(newVal, flashvars.video_url_text || 'HQ');
+              }
+            }
+          });
+        } catch (e) {}
+
+        // Fallback polling for asynchronous KVS deobfuscator
+        [50, 100, 200, 400, 800, 1500, 3000].forEach(delay => {
+          setTimeout(() => {
+            if (flashvars.video_url) sniffUrl(flashvars.video_url, flashvars.video_url_text || 'HQ');
+            if (flashvars.video_alt_url) sniffUrl(flashvars.video_alt_url, flashvars.video_alt_url_text || '240p');
+          }, delay);
+        });
       }
       return fn.apply(this, arguments);
     };
@@ -621,7 +750,37 @@
           });
         }
       }
-      return fn.apply(this, arguments);
+      const player = fn.apply(this, arguments);
+      if (player && typeof player.load === 'function' && !player.__xg_load_hooked__) {
+        player.__xg_load_hooked__ = true;
+        const origLoad = player.load;
+        player.load = function (source) {
+          try {
+            if (source && typeof source === 'object') {
+              const srcList = Array.isArray(source.sources) ? source.sources : (source.src ? [source] : []);
+              srcList.forEach(s => {
+                if (s && s.src && typeof s.src === 'string' && s.src.startsWith('http')) {
+                  broadcastStreamData({
+                    url: s.src,
+                    type: (s.type && s.type.includes('mpegurl')) || s.src.includes('.m3u8') ? 'HLS' : 'MP4',
+                    quality: detectQualityFromUrl(s.src),
+                    title: document.title
+                  });
+                }
+              });
+            } else if (typeof source === 'string' && source.startsWith('http')) {
+              broadcastStreamData({
+                url: source,
+                type: source.includes('.m3u8') ? 'HLS' : 'MP4',
+                quality: detectQualityFromUrl(source),
+                title: document.title
+              });
+            }
+          } catch (e) {}
+          return origLoad.apply(this, arguments);
+        };
+      }
+      return player;
     };
     for (const k in fn) {
       try { wrapped[k] = fn[k]; } catch (e) {}
