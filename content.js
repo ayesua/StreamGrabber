@@ -1459,6 +1459,64 @@
       .jw-state-idle .jw-display-icon-container { display: flex !important; }
       .fp-player { pointer-events: auto !important; }
       #kt_player { pointer-events: auto !important; }
+
+      .xg-video-seen {
+        position: relative !important;
+        transition: opacity 0.25s ease, filter 0.25s ease !important;
+      }
+      .xg-video-seen img {
+        opacity: 0.28 !important;
+        filter: grayscale(90%) contrast(75%) brightness(65%) !important;
+        transition: opacity 0.25s ease, filter 0.25s ease !important;
+      }
+      .xg-video-seen:hover img {
+        opacity: 0.85 !important;
+        filter: grayscale(15%) contrast(95%) brightness(95%) !important;
+      }
+      .xg-video-seen-overlay {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: rgba(15, 23, 42, 0.58) !important;
+        pointer-events: none !important;
+        z-index: 10 !important;
+        border-radius: inherit !important;
+        transition: opacity 0.25s ease !important;
+      }
+      .xg-video-seen:hover .xg-video-seen-overlay {
+        opacity: 0.15 !important;
+      }
+      .xg-video-seen-badge {
+        position: absolute !important;
+        top: 8px !important;
+        left: 8px !important;
+        z-index: 99999 !important;
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        color: #ffffff !important;
+        border: 1.5px solid #ffffff !important;
+        outline: 2px solid rgba(0, 0, 0, 0.85) !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        letter-spacing: 0.8px !important;
+        padding: 3px 8px !important;
+        border-radius: 5px !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.65), 0 0 8px rgba(245, 158, 11, 0.5) !important;
+        pointer-events: none !important;
+        text-transform: uppercase !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        line-height: 1.2 !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+      }
+      .xg-video-seen-badge .xg-badge-icon {
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        color: #ffffff !important;
+      }
     `;
     (document.head || document.documentElement).appendChild(style);
   } catch (e) {}
@@ -1508,6 +1566,8 @@
           el.classList.remove('xg-video-seen');
           const badge = el.querySelector('.xg-video-seen-badge');
           if (badge) badge.remove();
+          const overlay = el.querySelector('.xg-video-seen-overlay');
+          if (overlay) overlay.remove();
         });
       }
       return;
@@ -1541,18 +1601,28 @@
 
       if (isSeen) {
         const targetContainer = el.closest('article, .thumb, .item-video, .video-card, .video-thumb') || el;
+        const imgWrap = targetContainer.querySelector('.thumb__img, .thumb-image, .video-thumb-img, .thumbnail, a.thumb__img') || targetContainer.querySelector('a') || targetContainer;
+
         if (!targetContainer.classList.contains('xg-video-seen')) {
           targetContainer.classList.add('xg-video-seen');
-          // Add visible 'SEEN' pill badge if not already present
-          if (!targetContainer.querySelector('.xg-video-seen-badge')) {
+
+          if (imgWrap && getComputedStyle(imgWrap).position === 'static') {
+            imgWrap.style.position = 'relative';
+          }
+
+          // 1. Add semi-transparent dark dimming overlay directly over thumbnail image
+          if (imgWrap && !imgWrap.querySelector('.xg-video-seen-overlay')) {
+            const overlay = document.createElement('div');
+            overlay.className = 'xg-video-seen-overlay';
+            imgWrap.appendChild(overlay);
+          }
+
+          // 2. Add high-visibility, contoured "SEEN" badge
+          if (imgWrap && !imgWrap.querySelector('.xg-video-seen-badge')) {
             const badge = document.createElement('div');
             badge.className = 'xg-video-seen-badge';
-            badge.textContent = 'SEEN';
+            badge.innerHTML = '<span class="xg-badge-icon">✓</span><span>SEEN</span>';
             badge.title = 'You have already watched or downloaded this video';
-            const imgWrap = targetContainer.querySelector('.thumb__img, .thumb-image, .video-thumb-img, .thumbnail') || targetContainer;
-            if (getComputedStyle(imgWrap).position === 'static') {
-              imgWrap.style.position = 'relative';
-            }
             imgWrap.appendChild(badge);
           }
         }
