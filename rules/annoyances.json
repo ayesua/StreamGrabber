@@ -89,34 +89,7 @@
       "resourceTypes": ["script", "xmlhttprequest"]
     }
   },
-  {
-    "id": 4011,
-    "priority": 1,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        { "header": "Referer", "operation": "remove" }
-      ]
-    },
-    "condition": {
-      "urlFilter": "||ahcdn.com^",
-      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
-    }
-  },
-  {
-    "id": 4012,
-    "priority": 1,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        { "header": "Referer", "operation": "remove" }
-      ]
-    },
-    "condition": {
-      "urlFilter": "||nv7s.com^",
-      "resourceTypes": ["media", "xmlhttprequest", "other", "image", "sub_frame"]
-    }
-  },
+
   {
     "id": 4013,
     "priority": 1,
@@ -267,7 +240,7 @@
       ]
     },
     "condition": {
-      "urlFilter": "||ahcdn.com^",
+      "urlFilter": "*://*.ahcdn.com/*/vh/*",
       "resourceTypes": ["media", "xmlhttprequest", "other"]
     }
   },
@@ -282,6 +255,36 @@
     },
     "condition": {
       "urlFilter": "||nv7s.com^",
+      "resourceTypes": ["media", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 4025,
+    "priority": 10,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "set", "value": "https://thisvid.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||ahcdn.com^",
+      "initiatorDomains": ["thisvid.com"],
+      "resourceTypes": ["media", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 4026,
+    "priority": 10,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "Referer", "operation": "set", "value": "https://voyeurhit.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||ahcdn.com^",
+      "initiatorDomains": ["voyeurhit.com", "voyeurok.com", "videovoyeurhit.com"],
       "resourceTypes": ["media", "xmlhttprequest", "other"]
     }
   }

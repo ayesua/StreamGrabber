@@ -925,6 +925,9 @@
                 console.warn('[XtremeShld:JWPlayer:Debug] Sanitizing JWPlayer advertising config to prevent Error 224003');
                 delete options.advertising;
               }
+              if (options.components && options.components.ad_preroll) {
+                options.components.ad_preroll.enabled = false;
+              }
             }
           }
           const res = origSetup.apply(this, arguments);
@@ -932,6 +935,23 @@
           return res;
         };
       }
+
+      // Neutralize playAd so VAST errors never trigger Error 224003
+      try {
+        player.playAd = function (tag) {
+          console.warn('[XtremeShld:JWPlayer] playAd bypassed to prevent Error 224003:', tag);
+          setTimeout(() => {
+            try {
+              if (typeof player.trigger === 'function') {
+                player.trigger('adSkipped', { tag: tag });
+                player.trigger('adComplete', { tag: tag });
+              }
+            } catch (_) {}
+            try { player.play(); } catch (_) {}
+          }, 0);
+          return this;
+        };
+      } catch (_) {}
 
       attachPlayerGuards(player);
 
@@ -1022,9 +1042,9 @@
 
     let _vadv2 = window.videoadvertising2;
     Object.defineProperty(window, 'videoadvertising2', {
-      get: () => _vadv2 || { tag: '' },
+      get: () => _vadv2 || { tag: '', rtb: [] },
       set: (v) => {
-        _vadv2 = (v && typeof v === 'object') ? { ...v, tag: '' } : { tag: '' };
+        _vadv2 = (v && typeof v === 'object') ? { ...v, tag: '', rtb: [] } : { tag: '', rtb: [] };
       },
       configurable: true
     });
