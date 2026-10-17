@@ -9,6 +9,7 @@ let currentTabTitle = '';
 let allDetectedMedia = [];
 let currentFilter = 'all'; // 'all' | 'video' | 'audio'
 let currentLang = 'en';
+let isExtensionEnabled = true;
 
 function formatSpeed(bps) {
   if (!bps || bps <= 0) return '0 KB/s';
@@ -45,6 +46,89 @@ function isGenericOrTechnicalTitle(title) {
   return false;
 }
 
+function updateExtensionStatusUI() {
+  const masterPowerToggle = document.getElementById('masterPowerToggle');
+  const masterPowerLabel = document.getElementById('masterPowerLabel');
+  const btnSubbarToggle = document.getElementById('btnSubbarToggle');
+  const btnToggle = document.getElementById('btnToggleExtension');
+  const disabledBanner = document.getElementById('disabledBanner');
+  const mediaListContainer = document.getElementById('mediaListContainer');
+  const emptyState = document.getElementById('emptyState');
+  const filterPills = document.querySelector('.filter-pills-bar');
+  const mediaCount = document.getElementById('mediaCount');
+
+  // 1. Sync header slider switch & label
+  if (masterPowerToggle) {
+    masterPowerToggle.checked = isExtensionEnabled;
+  }
+  if (masterPowerLabel) {
+    masterPowerLabel.textContent = isExtensionEnabled ? 'ON' : 'OFF';
+    masterPowerLabel.classList.toggle('disabled', !isExtensionEnabled);
+  }
+
+  // 2. Sync subbar toggle pill
+  if (btnSubbarToggle) {
+    btnSubbarToggle.textContent = isExtensionEnabled ? '🟢 Active' : '🔴 Disabled';
+    btnSubbarToggle.className = isExtensionEnabled ? 'subbar-toggle-pill enabled' : 'subbar-toggle-pill disabled';
+    btnSubbarToggle.setAttribute('title', isExtensionEnabled ? 'Click to disable XtremeGrbr' : 'Click to enable XtremeGrbr');
+  }
+
+  // 3. Sync header icon button
+  if (btnToggle) {
+    if (isExtensionEnabled) {
+      btnToggle.classList.remove('disabled');
+      btnToggle.setAttribute('title', 'Pause / Disable XtremeGrbr');
+      btnToggle.style.color = '#22c55e';
+    } else {
+      btnToggle.classList.add('disabled');
+      btnToggle.setAttribute('title', 'Turn On / Enable XtremeGrbr');
+      btnToggle.style.color = '#ef4444';
+    }
+  }
+
+  // 4. Sync paused banner
+  if (disabledBanner) {
+    disabledBanner.style.display = isExtensionEnabled ? 'none' : 'flex';
+  }
+
+  // 5. Sync media listing and badge state
+  if (!isExtensionEnabled) {
+    if (mediaCount) {
+      mediaCount.textContent = 'Paused';
+      mediaCount.style.background = '#fee2e2';
+      mediaCount.style.color = '#ef4444';
+    }
+    if (mediaListContainer) mediaListContainer.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+    if (filterPills) filterPills.style.opacity = '0.35';
+  } else {
+    if (mediaCount) {
+      mediaCount.style.background = '#e0f2fe';
+      mediaCount.style.color = 'var(--vdh-blue)';
+    }
+    if (mediaListContainer) mediaListContainer.style.display = 'block';
+    if (filterPills) filterPills.style.opacity = '1';
+  }
+}
+
+function toggleExtensionEnabled(forcedState = null) {
+  if (typeof forcedState === 'boolean') {
+    isExtensionEnabled = forcedState;
+  } else {
+    isExtensionEnabled = !isExtensionEnabled;
+  }
+
+  chrome.storage.local.set({ extensionEnabled: isExtensionEnabled }, () => {
+    chrome.runtime.sendMessage({ action: 'SET_EXTENSION_ENABLED', enabled: isExtensionEnabled }, () => {
+      if (chrome.runtime.lastError) {}
+    });
+    updateExtensionStatusUI();
+    if (isExtensionEnabled) {
+      loadTabMedia();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // 0. Initialize Internationalization (i18n) & Theme
   if (typeof getStoredLanguage === 'function') {
@@ -78,92 +162,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (typeof applyTheme === 'function') applyTheme(theme);
           updateThemeButtonIcon(theme);
         });
-      }
-    });
-  }
-
-  // Master Extension Enable / Disable State
-  let isExtensionEnabled = true;
-
-  function updateExtensionStatusUI() {
-    const masterPowerToggle = document.getElementById('masterPowerToggle');
-    const masterPowerLabel = document.getElementById('masterPowerLabel');
-    const btnSubbarToggle = document.getElementById('btnSubbarToggle');
-    const btnToggle = document.getElementById('btnToggleExtension');
-    const disabledBanner = document.getElementById('disabledBanner');
-    const mediaListContainer = document.getElementById('mediaListContainer');
-    const emptyState = document.getElementById('emptyState');
-    const filterPills = document.querySelector('.filter-pills-bar');
-    const mediaCount = document.getElementById('mediaCount');
-
-    // 1. Sync header slider switch & label
-    if (masterPowerToggle) {
-      masterPowerToggle.checked = isExtensionEnabled;
-    }
-    if (masterPowerLabel) {
-      masterPowerLabel.textContent = isExtensionEnabled ? 'ON' : 'OFF';
-      masterPowerLabel.classList.toggle('disabled', !isExtensionEnabled);
-    }
-
-    // 2. Sync subbar toggle pill
-    if (btnSubbarToggle) {
-      btnSubbarToggle.textContent = isExtensionEnabled ? '🟢 Active' : '🔴 Disabled';
-      btnSubbarToggle.className = isExtensionEnabled ? 'subbar-toggle-pill enabled' : 'subbar-toggle-pill disabled';
-      btnSubbarToggle.setAttribute('title', isExtensionEnabled ? 'Click to disable XtremeGrbr' : 'Click to enable XtremeGrbr');
-    }
-
-    // 3. Sync header icon button
-    if (btnToggle) {
-      if (isExtensionEnabled) {
-        btnToggle.classList.remove('disabled');
-        btnToggle.setAttribute('title', 'Pause / Disable XtremeGrbr');
-        btnToggle.style.color = '#22c55e';
-      } else {
-        btnToggle.classList.add('disabled');
-        btnToggle.setAttribute('title', 'Turn On / Enable XtremeGrbr');
-        btnToggle.style.color = '#ef4444';
-      }
-    }
-
-    // 4. Sync paused banner
-    if (disabledBanner) {
-      disabledBanner.style.display = isExtensionEnabled ? 'none' : 'flex';
-    }
-
-    // 5. Sync media listing and badge state
-    if (!isExtensionEnabled) {
-      if (mediaCount) {
-        mediaCount.textContent = 'Paused';
-        mediaCount.style.background = '#fee2e2';
-        mediaCount.style.color = '#ef4444';
-      }
-      if (mediaListContainer) mediaListContainer.style.display = 'none';
-      if (emptyState) emptyState.style.display = 'none';
-      if (filterPills) filterPills.style.opacity = '0.35';
-    } else {
-      if (mediaCount) {
-        mediaCount.style.background = '#e0f2fe';
-        mediaCount.style.color = 'var(--vdh-blue)';
-      }
-      if (mediaListContainer) mediaListContainer.style.display = 'block';
-      if (filterPills) filterPills.style.opacity = '1';
-    }
-  }
-
-  function toggleExtensionEnabled(forcedState = null) {
-    if (typeof forcedState === 'boolean') {
-      isExtensionEnabled = forcedState;
-    } else {
-      isExtensionEnabled = !isExtensionEnabled;
-    }
-
-    chrome.storage.local.set({ extensionEnabled: isExtensionEnabled }, () => {
-      chrome.runtime.sendMessage({ action: 'SET_EXTENSION_ENABLED', enabled: isExtensionEnabled }, () => {
-        if (chrome.runtime.lastError) {}
-      });
-      updateExtensionStatusUI();
-      if (isExtensionEnabled) {
-        loadTabMedia();
       }
     });
   }
@@ -374,7 +372,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (el) el.remove();
       loadTabMedia();
     } else if (message.action === 'MEDIA_UPDATED') {
-      loadTabMedia();
+      if (!message.tabId || !currentTabId || message.tabId === currentTabId) {
+        loadTabMedia();
+      }
     }
   });
 
@@ -537,13 +537,25 @@ function openPreview(item) {
     }
   };
 
+  let playbackStarted = false;
+  const safeStartPlayback = (playUrl) => {
+    if (playbackStarted) return;
+    playbackStarted = true;
+    startPlayback(playUrl);
+  };
+
+  const timeoutId = setTimeout(() => {
+    safeStartPlayback(streamUrl);
+  }, 600);
+
   chrome.runtime.sendMessage({
     action: 'PREPARE_PREVIEW_RULES',
     url: streamUrl,
     pageUrl: item.pageUrl || ''
   }, (resp) => {
+    clearTimeout(timeoutId);
     const playUrl = (resp && resp.finalUrl) ? resp.finalUrl : streamUrl;
-    startPlayback(playUrl);
+    safeStartPlayback(playUrl);
   });
 }
 
@@ -568,21 +580,35 @@ function closePreview() {
 }
 
 async function loadTabMedia() {
-  if (!currentTabId) return;
-  if (!isExtensionEnabled) {
-    updateExtensionStatusUI();
-    return;
+  try {
+    if (!currentTabId) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab) {
+        currentTabId = tab.id;
+        currentTabUrl = tab.url;
+        currentTabTitle = tab.title || tab.url;
+        const titleEl = document.getElementById('currentTabTitle');
+        if (titleEl) titleEl.textContent = tab.title || tab.url;
+      }
+    }
+    if (!currentTabId) return;
+    if (!isExtensionEnabled) {
+      updateExtensionStatusUI();
+      return;
+    }
+
+    chrome.runtime.sendMessage({ action: 'GET_TAB_MEDIA', tabId: currentTabId }, (response) => {
+      if (chrome.runtime.lastError || !response) return;
+      const { mediaList, activeDownloads } = response;
+
+      allDetectedMedia = mediaList || [];
+      updateFilterCounts(allDetectedMedia);
+      renderMediaList(allDetectedMedia);
+      renderActiveDownloads(activeDownloads || []);
+    });
+  } catch (err) {
+    console.warn('[XtremeGrbr] Error in loadTabMedia:', err);
   }
-
-  chrome.runtime.sendMessage({ action: 'GET_TAB_MEDIA', tabId: currentTabId }, (response) => {
-    if (chrome.runtime.lastError || !response) return;
-    const { mediaList, activeDownloads } = response;
-
-    allDetectedMedia = mediaList || [];
-    updateFilterCounts(allDetectedMedia);
-    renderMediaList(allDetectedMedia);
-    renderActiveDownloads(activeDownloads || []);
-  });
 }
 
 function updateFilterCounts(mediaList) {
@@ -839,6 +865,7 @@ function renderMediaList(mediaList) {
 }
 
 function createMediaCardHTML(item) {
+  if (!item.id) item.id = 'media_' + Math.random().toString(36).substr(2, 9);
   const typeClass = item.type ? `tag-type-${item.type.toLowerCase()}` : 'tag-type-mp4';
   
   // Quick Win: Smart Size & Estimation

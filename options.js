@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dynamic Version Display from Manifest
   try {
-    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.5';
+    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.6';
     const optionsVersionLabel = document.getElementById('optionsVersionLabel');
     const updatesVersionBadge = document.getElementById('updatesVersionBadge');
     const updateStatusText = document.getElementById('updateStatusText');

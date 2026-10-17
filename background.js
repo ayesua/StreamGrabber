@@ -365,6 +365,9 @@ function addMediaItem(tabId, item) {
   // If item already exists, enrich it with newer/better data
   if (tabStore.has(item.url)) {
     const existing = tabStore.get(item.url);
+    if (!existing.id) {
+      existing.id = item.id || ('media_' + Math.random().toString(36).substr(2, 9));
+    }
     if (!existing.poster && (item.poster || tabPosters.has(tabId))) {
       existing.poster = item.poster || tabPosters.get(tabId);
     }
@@ -375,6 +378,9 @@ function addMediaItem(tabId, item) {
       existing.variants = item.variants;
       existing.quality = item.quality;
     }
+    chrome.runtime.sendMessage({ action: 'MEDIA_UPDATED', tabId, item: existing }, () => {
+      if (chrome.runtime.lastError) {}
+    });
     return;
   }
 
@@ -396,6 +402,10 @@ function addMediaItem(tabId, item) {
         existing.title = item.title;
       }
     }
+  }
+
+  if (!item.id) {
+    item.id = 'media_' + Math.random().toString(36).substr(2, 9);
   }
 
   tabStore.set(item.url, item);
