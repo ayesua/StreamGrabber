@@ -9,10 +9,17 @@
   if (window.__pureshield_injected__) return;
   window.__pureshield_injected__ = true;
 
-  const hostname = window.location.hostname;
-  if (['mail.google.com', 'accounts.google.com', 'docs.google.com', 'drive.google.com'].some(d => hostname === d || hostname.endsWith('.' + d))) {
-    return; // Never inject into critical Google Workspace apps
+  const hostname = (window.location.hostname || '').toLowerCase();
+  const href = (window.location.href || '').toLowerCase();
+  if (['youtube.com', 'youtu.be', 'googlevideo.com', 'mail.google.com', 'accounts.google.com', 'docs.google.com', 'drive.google.com'].some(d => hostname === d || hostname.endsWith('.' + d) || href.includes(d))) {
+    return; // Never inject into YouTube or critical Google Workspace apps
   }
+  try {
+    if (window.top && window.top !== window) {
+      const topHost = (window.top.location.hostname || '').toLowerCase();
+      if (topHost.includes('youtube.com') || topHost.includes('youtu.be') || topHost.includes('googlevideo.com')) return;
+    }
+  } catch (_) {}
 
 
 

@@ -733,7 +733,11 @@
         // Never tamper with main player video engines unless it's an explicit ad stream URL
         const isLegitPlayerEngine = v.classList.contains('fp-engine') ||
                                     v.classList.contains('jw-video') ||
-                                    Boolean(v.closest('#kt_player, .flowplayer, .video-holder, .plyr, .jwplayer, [class*="jwplayer" i]'));
+                                    v.classList.contains('html5-main-video') ||
+                                    v.classList.contains('video-stream') ||
+                                    location.hostname.includes('youtube.com') ||
+                                    location.hostname.includes('youtu.be') ||
+                                    Boolean(v.closest('#movie_player, .html5-video-player, #kt_player, .flowplayer, .video-holder, .plyr, .jwplayer, [class*="jwplayer" i]'));
         if (isLegitPlayerEngine && !isAdSource) {
           if (v.playbackRate > 2.0) {
             try { v.playbackRate = 1.0; } catch (_) {}
