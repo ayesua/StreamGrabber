@@ -57,6 +57,11 @@
   let isSiteExcluded = false;
   const currentHost = (location.hostname || '').toLowerCase();
 
+  // Voyeur domains default excluded from sniffer to prevent any interference
+  if (currentHost.includes('voyeurok.com') || currentHost.includes('voyeurhit.com') || currentHost.includes('videovoyeurhit.com')) {
+    isSiteExcluded = true;
+  }
+
   function checkSiteExcluded(excludedSites) {
     if (!Array.isArray(excludedSites)) return false;
     return excludedSites.some(site => {
@@ -77,10 +82,23 @@
     } catch (_) {}
   }
 
-  chrome.storage.local.get({ extensionEnabled: true, excludedSites: ['voyeurok.com'] }, (res) => {
+  function syncExtensionEnabledState(enabled) {
+    try {
+      if (!enabled) {
+        sessionStorage.setItem('__xg_off__', '1');
+        localStorage.setItem('__xg_disabled__', '1');
+      } else {
+        sessionStorage.removeItem('__xg_off__');
+        localStorage.removeItem('__xg_disabled__');
+      }
+    } catch (_) {}
+  }
+
+  chrome.storage.local.get({ extensionEnabled: true, excludedSites: ['voyeurok.com', 'voyeurhit.com', 'videovoyeurhit.com'] }, (res) => {
     isExtensionEnabled = res.extensionEnabled !== false;
-    isSiteExcluded = checkSiteExcluded(res.excludedSites);
+    isSiteExcluded = isSiteExcluded || checkSiteExcluded(res.excludedSites);
     syncLocalStorageExclusion(isSiteExcluded);
+    syncExtensionEnabledState(isExtensionEnabled);
     if ((!isExtensionEnabled || isSiteExcluded) && typeof floatingBtn !== 'undefined' && floatingBtn) {
       floatingBtn.style.display = 'none';
     }
@@ -90,6 +108,7 @@
     if (area === 'local') {
       if (changes.extensionEnabled !== undefined) {
         isExtensionEnabled = changes.extensionEnabled.newValue !== false;
+        syncExtensionEnabledState(isExtensionEnabled);
       }
       if (changes.excludedSites !== undefined) {
         isSiteExcluded = checkSiteExcluded(changes.excludedSites.newValue);
@@ -1137,6 +1156,20 @@
 
   // 4. In-page Message Listener: Handles Crop Rect, Scan Requests & In-Page Fetch to prevent HTTP 412
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Handle global extension status changes dynamically
+    if (request.action === 'EXTENSION_STATUS_CHANGED') {
+      isExtensionEnabled = Boolean(request.enabled);
+      syncExtensionEnabledState(isExtensionEnabled);
+      if (typeof floatingBtn !== 'undefined' && floatingBtn) {
+        floatingBtn.style.display = (!isExtensionEnabled || isSiteExcluded) ? 'none' : 'flex';
+      }
+      if (isExtensionEnabled && !isSiteExcluded) {
+        runScan();
+      }
+      sendResponse({ success: true, isExtensionEnabled });
+      return true;
+    }
+
     // Handle site exclusion changes dynamically
     if (request.action === 'SITE_EXCLUSION_CHANGED') {
       const match = checkSiteExcluded([request.domain]);

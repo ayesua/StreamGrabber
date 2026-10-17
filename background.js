@@ -1156,8 +1156,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === 'SET_EXTENSION_ENABLED') {
     isExtensionGloballyEnabled = message.enabled !== false;
-    chrome.storage.local.set({ extensionEnabled: isExtensionGloballyEnabled }, () => {
+    chrome.storage.local.set({ extensionEnabled: isExtensionGloballyEnabled }, async () => {
+      if (!isExtensionGloballyEnabled) {
+        await purgeAllDnrRules();
+        tabMediaStore.clear();
+        tabPosters.clear();
+      }
       updateAllBadges();
+      chrome.tabs.query({}, (tabs) => {
+        if (!tabs) return;
+        for (const t of tabs) {
+          if (t.id) {
+            chrome.tabs.sendMessage(t.id, {
+              action: 'EXTENSION_STATUS_CHANGED',
+              enabled: isExtensionGloballyEnabled
+            }, () => { if (chrome.runtime.lastError) {} });
+          }
+        }
+      });
       sendResponse({ success: true, enabled: isExtensionGloballyEnabled });
     });
     return true;
@@ -1680,7 +1696,8 @@ function cleanVideoUrlKey(url) {
  * Injects required Referer and Origin headers at the network layer.
  */
 async function setDownloadRefererRules(mediaUrl, refererUrl) {
-  if (!chrome.declarativeNetRequest) return;
+  if (!chrome.declarativeNetRequest || !isExtensionGloballyEnabled) return;
+  if (isSiteExcluded(refererUrl || '') || isSiteExcluded(mediaUrl || '')) return;
   refererUrl = getEffectiveReferer(mediaUrl, refererUrl);
   try {
     let refererOrigin = '';
@@ -1831,76 +1848,18 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
   }
 }
 
-async function initStandingDnrRules() {
+async function purgeAllDnrRules() {
   if (!chrome.declarativeNetRequest) return;
   try {
-    const standingRules = [
-      {
-        id: 9910,
-        priority: 25,
-        action: {
-          type: 'modifyHeaders',
-          requestHeaders: [
-            { header: 'Referer', operation: 'set', value: 'https://voyeurhit.com/' }
-          ],
-          responseHeaders: [
-            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
-            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' }
-          ]
-        },
-        condition: {
-          urlFilter: '*://*.ahcdn.com/*/vh/*',
-          resourceTypes: ['media', 'xmlhttprequest', 'sub_frame', 'other']
-        }
-      },
-      {
-        id: 9911,
-        priority: 25,
-        action: {
-          type: 'modifyHeaders',
-          requestHeaders: [
-            { header: 'Referer', operation: 'set', value: 'https://voyeurhit.com/' }
-          ],
-          responseHeaders: [
-            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
-            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' }
-          ]
-        },
-        condition: {
-          urlFilter: '*://*.nv7s.com/*',
-          resourceTypes: ['media', 'xmlhttprequest', 'sub_frame', 'other']
-        }
-      },
-      {
-        id: 9912,
-        priority: 25,
-        action: {
-          type: 'modifyHeaders',
-          requestHeaders: [
-            { header: 'Referer', operation: 'set', value: 'https://thisvid.com/' }
-          ],
-          responseHeaders: [
-            { header: 'Access-Control-Allow-Origin', operation: 'set', value: '*' },
-            { header: 'Access-Control-Allow-Headers', operation: 'set', value: '*' }
-          ]
-        },
-        condition: {
-          urlFilter: '*://*.ahcdn.com/*',
-          initiatorDomains: ['thisvid.com'],
-          resourceTypes: ['media', 'xmlhttprequest', 'sub_frame', 'other']
-        }
-      }
-    ];
-
     await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: [9910, 9911, 9912],
-      addRules: standingRules
+      removeRuleIds: [9900, 9901, 9902, 9903, 9904, 9905, 9906, 9907, 9910, 9911, 9912, 9913, 9914, 9915]
     });
   } catch (e) {
-    console.warn('[XtremeGrbr] initStandingDnrRules notice:', e);
+    console.warn('[XtremeGrbr] purgeAllDnrRules notice:', e);
   }
 }
-initStandingDnrRules();
+// Clean up any stale standing rules immediately on service worker startup
+purgeAllDnrRules();
 
 /**
  * Resolves HTTP redirects (302, 301, 307) upfront before calling chrome.downloads.download.

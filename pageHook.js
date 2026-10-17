@@ -11,32 +11,28 @@
     return;
   }
 
-  // 0. Site Exclusion Check: Completely bypass player hooks on excluded sites (e.g. voyeurok.com to prevent Error 224003)
+  // 0. Master Switch & Exclusion Checks: If extension is OFF or site is excluded, exit immediately!
   try {
-    if (window.localStorage && (window.localStorage.getItem('__xg_excluded__') === 'true' || window.localStorage.getItem('__xg_excluded__') === '1')) {
+    if (window.sessionStorage && window.sessionStorage.getItem('__xg_off__') === '1') {
       return;
     }
   } catch (e) {}
 
   try {
-    if (document.cookie && document.cookie.includes('__xg_excluded__=1')) {
+    if (window.localStorage && (window.localStorage.getItem('__xg_disabled__') === '1' || window.localStorage.getItem('__xg_excluded__') === 'true' || window.localStorage.getItem('__xg_excluded__') === '1')) {
       return;
     }
   } catch (e) {}
 
-  // Known default excluded sites (can be unexcluded if user explicitly removed via UI)
-  const defaultExcluded = ['voyeurok.com', 'videovoyeurhit.com'];
-  let isExplicitlyUnexcluded = false;
   try {
-    if (window.localStorage && window.localStorage.getItem('__xg_unexcluded__') === 'true') {
-      isExplicitlyUnexcluded = true;
+    if (document.cookie && (document.cookie.includes('__xg_excluded__=1') || document.cookie.includes('__xg_off__=1'))) {
+      return;
     }
   } catch (e) {}
 
-  if (!isExplicitlyUnexcluded) {
-    for (const d of defaultExcluded) {
-      if (host === d || host.endsWith('.' + d)) return;
-    }
+  // Known default excluded sites (e.g. voyeur sites)
+  if (host.includes('voyeurok.com') || host.includes('voyeurhit.com') || host.includes('videovoyeurhit.com')) {
+    return;
   }
 
   // Prevent multiple executions per frame
@@ -564,65 +560,37 @@
     }
   } catch (e) {}
 
-  // 1B. JWPlayer Interceptor & VAST Sanitizer (e.g. voyeurhit, videovoyeurhit, voyeurok)
+  // 1B. JWPlayer Interceptor (Passive Sniffer Only: Never modifies ads, never breaks player)
+  function hookJWPlayerConfig(config) {
+    if (!config || typeof config !== 'object') return;
+    try {
+      const sources = Array.isArray(config.sources) ? config.sources :
+        (Array.isArray(config.playlist) && config.playlist[0] && Array.isArray(config.playlist[0].sources) ? config.playlist[0].sources : null);
+      if (sources) {
+        sources.forEach(srcItem => {
+          if (srcItem && srcItem.file) {
+            const fullUrl = srcItem.file.startsWith('/') ? location.origin + srcItem.file : srcItem.file;
+            broadcastStreamData({
+              url: fullUrl,
+              type: (srcItem.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
+              quality: srcItem.label || detectQualityFromUrl(fullUrl),
+              title: config.title || (config.playlist && config.playlist[0] && config.playlist[0].title) || document.title,
+              poster: config.image || (config.playlist && config.playlist[0] && config.playlist[0].image) || null
+            });
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
   function wrapJWPlayerInstance(player) {
     if (!player || player.__xg_hooked__) return player;
     player.__xg_hooked__ = true;
 
-    // Neutralize preroll ads: bypass playAd with clean adSkipped/adComplete events
-    try {
-      player.playAd = function (tag) {
-        console.warn('[XtremeGrbr:JWPlayer] playAd bypassed to prevent Error 224003:', tag);
-        setTimeout(() => {
-          try {
-            if (typeof player.trigger === 'function') {
-              player.trigger('adSkipped', { tag: tag });
-              player.trigger('adComplete', { tag: tag });
-            }
-          } catch (_) {}
-          try { player.play(); } catch (_) {}
-        }, 0);
-        return this;
-      };
-      if (typeof player.on === 'function') {
-        player.on('adError', function () {
-          try { player.play(); } catch (e) {}
-        });
-        player.on('adBlock', function () {
-          try { player.play(); } catch (e) {}
-        });
-      }
-    } catch (e) {}
-
     const origSetup = player.setup;
     if (origSetup) {
       player.setup = function (config) {
-        if (config && typeof config === 'object') {
-          // Cleanly remove advertising so JWPlayer never triggers Error 224003
-          if (config.advertising) {
-            delete config.advertising;
-          }
-          if (config.components && config.components.ad_preroll) {
-            config.components.ad_preroll.enabled = false;
-          }
-          // Sniff sources if present directly in config
-          const sources = Array.isArray(config.sources) ? config.sources :
-            (Array.isArray(config.playlist) && config.playlist[0] && Array.isArray(config.playlist[0].sources) ? config.playlist[0].sources : null);
-          if (sources) {
-            sources.forEach(srcItem => {
-              if (srcItem && srcItem.file) {
-                const fullUrl = srcItem.file.startsWith('/') ? location.origin + srcItem.file : srcItem.file;
-                broadcastStreamData({
-                  url: fullUrl,
-                  type: (srcItem.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
-                  quality: srcItem.label || detectQualityFromUrl(fullUrl),
-                  title: config.title || (config.playlist && config.playlist[0] && config.playlist[0].title) || document.title,
-                  poster: config.image || (config.playlist && config.playlist[0] && config.playlist[0].image) || null
-                });
-              }
-            });
-          }
-        }
+        hookJWPlayerConfig(config);
         return origSetup.apply(this, arguments);
       };
     }
@@ -674,59 +642,6 @@
       }
     });
     if (_jwplayer) _jwplayer = hookJWPlayerGlobal(_jwplayer);
-  } catch (e) {}
-
-  // Neutralize VoyeurHit / Videovoyeurhit preroll ad calls and VAST structures
-  try {
-    Object.defineProperty(window, 'ad_preroll', {
-      configurable: true,
-      enumerable: true,
-      get: function () { return function () {}; },
-      set: function () {}
-    });
-    Object.defineProperty(window, 'ad_preroll2', {
-      configurable: true,
-      enumerable: true,
-      get: function () { return function () {}; },
-      set: function () {}
-    });
-    let _vadv2 = window.videoadvertising2;
-    Object.defineProperty(window, 'videoadvertising2', {
-      configurable: true,
-      enumerable: true,
-      get: () => _vadv2 || { tag: '', rtb: [] },
-      set: (v) => {
-        _vadv2 = (v && typeof v === 'object') ? { ...v, tag: '', rtb: [] } : { tag: '', rtb: [] };
-      }
-    });
-  } catch (e) {}
-
-  // Ensure VoyeurHit CDN media elements do not send cross-origin VoyeurOK Referer (which triggers HTTP 403 / Error 224003)
-  try {
-    const sanitizeVideoElement = (v) => {
-      if (!v) return;
-      const src = v.src || v.currentSrc || '';
-      if (src && (src.includes('ahcdn.com') || src.includes('nv7s.com') || src.includes('voyeurhit.com'))) {
-        if (v.getAttribute('referrerpolicy') !== 'no-referrer') {
-          v.setAttribute('referrerpolicy', 'no-referrer');
-        }
-      }
-    };
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.type === 'childList') {
-          m.addedNodes.forEach(node => {
-            if (node.nodeType === 1) {
-              if (node.tagName === 'VIDEO') sanitizeVideoElement(node);
-              else node.querySelectorAll?.('video').forEach(sanitizeVideoElement);
-            }
-          });
-        } else if (m.type === 'attributes' && m.target.tagName === 'VIDEO') {
-          sanitizeVideoElement(m.target);
-        }
-      }
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
   } catch (e) {}
 
   // 1C. KVS / Flashvars / kt_player Interceptor for thisvid.com & Tube Players (Sniffs HQ streams)
