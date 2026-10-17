@@ -644,6 +644,77 @@
     if (_jwplayer) _jwplayer = hookJWPlayerGlobal(_jwplayer);
   } catch (e) {}
 
+  // 1B-2. FluidPlayer Interceptor (Neutralizes VAST ad traps, unfreezes timeline scrubber & sniffs sources)
+  function hookFluidPlayerGlobal(origFP) {
+    if (typeof origFP !== 'function' || origFP.__xg_hooked__) return origFP;
+    const wrappedFP = function (target, config) {
+      if (config && typeof config === 'object') {
+        // Strip out blocking VAST ads so player never enters frozen ad state or spawns clickthrough layers
+        if (config.vastOptions) {
+          config.vastOptions.adList = [];
+        }
+        if (config.layoutControls) {
+          if (config.layoutControls.htmlOnPauseBlock) {
+            delete config.layoutControls.htmlOnPauseBlock;
+          }
+          if (config.layoutControls.KVS && config.layoutControls.KVS.nextVideo) {
+            delete config.layoutControls.KVS.nextVideo.banner;
+          }
+        }
+      }
+      const instance = origFP.apply(this, arguments);
+
+      // Sniff media sources from target video element or instance
+      try {
+        const v = typeof target === 'string' ? document.getElementById(target) : target;
+        if (v && v.querySelectorAll) {
+          const sources = v.querySelectorAll('source');
+          sources.forEach(srcItem => {
+            if (srcItem.src) {
+              const fullUrl = srcItem.src.startsWith('/') ? location.origin + srcItem.src : srcItem.src;
+              broadcastStreamData({
+                url: fullUrl,
+                type: fullUrl.includes('.m3u8') ? 'HLS' : 'MP4',
+                quality: srcItem.title || (srcItem.getAttribute && srcItem.getAttribute('data-fluid-hd') ? 'HD' : detectQualityFromUrl(fullUrl)),
+                title: document.title
+              });
+            }
+          });
+          if (v.src) {
+            const fullUrl = v.src.startsWith('/') ? location.origin + v.src : v.src;
+            broadcastStreamData({
+              url: fullUrl,
+              type: fullUrl.includes('.m3u8') ? 'HLS' : 'MP4',
+              quality: detectQualityFromUrl(fullUrl),
+              title: document.title
+            });
+          }
+        }
+      } catch (_) {}
+
+      return instance;
+    };
+
+    wrappedFP.__xg_hooked__ = true;
+    for (const k in origFP) {
+      try { wrappedFP[k] = origFP[k]; } catch (_) {}
+    }
+    return wrappedFP;
+  }
+
+  let _fluidPlayer = window.fluidPlayer;
+  try {
+    Object.defineProperty(window, 'fluidPlayer', {
+      configurable: true,
+      enumerable: true,
+      get: function () { return _fluidPlayer; },
+      set: function (val) {
+        _fluidPlayer = hookFluidPlayerGlobal(val);
+      }
+    });
+    if (_fluidPlayer) _fluidPlayer = hookFluidPlayerGlobal(_fluidPlayer);
+  } catch (e) {}
+
   // 1C. KVS / Flashvars / kt_player Interceptor for thisvid.com & Tube Players (Sniffs HQ streams)
   function sniffFlashvars(flashvars) {
     if (!flashvars || typeof flashvars !== 'object') return;

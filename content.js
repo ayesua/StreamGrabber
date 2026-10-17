@@ -1201,28 +1201,64 @@
       return true;
     }
 
-    // Toggle / Force HTML5 Video Player Controls
-    if (request.action === 'TOGGLE_VIDEO_CONTROLS') {
+  // Helper to remove invisible clickthrough ad blockers and unlock video timeline controls
+  function cleanVideoPlayerOverlays() {
+    const blockers = document.querySelectorAll(
+      '.vast_clickthrough_layer, .fluid_vpaid_slot, .fluid_ad_container, .fluid_ad_playing, ' +
+      '[id^="fluid_nonLinear"], [id^="fluid_vpaidNonLinear"], .ad-iframe-clip, #unmute_tap'
+    );
+    blockers.forEach(el => {
       try {
-        const videos = document.querySelectorAll('video');
-        let enabledState = false;
-        videos.forEach(v => {
-          if (request.enable !== undefined) {
-            v.controls = Boolean(request.enable);
-            enabledState = Boolean(request.enable);
-          } else {
-            v.controls = !v.controls;
-            enabledState = v.controls;
-          }
-          // Remove custom pointer-events overlays if present
-          v.style.pointerEvents = 'auto';
-        });
-        sendResponse({ success: true, count: videos.length, enabled: enabledState });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-      return true;
+        el.style.setProperty('pointer-events', 'none', 'important');
+        el.style.setProperty('display', 'none', 'important');
+      } catch (_) {}
+    });
+
+    const controlBars = document.querySelectorAll(
+      '.fluid_controls_container, .fluid_controls_progress_container, .fluid_controls_progress, ' +
+      '.jw-controlbar, .vjs-control-bar, .plyr__controls'
+    );
+    controlBars.forEach(cb => {
+      try {
+        cb.style.setProperty('pointer-events', 'auto', 'important');
+        cb.style.setProperty('z-index', '2147483640', 'important');
+      } catch (_) {}
+    });
+
+    const videos = document.querySelectorAll('video');
+    videos.forEach(v => {
+      try {
+        v.style.setProperty('pointer-events', 'auto', 'important');
+      } catch (_) {}
+    });
+  }
+
+  // Toggle / Force HTML5 Video Player Controls
+  if (request.action === 'TOGGLE_VIDEO_CONTROLS') {
+    try {
+      const videos = document.querySelectorAll('video');
+      let enabledState = false;
+      videos.forEach(v => {
+        if (request.enable !== undefined) {
+          v.controls = Boolean(request.enable);
+          enabledState = Boolean(request.enable);
+        } else {
+          v.controls = !v.controls;
+          enabledState = v.controls;
+        }
+        v.style.setProperty('pointer-events', 'auto', 'important');
+        if (enabledState) {
+          v.style.setProperty('z-index', '2147483640', 'important');
+          v.setAttribute('controlsList', 'nodownload');
+        }
+      });
+      cleanVideoPlayerOverlays();
+      sendResponse({ success: true, count: videos.length, enabled: enabledState });
+    } catch (err) {
+      sendResponse({ success: false, error: err.message });
     }
+    return true;
+  }
 
 
     // In-Page Manifest Fetch (Runs with page's cookies, origin & headers -> Bypasses HTTP 412)
@@ -1299,6 +1335,32 @@
     }
   });
 
+  function handleToggleControls(targetVideo) {
+    const video = targetVideo || activeVideo || findMostVisibleVideo();
+    if (!video) return;
+
+    const newState = !video.controls;
+    video.controls = newState;
+    video.style.setProperty('pointer-events', 'auto', 'important');
+    if (newState) {
+      video.style.setProperty('z-index', '2147483640', 'important');
+      video.setAttribute('controlsList', 'nodownload');
+    }
+    cleanVideoPlayerOverlays();
+
+    const textEl = floatingBtn?.querySelector('.streamgrabber-controls-text');
+    if (textEl) {
+      textEl.textContent = newState ? 'Controls: ON' : 'Controls: OFF';
+      textEl.style.color = newState ? '#4ade80' : '#94a3b8';
+      setTimeout(() => {
+        if (textEl) {
+          textEl.textContent = 'Controls';
+          textEl.style.color = '#7dd3fc';
+        }
+      }, 2000);
+    }
+  }
+
   function createFloatingButton() {
     if (floatingBtn) return floatingBtn;
 
@@ -1306,10 +1368,16 @@
     btn.id = 'streamgrabber-floating-btn';
     btn.className = 'streamgrabber-floating-btn';
     btn.setAttribute('data-streamgrabber', 'true');
-    btn.title = 'StreamGrabber 2 - Click to download this video';
     btn.innerHTML = `
-      <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber 2" style="width: 24px !important; height: 24px !important; border-radius: 6px !important; display: block !important; flex-shrink: 0 !important; pointer-events: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;" />
-      <span class="streamgrabber-btn-text" style="font-weight: 700 !important; font-size: 12px !important; color: #ffffff !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Download</span>
+      <div class="streamgrabber-dl-action" title="StreamGrabber - Click to download this video" style="display: flex !important; align-items: center !important; gap: 6px !important; cursor: pointer !important; padding: 2px 6px !important; border-radius: 14px !important;">
+        <img src="${appIconUrl}" class="streamgrabber-app-icon" alt="StreamGrabber" style="width: 22px !important; height: 22px !important; border-radius: 5px !important; display: block !important; flex-shrink: 0 !important; pointer-events: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;" />
+        <span class="streamgrabber-btn-text" style="font-weight: 700 !important; font-size: 12px !important; color: #ffffff !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Download</span>
+      </div>
+      <div style="width: 1px !important; height: 16px !important; background: rgba(255, 255, 255, 0.25) !important; flex-shrink: 0 !important; margin: 0 1px !important;"></div>
+      <div class="streamgrabber-controls-action" title="Toggle native HTML5 video player controls (or press Alt+C) to seek/advance with mouse pointer" style="display: flex !important; align-items: center !important; gap: 4px !important; cursor: pointer !important; padding: 3px 8px !important; border-radius: 14px !important; background: rgba(255, 255, 255, 0.1) !important;">
+        <span style="font-size: 11px !important; pointer-events: none !important; line-height: 1 !important;">⏯️</span>
+        <span class="streamgrabber-controls-text" style="font-weight: 700 !important; font-size: 11px !important; color: #7dd3fc !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Controls</span>
+      </div>
     `;
 
     // Apply strict styles via setProperty with 'important' to prevent any page CSS (e.g. body > * { width: 100%; height: 100% }) from hijacking the button!
@@ -1318,12 +1386,12 @@
       'z-index': '2147483647',
       'display': 'none',
       'align-items': 'center',
-      'gap': '7px',
+      'gap': '5px',
       'background': 'rgba(15, 23, 42, 0.94)',
       'color': '#ffffff',
       'border': '1.5px solid #0087cd',
       'border-radius': '24px',
-      'padding': '5px 12px 5px 6px',
+      'padding': '4px 8px 4px 5px',
       'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       'font-size': '12px',
       'font-weight': '700',
@@ -1336,8 +1404,8 @@
       'opacity': '0.9',
       'width': 'auto',
       'height': 'auto',
-      'min-width': '100px',
-      'max-width': '160px',
+      'min-width': '180px',
+      'max-width': '270px',
       'min-height': '32px',
       'max-height': '40px',
       'bottom': 'auto',
@@ -1355,8 +1423,7 @@
     btn.addEventListener('mouseenter', () => {
       isMouseOverBtn = true;
       btn.style.setProperty('opacity', '1', 'important');
-      btn.style.setProperty('transform', 'scale(1.06)', 'important');
-      btn.style.setProperty('background', '#0087cd', 'important');
+      btn.style.setProperty('transform', 'scale(1.04)', 'important');
       btn.style.setProperty('border-color', '#38bdf8', 'important');
     });
 
@@ -1364,7 +1431,6 @@
       isMouseOverBtn = false;
       btn.style.setProperty('opacity', '0.9', 'important');
       btn.style.setProperty('transform', 'none', 'important');
-      btn.style.setProperty('background', 'rgba(15, 23, 42, 0.94)', 'important');
       btn.style.setProperty('border-color', '#0087cd', 'important');
     });
 
@@ -1372,7 +1438,13 @@
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      handleFloatingDownload();
+
+      const controlsBtn = e.target.closest('.streamgrabber-controls-action');
+      if (controlsBtn) {
+        handleToggleControls();
+      } else {
+        handleFloatingDownload();
+      }
     }, true);
 
     const targetRoot = document.fullscreenElement || document.body || document.documentElement;
@@ -1607,14 +1679,22 @@
     window.addEventListener('popstate', checkUrlChange);
     window.addEventListener('hashchange', checkUrlChange);
 
+    document.addEventListener('keydown', (e) => {
+      if (e.altKey && (e.key === 'c' || e.key === 'C')) {
+        handleToggleControls();
+      }
+    }, { capture: true });
+
     setInterval(updateTracker, 1500);
+    setInterval(cleanVideoPlayerOverlays, 1500);
     setTimeout(updateTracker, 500);
     setTimeout(updateTracker, 1500);
   }
 
-  // Defuse interstitials and unhide player display icons (e.g. TrafficStars on thisvid, JWPlayer on voyeurhit)
+  // Defuse interstitials and unhide player display icons (e.g. TrafficStars on thisvid, FluidPlayer on anysex)
   function cleanupInterstitialsAndFixPlayers() {
     try {
+      cleanVideoPlayerOverlays();
       const badSelectors = [
         '#tr-interstitial',
         '[id^="tr-interstitial"]',
@@ -1622,7 +1702,9 @@
         '[id^="tr-"][style*="z-index"]',
         '.fp-ad',
         '.fp-preroll',
-        '.video-overlay-advertisement'
+        '.video-overlay-advertisement',
+        '.vast_clickthrough_layer',
+        '.fluid_ad_container'
       ];
       for (const sel of badSelectors) {
         const els = document.querySelectorAll(sel);
@@ -1633,8 +1715,8 @@
         }
       }
 
-      // Ensure Flowplayer / JWPlayer elements have proper pointer-events and visibility
-      const players = document.querySelectorAll('.fp-player, #kt_player, .jwplayer, .video__player');
+      // Ensure Flowplayer / JWPlayer / FluidPlayer elements have proper pointer-events and visibility
+      const players = document.querySelectorAll('.fp-player, #kt_player, .jwplayer, .video__player, .fluid_video_wrapper');
       for (const p of players) {
         if (p) {
           p.style.pointerEvents = 'auto';
@@ -1647,6 +1729,16 @@
     const style = document.createElement('style');
     style.id = '__xg_player_fix_css__';
     style.textContent = `
+      .vast_clickthrough_layer, .fluid_vpaid_slot, .fluid_ad_container, .fluid_ad_playing {
+        display: none !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+      }
+      .fluid_controls_container, .fluid_controls_progress_container, .fluid_controls_progress {
+        pointer-events: auto !important;
+        z-index: 2147483640 !important;
+      }
       .jw-display-icon-container { display: flex !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
       .jw-state-idle .jw-display-icon-container { display: flex !important; }
       .fp-player { pointer-events: auto !important; }
