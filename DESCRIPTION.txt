@@ -1,33 +1,72 @@
 ================================================================================
-Video Downloader - XtremeGrbr (v3.5.1) - Chrome Web Store Metadata & Description
+Video Downloader - XtremeGrbr (v3.5.10) - Chrome Web Store Metadata & Description
 ================================================================================
 
 TITLE:
 Video Downloader - XtremeGrbr
 
 SHORT DESCRIPTION (Max 132 characters):
-Fast video, audio, and HLS (.m3u8) stream detector and downloader with player preview, dark/light theme, and multi-language support.
+Fast video, audio, and HLS (.m3u8) stream detector and downloader with player preview, video controls enabler, and quality selector.
 
 --------------------------------------------------------------------------------
 ENGLISH DESCRIPTION
 --------------------------------------------------------------------------------
 
-⚡ Video Downloader - XtremeGrbr (Formerly StreamGrabber / StreamGrabber 2): Fast Video, Audio & HLS (.m3u8) Downloader with Preview, Rotation, Theme Switcher & Quality Selector
+⚡ Video Downloader - XtremeGrbr: Fast Video, Audio & HLS (.m3u8) Downloader with Player Preview, Video Controls Enabler, Rotation & Quality Selector
 
-Video Downloader - XtremeGrbr (formerly known as StreamGrabber and StreamGrabber 2) is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, dark & light theme modes, and multi-resolution quality selection.
+Video Downloader - XtremeGrbr is a powerful, lightweight, and ultra-fast media sniffer and stream downloader for Google Chrome. Easily capture full-length HLS (.m3u8), DASH (.mpd), MP4, WebM, and audio tracks with live player preview, lossless orientation rotation, dark & light theme modes, native video controls unlocker, and multi-resolution quality selection.
 
 --------------------------------------------------------------------------------
-⚠️ IMPORTANT NOTICE — OFFICIAL XTREMEGRBR (FORMERLY STREAMGRABBER) RELEASE
+🚀 WHAT'S NEW IN VERSION 3.5.10
 --------------------------------------------------------------------------------
-Please be aware that an unauthorized Chinese rip-off / copycat clone of our original extension (StreamGrabber) recently surfaced on the Chrome Web Store. To safeguard our users against unverified code, adware, and clones, we have officially rebranded from StreamGrabber to "Video Downloader - XtremeGrbr" (v3.5.1).
 
-This is the genuine, 100% free, zero-log, and actively maintained official continuation of StreamGrabber by the original author. If you come across any unauthorized copies, fake clones, or rip-offs impersonating StreamGrabber or XtremeGrbr on the Chrome Web Store, please help our community by clicking "Report abuse" to have Google take them down!
+⏯️ Video Controls Enabler & Mouse Seeking Unlocker (New!)
+• Added a dedicated [⏯️ Controls] button directly inside the floating player toolbar.
+• 1-Click forces native HTML5 video controls onto custom web players that restrict or hide playback bars.
+• Smooth mouse scrubbing: Freely advance or rewind anywhere in the video with your mouse pointer.
+• Global shortcut: Press Alt+C anytime to instantly toggle native controls on the video under your cursor.
+
+🛡️ FluidPlayer & VAST Ad Trap Defuser (New!)
+• Automatically detects and defuses stuck VAST pre-roll/post-roll ad traps and invisible overlay blockers (.vast_clickthrough_layer, .fluid_vpaid_slot).
+• Unfreezes locked timeline progress bars so you can seek immediately without waiting for stalled ad layers.
+
+👁️ Watched / Seen Videos Dimmer & History Badge (New!)
+• Automatically highlights videos you have already watched in gallery and index listings with a dimming overlay and a clear visual badge.
+• Helps you effortlessly track viewed content. Can be toggled on/off anytime in Settings.
+
+🛑 Instant Master Switch & Dynamic DNR Rule Purge (Fixed!)
+• Turning the extension OFF now instantly flushes all dynamic declarative net request rules, ensuring zero interference with sites when paused.
+• Broadcasts immediate status updates to hide all floating buttons and overlays across open tabs simultaneously.
+
+🌐 Enhanced Chrome Web Store & YouTube Policy Compliance
+• Strict Manifest V3 exclude-matches for YouTube (*://*.youtube.com/* and *://*.youtu.be/*).
+• Zero injection or tampering on YouTube domains, guaranteeing 100% policy compliance and uninterrupted YouTube playback.
 
 --------------------------------------------------------------------------------
 🚀 KEY FEATURES & CAPABILITIES
 --------------------------------------------------------------------------------
 
-🌓 Dark & Light Mode Theme Switcher (NEW in v3.5.1)
+🎬 Live In-Popup Preview & Orientation Rotation
+• Watch and verify video streams directly inside the popup player before downloading.
+• Live Rotation Controls: Rotate orientation (+90°, 180°, 270°, 0°) with 1 click using the top-right rotation icon or the toolbar.
+• Lossless MP4 Rotation: Seamlessly embeds your chosen orientation into the MP4 video track metadata without re-encoding quality loss!
+
+⚡ Multi-Threaded HLS (.m3u8) & DASH Stream Engine
+• Downloads video segments concurrently using parallel worker connections for blazing-fast download speeds.
+• AES-128 cryptographic decryption and lossless assembly into MP4, MKV, or TS files.
+• Resolves Master Playlists with full bitrate and resolution selection (4K, 1080p Full HD, 720p HD, 480p SD).
+
+🎯 In-Page Floating Toolbar & Quick Controls
+• Sleek on-hover floating action bar docked directly over HTML5 players and embedded web containers.
+• Dual-action bar: [⬇️ Download] and [⏯️ Controls] without obstructing playback.
+• Fully customizable in Settings (can be toggled on or off at any time).
+
+📊 Smart Quality Dropdown & Size Ordering
+• Automatic Resolution Grouping: Consolidates duplicate resolution variants into an intuitive dropdown selector.
+• Ordered from Largest to Smallest: Media items automatically arranged from highest quality / largest file size to lowest for quick access.
+• Main Video Prioritization: Identifies and highlights the primary viewport player, discarding side thumbnails and hover preview clips.
+
+🌓 Dark & Light Mode Theme Switcher
 • Seamlessly switch between modern Dark and Light themes.
 • 1-Click quick toggle (☀️ / 🌙) directly in the popup navbar.
 • Dedicated theme selector in the Settings page with real-time sync.
@@ -39,36 +78,6 @@ This is the genuine, 100% free, zero-log, and actively maintained official conti
   - Chinese - China (简体中文)
   - Russian (Русский)
 • Easily toggle your preferred language at the top of the Settings configuration.
-
-🔄 In-Settings "Check for Updates" Button
-• Verify your extension version and check for new releases directly from Settings.
-
-🛡️ ExtremeShield Ad & Popup Blocker Recommendation
-• Pair XtremeGrbr with ExtremeShield to eliminate intrusive video ads, popunders, and malicious redirects without slowing down video streaming.
-
-🎬 Live In-Popup Preview & Orientation Rotation
-• Watch and verify video streams directly inside the popup player before downloading.
-• Live Rotation Controls: Rotate orientation (+90°, 180°, 270°, 0°) with 1 click using the top-right rotation icon or the toolbar.
-• Lossless MP4 Rotation: Seamlessly embeds your chosen orientation into the MP4 video track metadata without re-encoding quality loss!
-
-⚡ Multi-Threaded HLS (.m3u8) & DASH Stream Engine
-• Downloads video segments concurrently using parallel worker connections for blazing-fast downloads.
-• AES-128 cryptographic decryption and lossless assembly into MP4, MKV, or TS files.
-• Resolves Master Playlists with full bitrate and resolution selection (4K, 1080p Full HD, 720p HD, 480p SD).
-
-🎯 In-Page Floating Download Button
-• Sleek on-hover download button docked directly over HTML5 players and embedded web containers for instant 1-click downloads.
-• Fixed compact pill styling that never obstructs video controls or click-to-play.
-• Fully customizable in Settings (can be toggled on or off at any time).
-
-📊 Smart Quality Dropdown & Size Ordering
-• Automatic Resolution Grouping: Consolidates duplicate resolution variants into an intuitive dropdown selector.
-• Ordered from Largest to Smallest: Media items automatically arranged from highest quality / largest file size to lowest for quick access.
-• Main Video Prioritization: Identifies and highlights the primary viewport player, discarding side thumbnails and hover preview clips.
-
-🌐 Advanced Portal & Embed Resolver
-• Full VK Video (vkvideo.ru & vk.com) support with dynamic stream resolution across React SPAs, age-restricted disclaimer overlays, HLS master playlists, and direct MP4 qualities (1080p, 720p, 480p, 360p, 240p).
-• Seamless support for Yandex Video preview players, Mail.ru embeds, and complex iframe video wrappers.
 
 🎵 Audio MP3 Extractor & Direct Media Capture
 • Extract audio from any video stream and download as high-fidelity MP3 with a single click.
