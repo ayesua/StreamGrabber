@@ -762,7 +762,10 @@
         lower.includes('tsyndicate.com/do2/') ||
         lower.includes('vstserv.com') ||
         lower.includes('vstvstsa.com') ||
-        lower.includes('katds_ep')
+        lower.includes('katds_ep') ||
+        lower.includes('/bid?') ||
+        lower.includes('spot_id=') ||
+        lower.includes('rtb-')
       );
     }
 
@@ -1055,6 +1058,42 @@
       set: () => { _ad_preroll2 = () => false; },
       configurable: true
     });
+
+    // 4. FluidPlayer Interceptor (anysex, tube sites)
+    function wrapFluidPlayerGlobal(origFP) {
+      if (typeof origFP !== 'function' || origFP.__xs_hooked__) return origFP;
+      const wrappedFP = function (target, config) {
+        if (config && typeof config === 'object') {
+          if (config.vastOptions) {
+            config.vastOptions.adList = [];
+          }
+          if (config.layoutControls) {
+            if (config.layoutControls.htmlOnPauseBlock) {
+              delete config.layoutControls.htmlOnPauseBlock;
+            }
+            if (config.layoutControls.KVS && config.layoutControls.KVS.nextVideo) {
+              delete config.layoutControls.KVS.nextVideo.banner;
+            }
+          }
+        }
+        return origFP.apply(this, arguments);
+      };
+      wrappedFP.__xs_hooked__ = true;
+      for (const k in origFP) {
+        try { wrappedFP[k] = origFP[k]; } catch (_) {}
+      }
+      return wrappedFP;
+    }
+
+    let _xs_fluidPlayer = window.fluidPlayer;
+    Object.defineProperty(window, 'fluidPlayer', {
+      get: () => _xs_fluidPlayer,
+      set: (fn) => {
+        _xs_fluidPlayer = wrapFluidPlayerGlobal(fn);
+      },
+      configurable: true
+    });
+    if (_xs_fluidPlayer) _xs_fluidPlayer = wrapFluidPlayerGlobal(_xs_fluidPlayer);
 
     let _ad_preroll = window.ad_preroll;
     Object.defineProperty(window, 'ad_preroll', {

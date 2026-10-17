@@ -460,7 +460,13 @@
     '[class*="interstitial" i]',
     '[id*="interstitial" i]',
     '#tr-interstitial',
-    '[id^="tr-interstitial"]'
+    '[id^="tr-interstitial"]',
+    '.vast_clickthrough_layer',
+    '.fluid_vpaid_slot',
+    '.fluid_ad_container',
+    '.fluid_ad_playing',
+    '[id^="fluid_nonLinear"]',
+    '[id^="fluid_vpaidNonLinear"]'
   ];
 
   const processedNodes = new WeakSet();
