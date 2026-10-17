@@ -7,9 +7,19 @@
 (function () {
   // Chrome Web Store Compliance: Strictly bypass YouTube
   const host = (location.hostname || '').toLowerCase();
-  if (host.includes('youtube.com') || host.includes('youtu.be')) {
+  const href = (location.href || '').toLowerCase();
+  if (host.includes('youtube.com') || host.includes('youtu.be') || host.includes('googlevideo.com') ||
+      href.includes('youtube.com') || href.includes('youtu.be') || href.includes('googlevideo.com')) {
     return;
   }
+  try {
+    if (window.top && window.top !== window) {
+      const topHost = (window.top.location.hostname || '').toLowerCase();
+      if (topHost.includes('youtube.com') || topHost.includes('youtu.be') || topHost.includes('googlevideo.com')) {
+        return;
+      }
+    }
+  } catch (_) {}
 
   // 0. Master Switch & Exclusion Checks: If extension is OFF or site is excluded, exit immediately!
   try {

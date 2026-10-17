@@ -5,9 +5,20 @@
 
 (function () {
   // Chrome Web Store Compliance: Completely bypass YouTube
-  if (location.hostname.includes('youtube.com') || location.hostname.includes('youtu.be')) {
+  const host = (location.hostname || '').toLowerCase();
+  const href = (location.href || '').toLowerCase();
+  if (host.includes('youtube.com') || host.includes('youtu.be') || host.includes('googlevideo.com') ||
+      href.includes('youtube.com') || href.includes('youtu.be') || href.includes('googlevideo.com')) {
     return;
   }
+  try {
+    if (window.top && window.top !== window) {
+      const topHost = (window.top.location.hostname || '').toLowerCase();
+      if (topHost.includes('youtube.com') || topHost.includes('youtu.be') || topHost.includes('googlevideo.com')) {
+        return;
+      }
+    }
+  } catch (_) {}
 
   const KNOWN_AD_DOMAINS = [
     'trafficstars.com', 'tsyndicate.com', 'magsrv.com', 'exoclick.com',

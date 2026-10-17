@@ -1851,9 +1851,24 @@ async function setDownloadRefererRules(mediaUrl, refererUrl) {
 async function purgeAllDnrRules() {
   if (!chrome.declarativeNetRequest) return;
   try {
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: [9900, 9901, 9902, 9903, 9904, 9905, 9906, 9907, 9910, 9911, 9912, 9913, 9914, 9915]
-    });
+    const existingDynamic = await chrome.declarativeNetRequest.getDynamicRules();
+    const dynamicIds = existingDynamic.map(r => r.id);
+    const hardcodedIds = [9900, 9901, 9902, 9903, 9904, 9905, 9906, 9907, 9910, 9911, 9912, 9913, 9914, 9915];
+    const allIds = Array.from(new Set([...dynamicIds, ...hardcodedIds]));
+    if (allIds.length > 0) {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: allIds
+      });
+    }
+    if (chrome.declarativeNetRequest.getSessionRules) {
+      const existingSession = await chrome.declarativeNetRequest.getSessionRules();
+      const sessionIds = existingSession.map(r => r.id);
+      if (sessionIds.length > 0) {
+        await chrome.declarativeNetRequest.updateSessionRules({
+          removeRuleIds: sessionIds
+        });
+      }
+    }
   } catch (e) {
     console.warn('[XtremeGrbr] purgeAllDnrRules notice:', e);
   }

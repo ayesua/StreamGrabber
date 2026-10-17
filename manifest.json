@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Video Downloader - XtremeGrbr",
-  "version": "3.5.9",
+  "version": "3.5.10",
   "description": "Fast video, audio, and HLS (.m3u8) stream detector and downloader with player preview and quality selector.",
   "permissions": [
     "storage",
@@ -26,6 +26,10 @@
       "matches": [
         "<all_urls>"
       ],
+      "exclude_matches": [
+        "*://*.youtube.com/*",
+        "*://*.youtu.be/*"
+      ],
       "js": [
         "pageHook.js"
       ],
@@ -37,6 +41,10 @@
     {
       "matches": [
         "<all_urls>"
+      ],
+      "exclude_matches": [
+        "*://*.youtube.com/*",
+        "*://*.youtu.be/*"
       ],
       "js": [
         "content.js"
