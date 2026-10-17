@@ -6,10 +6,22 @@
 let currentTabId = null;
 let currentTabUrl = '';
 let currentTabTitle = '';
+let currentTabHost = '';
+let isCurrentSiteExcluded = false;
+let excludedSitesList = [];
 let allDetectedMedia = [];
 let currentFilter = 'all'; // 'all' | 'video' | 'audio'
 let currentLang = 'en';
 let isExtensionEnabled = true;
+
+function checkSiteIsExcluded(host, sites) {
+  if (!host || !Array.isArray(sites)) return false;
+  const h = host.toLowerCase().trim();
+  return sites.some(s => {
+    const clean = s.toLowerCase().trim();
+    return clean && (h === clean || h.endsWith('.' + clean));
+  });
+}
 
 function formatSpeed(bps) {
   if (!bps || bps <= 0) return '0 KB/s';
@@ -52,10 +64,53 @@ function updateExtensionStatusUI() {
   const btnSubbarToggle = document.getElementById('btnSubbarToggle');
   const btnToggle = document.getElementById('btnToggleExtension');
   const disabledBanner = document.getElementById('disabledBanner');
+  const siteExcludedBanner = document.getElementById('siteExcludedBanner');
+  const siteExcludedTitle = document.getElementById('siteExcludedTitle');
+  const btnExcludeSite = document.getElementById('btnExcludeSite');
   const mediaListContainer = document.getElementById('mediaListContainer');
   const emptyState = document.getElementById('emptyState');
   const filterPills = document.querySelector('.filter-pills-bar');
   const mediaCount = document.getElementById('mediaCount');
+
+  // Handle current site exclusion button in subbar
+  if (btnExcludeSite) {
+    if (!currentTabHost || currentTabUrl.startsWith('chrome') || currentTabUrl.startsWith('edge') || currentTabUrl.startsWith('about')) {
+      btnExcludeSite.style.display = 'none';
+    } else {
+      btnExcludeSite.style.display = 'inline-flex';
+      if (isCurrentSiteExcluded) {
+        btnExcludeSite.textContent = '⛔ Excluded';
+        btnExcludeSite.className = 'subbar-toggle-pill excluded';
+        btnExcludeSite.setAttribute('title', `${currentTabHost} is excluded. Click to re-enable.`);
+      } else {
+        btnExcludeSite.textContent = '⛔ Exclude Site';
+        btnExcludeSite.className = 'subbar-toggle-pill';
+        btnExcludeSite.setAttribute('title', `Click to exclude ${currentTabHost} from XtremeGrbr`);
+      }
+    }
+  }
+
+  // Handle site excluded banner
+  if (siteExcludedBanner) {
+    siteExcludedBanner.style.display = isCurrentSiteExcluded ? 'flex' : 'none';
+    if (siteExcludedTitle && currentTabHost) {
+      siteExcludedTitle.textContent = `${currentTabHost} Excluded`;
+    }
+  }
+
+  // If site is excluded, override listing and badge
+  if (isCurrentSiteExcluded) {
+    if (disabledBanner) disabledBanner.style.display = 'none';
+    if (mediaCount) {
+      mediaCount.textContent = 'Excluded';
+      mediaCount.style.background = '#fef2f2';
+      mediaCount.style.color = '#dc2626';
+    }
+    if (mediaListContainer) mediaListContainer.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+    if (filterPills) filterPills.style.opacity = '0.35';
+    return;
+  }
 
   // 1. Sync header slider switch & label
   if (masterPowerToggle) {
@@ -123,7 +178,26 @@ function toggleExtensionEnabled(forcedState = null) {
       if (chrome.runtime.lastError) {}
     });
     updateExtensionStatusUI();
-    if (isExtensionEnabled) {
+    if (isExtensionEnabled && !isCurrentSiteExcluded) {
+      loadTabMedia();
+    }
+  });
+}
+
+function toggleSiteExclusion(forcedDomain = null) {
+  const domain = (forcedDomain || currentTabHost || '').toLowerCase().trim();
+  if (!domain) return;
+
+  const targetExcluded = !isCurrentSiteExcluded;
+  chrome.runtime.sendMessage({
+    action: 'TOGGLE_SITE_EXCLUSION',
+    domain,
+    exclude: targetExcluded,
+    tabId: currentTabId
+  }, () => {
+    isCurrentSiteExcluded = targetExcluded;
+    updateExtensionStatusUI();
+    if (!targetExcluded) {
       loadTabMedia();
     }
   });
@@ -191,24 +265,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnEnableExtension.addEventListener('click', () => toggleExtensionEnabled(true));
   }
 
-  // 1. Get Active Tab
+  // 1. Get Active Tab & detect hostname
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
     currentTabId = tab.id;
-    currentTabUrl = tab.url;
+    currentTabUrl = tab.url || '';
     currentTabTitle = tab.title || tab.url;
+    try {
+      if (currentTabUrl.includes('://')) {
+        currentTabHost = new URL(currentTabUrl).hostname;
+      }
+    } catch (_) {}
     const titleEl = document.getElementById('currentTabTitle');
     if (titleEl) titleEl.textContent = tab.title || tab.url;
 
-    // Trigger instant DOM media scan on active tab
-    try {
-      chrome.tabs.sendMessage(currentTabId, { action: 'SCAN_MEDIA_NOW' }, () => {
-        if (chrome.runtime.lastError) {}
-        loadTabMedia();
-      });
-    } catch (e) {}
+    chrome.storage.local.get({ excludedSites: ['voyeurok.com'] }, (res) => {
+      excludedSitesList = Array.isArray(res.excludedSites) ? res.excludedSites : ['voyeurok.com'];
+      isCurrentSiteExcluded = checkSiteIsExcluded(currentTabHost, excludedSitesList);
+      updateExtensionStatusUI();
 
-    loadTabMedia();
+      if (!isCurrentSiteExcluded) {
+        // Trigger instant DOM media scan on active tab
+        try {
+          chrome.tabs.sendMessage(currentTabId, { action: 'SCAN_MEDIA_NOW' }, () => {
+            if (chrome.runtime.lastError) {}
+            loadTabMedia();
+          });
+        } catch (e) {}
+
+        loadTabMedia();
+      }
+    });
+  }
+
+  // Site exclusion buttons
+  const btnExcludeSite = document.getElementById('btnExcludeSite');
+  if (btnExcludeSite) {
+    btnExcludeSite.addEventListener('click', () => toggleSiteExclusion());
+  }
+  const btnIncludeSite = document.getElementById('btnIncludeSite');
+  if (btnIncludeSite) {
+    btnIncludeSite.addEventListener('click', () => toggleSiteExclusion());
   }
 
   // Quick Win: Filter Pills Bar (Todos | Videos | Audios)
@@ -585,13 +682,20 @@ async function loadTabMedia() {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab) {
         currentTabId = tab.id;
-        currentTabUrl = tab.url;
+        currentTabUrl = tab.url || '';
         currentTabTitle = tab.title || tab.url;
+        try {
+          if (currentTabUrl.includes('://')) currentTabHost = new URL(currentTabUrl).hostname;
+        } catch (_) {}
         const titleEl = document.getElementById('currentTabTitle');
         if (titleEl) titleEl.textContent = tab.title || tab.url;
       }
     }
     if (!currentTabId) return;
+    if (isCurrentSiteExcluded) {
+      updateExtensionStatusUI();
+      return;
+    }
     if (!isExtensionEnabled) {
       updateExtensionStatusUI();
       return;
@@ -599,6 +703,11 @@ async function loadTabMedia() {
 
     chrome.runtime.sendMessage({ action: 'GET_TAB_MEDIA', tabId: currentTabId }, (response) => {
       if (chrome.runtime.lastError || !response) return;
+      if (response.isSiteExcluded) {
+        isCurrentSiteExcluded = true;
+        updateExtensionStatusUI();
+        return;
+      }
       const { mediaList, activeDownloads } = response;
 
       allDetectedMedia = mediaList || [];

@@ -1786,6 +1786,23 @@ body.theme-dark .subbar-toggle-pill.disabled {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
+.subbar-toggle-pill.excluded {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.subbar-toggle-pill.excluded:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+body.theme-dark .subbar-toggle-pill.excluded {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
 /* ==========================================================================
    Watched / Seen Videos Dimming Styles
    ========================================================================== */

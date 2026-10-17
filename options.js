@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dynamic Version Display from Manifest
   try {
-    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.6';
+    const manifestVer = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.7';
     const optionsVersionLabel = document.getElementById('optionsVersionLabel');
     const updatesVersionBadge = document.getElementById('updatesVersionBadge');
     const updateStatusText = document.getElementById('updateStatusText');
@@ -253,4 +253,100 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // 5. Excluded Websites (Site Blacklist) Management
+  const inputNewExcludedSite = document.getElementById('inputNewExcludedSite');
+  const btnAddExcludedSite = document.getElementById('btnAddExcludedSite');
+  const excludedSitesList = document.getElementById('excludedSitesList');
+  const excludedCountBadge = document.getElementById('excludedCountBadge');
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function renderExcludedSites(sites) {
+    if (!excludedSitesList) return;
+    const cleanSites = Array.isArray(sites) ? sites : [];
+    if (excludedCountBadge) {
+      excludedCountBadge.textContent = `${cleanSites.length} ${cleanSites.length === 1 ? 'site' : 'sites'}`;
+    }
+
+    if (cleanSites.length === 0) {
+      excludedSitesList.innerHTML = `
+        <div style="font-size: 12px; color: var(--vdh-text-muted); font-style: italic; padding: 12px; text-align: center; background: #f8fafc; border-radius: 6px; border: 1px dashed var(--vdh-border);">
+          No websites excluded yet. Add domains above to bypass grabber completely.
+        </div>
+      `;
+      return;
+    }
+
+    excludedSitesList.innerHTML = cleanSites.map(site => `
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 6px;">
+        <span style="font-family: monospace; font-size: 13px; font-weight: 600; color: #be123c;">⛔ ${escapeHtml(site)}</span>
+        <button type="button" class="btn-remove-site" data-site="${escapeHtml(site)}" style="background: none; border: none; color: #e11d48; font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 12px;" title="Remove exclusion">
+          ✕ Remove
+        </button>
+      </div>
+    `).join('');
+
+    // Wire remove buttons
+    const removeBtns = excludedSitesList.querySelectorAll('.btn-remove-site');
+    removeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const siteToRemove = btn.getAttribute('data-site');
+        removeExcludedSite(siteToRemove);
+      });
+    });
+  }
+
+  function loadExcludedSites() {
+    chrome.storage.local.get({ excludedSites: ['voyeurok.com'] }, (res) => {
+      renderExcludedSites(res.excludedSites || ['voyeurok.com']);
+    });
+  }
+
+  function addExcludedSite(site) {
+    let clean = (site || '').toLowerCase().trim();
+    if (!clean) return;
+    try {
+      if (clean.includes('://')) clean = new URL(clean).hostname;
+    } catch (_) {}
+    clean = clean.replace(/^[./]+|[./]+$/g, '');
+    if (!clean) return;
+
+    chrome.storage.local.get({ excludedSites: ['voyeurok.com'] }, (res) => {
+      const sites = Array.isArray(res.excludedSites) ? [...res.excludedSites] : ['voyeurok.com'];
+      if (!sites.includes(clean)) {
+        sites.push(clean);
+        chrome.storage.local.set({ excludedSites: sites }, () => {
+          renderExcludedSites(sites);
+          if (inputNewExcludedSite) inputNewExcludedSite.value = '';
+        });
+      }
+    });
+  }
+
+  function removeExcludedSite(site) {
+    chrome.storage.local.get({ excludedSites: ['voyeurok.com'] }, (res) => {
+      const sites = (res.excludedSites || []).filter(s => s !== site);
+      chrome.storage.local.set({ excludedSites: sites }, () => {
+        renderExcludedSites(sites);
+      });
+    });
+  }
+
+  if (btnAddExcludedSite && inputNewExcludedSite) {
+    btnAddExcludedSite.addEventListener('click', () => {
+      addExcludedSite(inputNewExcludedSite.value);
+    });
+    inputNewExcludedSite.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addExcludedSite(inputNewExcludedSite.value);
+      }
+    });
+  }
+
+  loadExcludedSites();
 });

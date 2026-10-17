@@ -54,19 +54,50 @@
   window.__STREAMGRABBER_INITIALIZED__ = true;
 
   let isExtensionEnabled = true;
-  chrome.storage.local.get({ extensionEnabled: true }, (res) => {
+  let isSiteExcluded = false;
+  const currentHost = (location.hostname || '').toLowerCase();
+
+  function checkSiteExcluded(excludedSites) {
+    if (!Array.isArray(excludedSites)) return false;
+    return excludedSites.some(site => {
+      const s = site.toLowerCase().trim();
+      return s && (currentHost === s || currentHost.endsWith('.' + s));
+    });
+  }
+
+  function syncLocalStorageExclusion(excluded) {
+    try {
+      if (excluded) {
+        localStorage.setItem('__xg_excluded__', 'true');
+        localStorage.removeItem('__xg_unexcluded__');
+      } else {
+        localStorage.removeItem('__xg_excluded__');
+        localStorage.setItem('__xg_unexcluded__', 'true');
+      }
+    } catch (_) {}
+  }
+
+  chrome.storage.local.get({ extensionEnabled: true, excludedSites: ['voyeurok.com'] }, (res) => {
     isExtensionEnabled = res.extensionEnabled !== false;
-    if (!isExtensionEnabled && typeof floatingBtn !== 'undefined' && floatingBtn) {
+    isSiteExcluded = checkSiteExcluded(res.excludedSites);
+    syncLocalStorageExclusion(isSiteExcluded);
+    if ((!isExtensionEnabled || isSiteExcluded) && typeof floatingBtn !== 'undefined' && floatingBtn) {
       floatingBtn.style.display = 'none';
     }
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.extensionEnabled !== undefined) {
-      isExtensionEnabled = changes.extensionEnabled.newValue !== false;
-      if (!isExtensionEnabled && typeof floatingBtn !== 'undefined' && floatingBtn) {
+    if (area === 'local') {
+      if (changes.extensionEnabled !== undefined) {
+        isExtensionEnabled = changes.extensionEnabled.newValue !== false;
+      }
+      if (changes.excludedSites !== undefined) {
+        isSiteExcluded = checkSiteExcluded(changes.excludedSites.newValue);
+        syncLocalStorageExclusion(isSiteExcluded);
+      }
+      if ((!isExtensionEnabled || isSiteExcluded) && typeof floatingBtn !== 'undefined' && floatingBtn) {
         floatingBtn.style.display = 'none';
-      } else if (isExtensionEnabled && typeof runScan === 'function') {
+      } else if (isExtensionEnabled && !isSiteExcluded && typeof runScan === 'function') {
         runScan();
       }
     }
@@ -269,7 +300,7 @@
   }
 
   function reportMedia(mediaItem) {
-    if (!isExtensionEnabled) return;
+    if (!isExtensionEnabled || isSiteExcluded) return;
     if (!mediaItem.url || isExcludedUrl(mediaItem.url) || isAdOrAnnounceUrl(mediaItem.url) || detectedUrls.has(mediaItem.url)) return;
 
     detectedUrls.add(mediaItem.url);
@@ -997,6 +1028,7 @@
   }
 
   function runScan() {
+    if (!isExtensionEnabled || isSiteExcluded) return;
     scanYandexVideoPlayer();
     scanVkVideoPlayer();
     scanInlinePlayerScripts();
@@ -1105,6 +1137,23 @@
 
   // 4. In-page Message Listener: Handles Crop Rect, Scan Requests & In-Page Fetch to prevent HTTP 412
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Handle site exclusion changes dynamically
+    if (request.action === 'SITE_EXCLUSION_CHANGED') {
+      const match = checkSiteExcluded([request.domain]);
+      if (match) {
+        isSiteExcluded = Boolean(request.excluded);
+        syncLocalStorageExclusion(isSiteExcluded);
+        if (typeof floatingBtn !== 'undefined' && floatingBtn) {
+          floatingBtn.style.display = isSiteExcluded ? 'none' : 'flex';
+        }
+        if (!isSiteExcluded) {
+          runScan();
+        }
+      }
+      sendResponse({ success: true, isSiteExcluded });
+      return true;
+    }
+
     // Request Instant Media Scan from Popup / Rescan button
     if (request.action === 'SCAN_MEDIA_NOW') {
       runScan();

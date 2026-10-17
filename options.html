@@ -148,7 +148,7 @@
   <div class="options-card">
     <div class="options-title">
       <span data-i18n="optionsHeading">XtremeGrbr Settings</span>
-      <span id="optionsVersionLabel" style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.6</span>
+      <span id="optionsVersionLabel" style="font-size: 12px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 12px;">v3.5.7</span>
     </div>
 
     <!-- Language & Theme Selectors at the Top of Configuration -->
@@ -268,17 +268,43 @@
     </form>
   </div>
 
+  <!-- Excluded Websites & Pages (Site Blacklist) -->
+  <div class="options-card" style="margin-top: 24px; border-left: 4px solid #ef4444;">
+    <div class="options-title" style="border-bottom: 1px solid var(--vdh-border);">
+      <span style="display: flex; align-items: center; gap: 8px;">
+        <span>⛔</span> <span>Excluded Websites (Site Blacklist)</span>
+      </span>
+      <span id="excludedCountBadge" style="font-size: 11px; font-weight: 700; color: #ef4444; background: #fee2e2; padding: 3px 8px; border-radius: 12px;">0 sites</span>
+    </div>
+    <p style="font-size: 13px; color: var(--vdh-text-muted); margin: 12px 0 16px 0; line-height: 1.5;">
+      Websites listed here are completely bypassed by XtremeGrbr. Video grabbing, DOM sniffing, and player hooks are disabled on these domains to prevent playback errors (such as Error Code: 224003).
+    </p>
+
+    <!-- Add Excluded Domain Input Form -->
+    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+      <input type="text" id="inputNewExcludedSite" placeholder="e.g. voyeurok.com, badplayer.net" style="flex: 1; padding: 9px 12px; border: 1.5px solid var(--vdh-border); border-radius: 6px; font-size: 13px;" />
+      <button type="button" id="btnAddExcludedSite" style="background: #ef4444; color: white; border: none; border-radius: 6px; padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+        <span>➕</span> <span>Add Website</span>
+      </button>
+    </div>
+
+    <!-- Excluded Sites List Container -->
+    <div id="excludedSitesList" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto;">
+      <!-- Populated dynamically via options.js -->
+    </div>
+  </div>
+
   <!-- Updates & Version Card -->
   <div class="options-card" style="margin-top: 24px; border-left: 4px solid var(--vdh-blue);">
     <div class="options-title" style="border-bottom: 1px solid var(--vdh-border);">
       <span style="display: flex; align-items: center; gap: 8px;">
         <span>🔄</span> <span data-i18n="updatesCardTitle">Updates & Version</span>
       </span>
-      <span class="version-badge" id="updatesVersionBadge" style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 12px;">v3.5.6</span>
+      <span class="version-badge" id="updatesVersionBadge" style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 12px;">v3.5.7</span>
     </div>
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
       <div style="font-size: 13px; color: var(--vdh-text-muted);" id="updateStatusText" data-i18n="currentVersionLabel">
-        Current Version: v3.5.6
+        Current Version: v3.5.7
       </div>
       <button type="button" id="btnCheckUpdates" class="btn-check-updates" style="background: #0284c7; color: #ffffff; padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
         <span id="updateSpinner" style="display:none;">⏳</span>

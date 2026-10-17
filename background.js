@@ -11,6 +11,8 @@ const tabMediaStore = new Map();
 const tabPosters = new Map();
 // Page/Video title storage by tab ID: tabId -> cleanTitle
 const tabTitles = new Map();
+// Current tab URL storage by tab ID: tabId -> tabUrl
+const tabUrls = new Map();
 // Active downloads: id -> downloadState
 const activeDownloadsMap = new Map();
 // Chrome download item ID -> extension downloadId
@@ -22,15 +24,72 @@ let directDlPollInterval = null;
 // Master extension enabled state
 let isExtensionGloballyEnabled = true;
 
-chrome.storage.local.get({ extensionEnabled: true }, (res) => {
+// Excluded websites/domains list (e.g. voyeurok.com to prevent Error 224003)
+let excludedSitesList = ['voyeurok.com'];
+
+function isSiteExcluded(urlOrHostname) {
+  if (!urlOrHostname || typeof urlOrHostname !== 'string') return false;
+  let host = urlOrHostname.toLowerCase();
+  try {
+    if (host.includes('://')) {
+      host = new URL(urlOrHostname).hostname.toLowerCase();
+    }
+  } catch (_) {}
+  return excludedSitesList.some(site => {
+    const s = site.toLowerCase().trim();
+    return s && (host === s || host.endsWith('.' + s));
+  });
+}
+
+function syncExcludedCookies() {
+  if (!chrome.cookies) return;
+  for (const site of excludedSitesList) {
+    const domain = site.toLowerCase().trim();
+    if (!domain) continue;
+    try {
+      chrome.cookies.set({
+        url: `https://${domain}/`,
+        name: '__xg_excluded__',
+        value: '1',
+        path: '/',
+        secure: true,
+        sameSite: 'lax'
+      }, () => { if (chrome.runtime.lastError) {} });
+    } catch (_) {}
+  }
+}
+
+function removeExcludedCookie(domain) {
+  if (!chrome.cookies || !domain) return;
+  try {
+    chrome.cookies.remove({
+      url: `https://${domain}/`,
+      name: '__xg_excluded__'
+    }, () => { if (chrome.runtime.lastError) {} });
+  } catch (_) {}
+}
+
+chrome.storage.local.get({ extensionEnabled: true, excludedSites: ['voyeurok.com'] }, (res) => {
   isExtensionGloballyEnabled = res.extensionEnabled !== false;
+  excludedSitesList = Array.isArray(res.excludedSites) ? res.excludedSites : ['voyeurok.com'];
+  if (!res.excludedSites) {
+    chrome.storage.local.set({ excludedSites: excludedSitesList });
+  }
+  syncExcludedCookies();
   updateAllBadges();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.extensionEnabled !== undefined) {
-    isExtensionGloballyEnabled = changes.extensionEnabled.newValue !== false;
-    updateAllBadges();
+  if (area === 'local') {
+    if (changes.extensionEnabled !== undefined) {
+      isExtensionGloballyEnabled = changes.extensionEnabled.newValue !== false;
+      updateAllBadges();
+    }
+    if (changes.excludedSites !== undefined) {
+      excludedSitesList = Array.isArray(changes.excludedSites.newValue) ? changes.excludedSites.newValue : [];
+      syncExcludedCookies();
+      updateAllBadges();
+    }
   }
 });
 
@@ -343,6 +402,9 @@ function addMediaItem(tabId, item) {
   if (!isExtensionGloballyEnabled) return;
   if (!tabId || tabId < 0) return;
   if (!item || !item.url) return;
+  const currentTabUrl = tabUrls.get(tabId);
+  if (currentTabUrl && isSiteExcluded(currentTabUrl)) return;
+  if (item.pageUrl && isSiteExcluded(item.pageUrl)) return;
   if (item.url.includes('function/')) return; // Discard raw un-decoded KVS obfuscation placeholders
   if (isExcludedNetworkUrl(item.url, '')) return;
   if (isAdOrAnnounceUrl(item.url)) return;
@@ -822,6 +884,11 @@ function updateBadge(tabId) {
     chrome.action.setBadgeBackgroundColor({ tabId, color: '#64748b' });
     return;
   }
+  const tabUrl = tabUrls.get(tabId);
+  if (tabUrl && isSiteExcluded(tabUrl)) {
+    chrome.action.setBadgeText({ tabId, text: '' });
+    return;
+  }
   const tabStore = tabMediaStore.get(tabId);
   const count = tabStore ? tabStore.size : 0;
 
@@ -877,6 +944,9 @@ chrome.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (!isExtensionGloballyEnabled) return;
     if (!details.tabId || details.tabId < 0) return;
+    if (details.initiator && isSiteExcluded(details.initiator)) return;
+    const currentTabUrl = tabUrls.get(details.tabId);
+    if (currentTabUrl && isSiteExcluded(currentTabUrl)) return;
 
     const url = details.url;
     let contentType = '';
@@ -962,7 +1032,14 @@ chrome.webRequest.onHeadersReceived.addListener(
 );
 
 // Clear expired media tokens when user navigates or reloads the tab (Prevents HTTP 404 from expired tokens)
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (tab && tab.url) {
+    tabUrls.set(tabId, tab.url);
+    if (isSiteExcluded(tab.url)) {
+      tabMediaStore.delete(tabId);
+      tabPosters.delete(tabId);
+    }
+  }
   if (changeInfo.status === 'loading') {
     tabMediaStore.delete(tabId);
     tabPosters.delete(tabId);
@@ -974,6 +1051,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   tabMediaStore.delete(tabId);
   tabPosters.delete(tabId);
   tabTitles.delete(tabId);
+  tabUrls.delete(tabId);
 });
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
@@ -1085,7 +1163,66 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === 'TOGGLE_SITE_EXCLUSION') {
+    const domain = (message.domain || '').toLowerCase().trim();
+    if (!domain) {
+      sendResponse({ success: false });
+      return true;
+    }
+    const shouldExclude = message.exclude !== undefined ? message.exclude : !isSiteExcluded(domain);
+    chrome.storage.local.get({ excludedSites: ['voyeurok.com'] }, (res) => {
+      let sites = Array.isArray(res.excludedSites) ? [...res.excludedSites] : ['voyeurok.com'];
+      if (shouldExclude) {
+        if (!sites.some(s => s.toLowerCase() === domain)) {
+          sites.push(domain);
+        }
+      } else {
+        sites = sites.filter(s => s.toLowerCase() !== domain);
+        removeExcludedCookie(domain);
+      }
+      chrome.storage.local.set({ excludedSites: sites }, () => {
+        excludedSitesList = sites;
+        syncExcludedCookies();
+        if (message.tabId) {
+          if (shouldExclude) {
+            tabMediaStore.delete(message.tabId);
+            tabPosters.delete(message.tabId);
+          }
+          updateBadge(message.tabId);
+          chrome.tabs.sendMessage(message.tabId, {
+            action: 'SITE_EXCLUSION_CHANGED',
+            domain,
+            excluded: shouldExclude
+          }, () => { if (chrome.runtime.lastError) {} });
+        }
+        sendResponse({ success: true, excluded: shouldExclude, excludedSites: sites });
+      });
+    });
+    return true;
+  }
+
+  if (message.action === 'GET_SITE_EXCLUSION') {
+    const domain = (message.domain || '').toLowerCase().trim();
+    sendResponse({
+      excluded: isSiteExcluded(domain),
+      excludedSites: excludedSitesList
+    });
+    return true;
+  }
+
   if (message.action === 'GET_TAB_MEDIA') {
+    const tabUrl = tabUrls.get(message.tabId);
+    if (tabUrl && isSiteExcluded(tabUrl)) {
+      sendResponse({
+        mediaList: [],
+        activeDownloads: [],
+        isSiteExcluded: true,
+        siteDomain: (function() {
+          try { return new URL(tabUrl).hostname; } catch(_) { return ''; }
+        })()
+      });
+      return true;
+    }
     const tabStore = tabMediaStore.get(message.tabId);
     let mediaList = tabStore ? Array.from(tabStore.values()) : [];
 

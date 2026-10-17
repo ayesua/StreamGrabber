@@ -76,10 +76,21 @@
     <button id="btnEnableExtension" class="btn-enable-action" data-i18n="btnEnableAction">Turn On</button>
   </div>
 
+  <!-- Site Excluded Banner (Shown when current website is on exclusion list) -->
+  <div id="siteExcludedBanner" class="extension-disabled-banner" style="display: none; border-left: 4px solid #ef4444; background: linear-gradient(135deg, #2a1b1e, #1a0f12);">
+    <div class="disabled-banner-icon">⛔</div>
+    <div class="disabled-banner-content">
+      <div class="disabled-banner-title" id="siteExcludedTitle" style="color: #f87171;">Site Excluded from Grabber</div>
+      <div class="disabled-banner-desc" id="siteExcludedDesc">Video grabbing, sniffing, and player hooks are disabled for this site to prevent playback errors (e.g. Error 224003).</div>
+    </div>
+    <button id="btnIncludeSite" class="btn-enable-action" style="background: #ef4444;" title="Re-enable XtremeGrbr on this site">Re-enable</button>
+  </div>
+
   <!-- Subbar with Active Tab Info & Quick Status Pill -->
   <div class="vdh-subbar">
     <div class="vdh-tab-title" id="currentTabTitle" data-i18n="loadingTab">Loading tab...</div>
     <div class="vdh-subbar-right">
+      <button id="btnExcludeSite" class="subbar-toggle-pill" style="display: none;" title="Exclude this site from XtremeGrbr">⛔ Exclude Site</button>
       <button id="btnSubbarToggle" class="subbar-toggle-pill enabled" title="Click to disable XtremeGrbr">🟢 Active</button>
       <div class="vdh-media-count" id="mediaCount">0 detected</div>
     </div>

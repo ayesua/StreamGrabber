@@ -11,6 +11,34 @@
     return;
   }
 
+  // 0. Site Exclusion Check: Completely bypass player hooks on excluded sites (e.g. voyeurok.com to prevent Error 224003)
+  try {
+    if (window.localStorage && (window.localStorage.getItem('__xg_excluded__') === 'true' || window.localStorage.getItem('__xg_excluded__') === '1')) {
+      return;
+    }
+  } catch (e) {}
+
+  try {
+    if (document.cookie && document.cookie.includes('__xg_excluded__=1')) {
+      return;
+    }
+  } catch (e) {}
+
+  // Known default excluded sites (can be unexcluded if user explicitly removed via UI)
+  const defaultExcluded = ['voyeurok.com', 'videovoyeurhit.com'];
+  let isExplicitlyUnexcluded = false;
+  try {
+    if (window.localStorage && window.localStorage.getItem('__xg_unexcluded__') === 'true') {
+      isExplicitlyUnexcluded = true;
+    }
+  } catch (e) {}
+
+  if (!isExplicitlyUnexcluded) {
+    for (const d of defaultExcluded) {
+      if (host === d || host.endsWith('.' + d)) return;
+    }
+  }
+
   // Prevent multiple executions per frame
   if (window.__STREAMGRABBER_PAGE_HOOK__) return;
   window.__STREAMGRABBER_PAGE_HOOK__ = true;
