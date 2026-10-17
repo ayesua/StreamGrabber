@@ -241,6 +241,7 @@
     },
     "condition": {
       "urlFilter": "*://*.ahcdn.com/*/vh/*",
+      "excludedInitiatorDomains": ["voyeurok.com"],
       "resourceTypes": ["media", "xmlhttprequest", "other"]
     }
   },
@@ -255,6 +256,7 @@
     },
     "condition": {
       "urlFilter": "||nv7s.com^",
+      "excludedInitiatorDomains": ["voyeurok.com"],
       "resourceTypes": ["media", "xmlhttprequest", "other"]
     }
   },
@@ -284,7 +286,7 @@
     },
     "condition": {
       "urlFilter": "||ahcdn.com^",
-      "initiatorDomains": ["voyeurhit.com", "voyeurok.com", "videovoyeurhit.com"],
+      "initiatorDomains": ["voyeurhit.com", "videovoyeurhit.com"],
       "resourceTypes": ["media", "xmlhttprequest", "other"]
     }
   }
