@@ -206,7 +206,7 @@ function toggleSiteExclusion(forcedDomain = null) {
 document.addEventListener('DOMContentLoaded', async () => {
   // 0. Initialize Internationalization (i18n) & Theme
   try {
-    const ver = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.10';
+    const ver = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.11';
     const verEl = document.querySelector('.version-label');
     if (verEl) verEl.textContent = `v${ver}`;
   } catch (_) {}
