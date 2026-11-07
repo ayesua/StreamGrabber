@@ -864,8 +864,9 @@
               const file = item && (item.file || (Array.isArray(item.sources) && item.sources[0] && item.sources[0].file));
               const container = typeof p.getContainer === 'function' ? p.getContainer() : null;
               const v = (container ? container.querySelector('video') : null) || document.querySelector('video');
-              if (file && v && (!v.src || v.src === window.location.href || v.src === 'about:blank' || v.src.endsWith('/'))) {
-                console.log('[XtremeShld:JWPlayer:Debug] Binding stream directly to HTML5 video tag beforePlay:', file);
+              const isHlsOrDash = typeof file === 'string' && (file.includes('.m3u8') || file.includes('.mpd') || file.includes('hls'));
+              if (file && !isHlsOrDash && v && (!v.src || v.src === window.location.href || v.src === 'about:blank' || v.src.endsWith('/'))) {
+                console.log('[XtremeShld:JWPlayer:Debug] Binding MP4 stream directly to HTML5 video tag beforePlay:', file);
                 v.src = file;
               }
             } catch (_) {}
@@ -884,8 +885,9 @@
               if (v && (!v.src || v.src === window.location.href || v.src === 'about:blank' || v.src.endsWith('/'))) {
                 const item = typeof p.getPlaylistItem === 'function' ? p.getPlaylistItem() : null;
                 const file = item && (item.file || (Array.isArray(item.sources) && item.sources[0] && item.sources[0].file));
-                if (file) {
-                  console.warn('[XtremeShld:JWPlayer:Debug] Player stuck in buffer with empty video src. Restoring stream:', file);
+                const isHlsOrDash = typeof file === 'string' && (file.includes('.m3u8') || file.includes('.mpd') || file.includes('hls'));
+                if (file && !isHlsOrDash) {
+                  console.warn('[XtremeShld:JWPlayer:Debug] Player stuck in buffer with empty video src. Restoring MP4 stream:', file);
                   v.src = file;
                   if (typeof p.play === 'function') p.play();
                 }
@@ -985,36 +987,33 @@
     } catch (_) {}
 
     let _jwplayer = window.jwplayer;
-    if (_jwplayer && typeof _jwplayer === 'function') {
-      try {
-        if (typeof _jwplayer.key === 'string') {
-          // If already instantiated, wrap existing players
-        }
-      } catch (_) {}
-    }
+    let _jwplayerProxy = null;
 
-    function jwPlayerProxy(target) {
-      if (typeof _jwplayer !== 'function') return undefined;
-      const p = _jwplayer.apply(this, arguments);
-      return wrapJWPlayerInstance(p);
-    }
-    function syncJWPlayerProps() {
-      if (typeof _jwplayer === 'function') {
-        for (const k of Object.keys(_jwplayer)) {
-          try { jwPlayerProxy[k] = _jwplayer[k]; } catch (_) {}
+    function createJWPlayerProxy(fn) {
+      if (typeof fn !== 'function') return fn;
+      return new Proxy(fn, {
+        apply(target, thisArg, args) {
+          const p = Reflect.apply(target, thisArg, args);
+          return wrapJWPlayerInstance(p);
+        },
+        get(target, prop, receiver) {
+          return Reflect.get(target, prop, receiver);
+        },
+        set(target, prop, val, receiver) {
+          return Reflect.set(target, prop, val, target);
         }
-      }
+      });
     }
 
     Object.defineProperty(window, 'jwplayer', {
       get: () => {
         if (!_jwplayer) return undefined;
-        syncJWPlayerProps();
-        return jwPlayerProxy;
+        if (!_jwplayerProxy) _jwplayerProxy = createJWPlayerProxy(_jwplayer);
+        return _jwplayerProxy;
       },
       set: (fn) => {
         _jwplayer = fn;
-        syncJWPlayerProps();
+        _jwplayerProxy = createJWPlayerProxy(fn);
       },
       configurable: true
     });

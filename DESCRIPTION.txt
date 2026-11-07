@@ -1,5 +1,5 @@
 ================================================================================
-XTREMESHLD: CHROME WEB STORE METADATA & DESCRIPTIONS (COPY & PASTE READY)
+XTREMESHLD v1.0.43: CHROME WEB STORE METADATA & DESCRIPTIONS (COPY & PASTE READY)
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -7,6 +7,9 @@ XTREMESHLD: CHROME WEB STORE METADATA & DESCRIPTIONS (COPY & PASTE READY)
 --------------------------------------------------------------------------------
 Extension Title: 
 XtremeShld: Ultimate Privacy, Pop-up & Ad Blocker
+
+Latest Version:
+1.0.43
 
 Previous Name:
 ExtremeShield (Formerly known as ExtremeShield)
@@ -25,7 +28,18 @@ Free (No in-app purchases, no subscriptions, zero paywalls)
 
 
 ================================================================================
-2. ENGLISH (UNITED STATES) - STORE LISTING
+2. WHAT'S NEW IN VERSION 1.0.43 (RELEASE NOTES)
+================================================================================
+• Smart Cross-Page Element Zapper (Alt+Shift+Z): Upgraded with "Smart Mode (All Similar)" and "Exact Mode (Single)" toggle (hotkey M). Smart Mode strips generic layout wrappers and automatically targets semantic ad containers (e.g., div.spot, .bottom-spots, ad iframes) so zapped ads stay blocked across all pages of a website.
+• Live CSS Selector Editor & Multi-Match Preview: Edit selectors directly inside the Element Zapper toolbar with a real-time match counter badge and multi-element live preview.
+• Built-In Cosmetic Ad Filter Engine: Automatically hides common ad slots, ExoClick/Magsrv/TrafficStars/JuicyAds/Outbrain/Taboola widgets, and under-player banners out of the box.
+• Custom Cosmetic Rule Manager: Added a full Rule Editor in the Control Center (Add, Edit, Delete, Clear All, and global * wildcard domain rules).
+• Enhanced Video Player Compatibility (YouTube, JWPlayer, FluidPlayer): Added FluidPlayer VAST & clickthrough overlay defusers, JWPlayer ad_preroll/playAd hooks, scoped CDN Referer rules (fixing Error Code 224003), and full YouTube main-player/input focus protection.
+• Dynamic DNR Ruleset & Whitelist Sync: Individual protection toggles and whitelisted domains now dynamically synchronize with Chrome's native Declarative Net Request (DNR) engine and MV3 persistent alarms.
+
+
+================================================================================
+3. ENGLISH (UNITED STATES) - STORE LISTING
 ================================================================================
 
 [SHORT DESCRIPTION - Maximum 132 characters]
@@ -34,41 +48,42 @@ XtremeShld (formerly ExtremeShield): Defense against popups, trackers, fingerpri
 [DETAILED DESCRIPTION - Copy & Paste into Chrome Web Store]
 🛡️ XtremeShld (formerly ExtremeShield): Ultimate Privacy, Pop-up & Ad Blocker (Manifest V3)
 
-Experience high-speed browsing, total privacy, and absolute protection from deceptive advertising. XtremeShld (formerly known as ExtremeShield) combines military-grade popup trapping, video pre-roll defusing, anti-redirect shielding, and advanced canvas fingerprint spoofing into an ultra-fast, lightweight Chrome extension with ZERO paywalls, ZERO telemetry, and ZERO tracking.
+Experience high-speed browsing, total privacy, and absolute protection from deceptive advertising. XtremeShld (formerly known as ExtremeShield) combines military-grade popup trapping, video pre-roll defusing, anti-redirect shielding, smart cross-page cosmetic ad zapping, and advanced canvas fingerprint spoofing into an ultra-fast, lightweight Chrome extension with ZERO paywalls, ZERO telemetry, and ZERO tracking.
 
 Designed with a sleek StreamGrabber-inspired interface supporting both Light Tone (☀️) and Dark Tone (🌙) themes.
 
 --------------------------------------------------------------------------------
-⚡ KEY DEFENSE ENGINES
+⚡ KEY DEFENSE ENGINES (v1.0.43)
 --------------------------------------------------------------------------------
 
 🚫 AGGRESSIVE POPUP, POPUNDER & FULLSCREEN HIJACK DEFUSER
-• Traps unauthorized window.open calls directly at document_start.
-• Neutralizes synthetic link click exploits, popunders, and hidden anchor triggers.
+• Traps unauthorized window.open calls directly at document_start and neutralizes Zero-Popup Media Zone exploits on video players.
+• Neutralizes synthetic link click exploits, popunders, and detached anchor triggers while preserving legitimate OAuth and checkout flows.
 • Stops deceptive fullscreen hijack attempts (requestFullscreen lockouts) used by phishing websites.
-• Discrete floating toast notification with 1-click "Allow Once" or "Whitelist Site" options.
+• Discreet floating toast notification with 1-click "Allow Once" or "Whitelist Site" options.
 
 🔀 ANTI-REDIRECT, TAB-UNDER & HISTORY TRAPPING SHIELD
 • Neutralizes timer-based redirects (location.replace, location.assign, meta refresh).
 • Stops inactive background tabs from quietly redirecting to scam landings or fake download traps.
-• History Trapping Defense: Defuses rapid history.pushState and replaceState loops that freeze your browser's "Back" button while preserving normal SPA navigation (YouTube, Gmail, Twitter).
+• History Trapping Defense: Defuses rapid history.pushState and replaceState loops that freeze your browser's "Back" button while preserving normal SPA navigation (YouTube, Gmail, X/Twitter).
 
-🎬 VIDEO PRE-ROLL & VAST DEFUSER (FIX ERROR CODE: 224003)
+🎬 VIDEO PRE-ROLL, JWPLAYER & FLUIDPLAYER VAST DEFUSER (FIX ERROR CODE: 224003)
 • Intercepts VAST video ad requests and returns standard clean empty VAST XML.
-• Permanently fixes the dreaded "This video file cannot be played (Error Code: 224003)" on JWPlayer and HTML5 players.
-• Sanitizes video player configurations and automatically skips pre-roll countdown timers.
+• Permanently fixes the dreaded "This video file cannot be played (Error Code: 224003)" on JWPlayer, FluidPlayer, and HTML5 players.
+• Automatically strips FluidPlayer VAST clickthrough layers,JWPlayer ad_preroll traps, and pre-roll countdown timers while keeping YouTube playback and search bar focus 100% untouched.
+
+⚡ SMART ELEMENT ZAPPER & COSMETIC FILTER ENGINE (Alt+Shift+Z)
+• Point, laser-target, and vaporize any annoying ad slot, floating banner, video overlay, or modal with 1 click.
+• Smart Mode vs. Exact Mode Toggle (Hotkey M): Smart Mode automatically detects reusable ad containers across pages so zapped ads never reappear when navigating to another page with a similar layout.
+• Interactive container depth slider, editable live CSS selector input, real-time match counter badge, multi-element preview (P), and instant Undo (Ctrl+Z).
+• Full Custom Cosmetic Rule Editor in the Control Center with support for site-specific and global (*) rules.
 
 🕵️ ANTI-TRACKING, FINGERPRINT SPOOFING & DEEP SHADOW DOM SCANNER
-• Blocks cross-site ad networks, analytics beacons (Google, Meta, TikTok, Criteo), and session heatmaps.
-• Deep Shadow DOM Scanner: Recursively traverses open shadow roots (element.shadowRoot) to eliminate disguised trackers and embedded ads.
+• Blocks cross-site ad networks, analytics beacons (Google, Meta, TikTok, Criteo), and session heatmaps via Chrome's native Declarative Net Request (DNR) engine.
+• Deep Shadow DOM Scanner & Focus Guard: Recursively traverses open shadow roots (element.shadowRoot) to eliminate disguised trackers while protecting active text inputs and search bars from focus loss.
 • Spoofs Canvas 2D and AudioContext APIs with imperceptible, deterministic micro-noise to defeat cross-site device fingerprinting.
 • WebRTC IP Leak Defense prevents local and public IP disclosures over non-proxied connections.
 • Automatically strips tracking query parameters (utm_*, fbclid, gclid, mc_cid, etc.) from clicked links.
-
-⚡ PROMINENT ELEMENT ZAPPER (Alt+Shift+Z)
-• Point, laser-target, and vaporize any annoying floating banner, video overlay, or newsletter modal with 1 click.
-• Includes depth adjustment slider to expand or narrow container targeting.
-• Permanently remembers and applies cosmetic CSS hiding rules across visits.
 
 🍪 COOKIE CONSENT AUTO-DISMISSAL & SCROLL RECOVERY
 • Automatically detects and dismisses intrusive GDPR/CCPA cookie walls without accepting tracking.
@@ -77,12 +92,12 @@ Designed with a sleek StreamGrabber-inspired interface supporting both Light Ton
 
 🎨 STREAMGRABBER DESIGN SYSTEM & DUAL TONE THEME
 • Switch instantly between Light Tone (☀️) and Dark Tone (🌙).
-• Unified, clean typography and responsive components.
+• Multi-language UI (English, Español, 中文, Русский) with JSON backup & restore.
 
 --------------------------------------------------------------------------------
 🚀 COMPANION EXTENSION
 --------------------------------------------------------------------------------
-Looking to capture streaming media? Try StreamGrabber 2, our free companion tool:
+Looking to capture streaming media? Try StreamGrabber 2 (XtremeGrbr), our free companion tool:
 Download streaming videos, m3u8 playlists, and audio streams directly at maximum speed with zero hassle.
 
 --------------------------------------------------------------------------------
@@ -95,12 +110,12 @@ Download streaming videos, m3u8 playlists, and audio streams directly at maximum
 --------------------------------------------------------------------------------
 ⌨️ KEYBOARD SHORTCUTS
 --------------------------------------------------------------------------------
-• Alt + Shift + Z: Activate Element Zapper
+• Alt + Shift + Z: Activate Element Zapper (M: Smart/Exact Mode, P: Preview, Enter: Vaporize, Ctrl+Z: Undo)
 • Alt + Shift + P: Master Protection Toggle (ON / OFF)
 
 
 ================================================================================
-3. SPANISH (ESPAÑOL) - STORE LISTING
+4. SPANISH (ESPAÑOL) - STORE LISTING
 ================================================================================
 
 [DESCRIPCIÓN CORTA - Máximo 132 caracteres]
@@ -109,41 +124,42 @@ XtremeShld (antes ExtremeShield): Defensa contra popups, trackers, huella digita
 [DESCRIPCIÓN DETALLADA - Copiar y Pegar en Chrome Web Store]
 🛡️ XtremeShld (anteriormente ExtremeShield): Bloqueador Definitivo de Privacidad, Pop-ups y Anuncios (Manifest V3)
 
-Navega a máxima velocidad con privacidad total y protección absoluta contra publicidad invasiva y engañosa. XtremeShld (anteriormente conocido como ExtremeShield) combina bloqueo militar de ventanas emergentes, desactivación de anuncios en videos, escudo anti-redirecciones y protección avanzada contra la huella digital en una extensión ultra rápida para Chrome, con CERO muros de pago, CERO telemetría y CERO seguimiento.
+Navega a máxima velocidad con privacidad total y protección absoluta contra publicidad invasiva y engañosa. XtremeShld (anteriormente conocido como ExtremeShield) combina bloqueo militar de ventanas emergentes, desactivación de anuncios en videos, escudo anti-redirecciones, Element Zapper inteligente multi-página y protección avanzada contra la huella digital en una extensión ultra rápida para Chrome, con CERO muros de pago, CERO telemetría y CERO seguimiento.
 
 Diseñado con la interfaz moderna de StreamGrabber con selector de Tono Claro (☀️) y Tono Oscuro (🌙).
 
 --------------------------------------------------------------------------------
-⚡ MOTORES DE DEFENSA NÚCLEO
+⚡ MOTORES DE DEFENSA NÚCLEO (v1.0.43)
 --------------------------------------------------------------------------------
 
 🚫 BLOQUEADOR AGRESIVO DE POPUPS, POPUNDERS Y SECUESTRO DE PANTALLA COMPLETA
-• Intercepta llamadas window.open no autorizadas en document_start.
-• Neutraliza clics trampa sintéticos en enlaces ocultos, popunders y redirecciones silenciosas.
+• Intercepta llamadas window.open no autorizadas en document_start y protege reproductores de video con Zona Multimedia Cero-Popups.
+• Neutraliza clics trampa sintéticos en enlaces ocultos, popunders y redirecciones silenciosas sin afectar inicios de sesión OAuth o pasarelas de pago.
 • Bloquea intentos maliciosos de forzar pantalla completa (requestFullscreen) usados por páginas de phishing.
 • Notificación flotante discreta para permitir excepciones en 1 solo clic ("Permitir una vez" o "Lista blanca").
 
 🔀 ESCUDO ANTI-REDIRECCIONES, TAB-UNDER Y TRAMPAS DE HISTORIAL
 • Detiene redirecciones automáticas basadas en temporizadores (location.replace, location.assign, meta refresh).
 • Evita que pestañas inactivas en segundo plano redirijan silenciosamente a portales de estafas o descargas falsas.
-• Defensa Anti-Trampas de Historial: Neutraliza bucles de history.pushState y replaceState que congelan el botón "Atrás" de tu navegador sin afectar aplicaciones SPA legítimas (YouTube, Gmail, Twitter).
+• Defensa Anti-Trampas de Historial: Neutraliza bucles de history.pushState y replaceState que congelan el botón "Atrás" de tu navegador sin afectar aplicaciones SPA legítimas (YouTube, Gmail, X/Twitter).
 
 🎬 DESACTIVADOR DE ANUNCIOS PRE-ROLL Y REPARACIÓN DE ERROR 224003 EN VIDEOS
 • Intercepta llamadas publicitarias VAST devolviendo respuestas limpias para evitar fallos en reproductores.
 • Resuelve definitivamente el temido error "This video file cannot be played (Error Code: 224003)" en JWPlayer y reproductores HTML5.
 • Salta automáticamente los contadores de cuenta regresiva en videos embebidos.
 
+⚡ ELEMENT ZAPPER INTELIGENTE MULTI-PÁGINA (Alt+Shift+Z)
+• Mira interactiva para vaporizar cualquier contenedor de anuncios, banner flotante, reproductor invasivo o modal publicitario con 1 clic.
+• Modo Inteligente (Smart Mode) vs. Modo Exacto (Tecla M): El Modo Inteligente detecta automáticamente contenedores publicitarios reutilizables (como div.spot o .bottom-spots) para que los anuncios eliminados no vuelvan a aparecer al cambiar de página.
+• Incluye control deslizante de profundidad, editor de selector CSS en vivo, contador de coincidencias, vista previa (P) y deshacer instantáneo (Ctrl+Z).
+• Editor completo de filtros cosméticos personalizados en el Centro de Control con soporte para reglas por sitio o globales (*).
+
 🕵️ BLINDAJE ANTI-RASTREO, HUELLA DIGITAL Y ESCÁNER PROFUNDO DE SHADOW DOM
-• Bloquea redes publicitarias, píxeles de seguimiento (Google, Meta, TikTok, Criteo) y mapas de calor.
-• Escáner Profundo de Shadow DOM: Inspecciona recursivamente árboles abiertos (element.shadowRoot) para eliminar rastreadores ocultos y banners disfrazados.
+• Bloquea redes publicitarias, píxeles de seguimiento (Google, Meta, TikTok, Criteo) y mapas de calor mediante el motor nativo Declarative Net Request (DNR).
+• Escáner Profundo de Shadow DOM y Protección de Foco de Texto: Inspecciona árboles abiertos (element.shadowRoot) sin interrumpir jamás la escritura en barras de búsqueda (como YouTube) o campos de texto.
 • Inyecta micro-ruido imperceptible en Canvas 2D y AudioContext para frustrar la identificación de tu equipo.
 • Escudo contra fugas de IP por WebRTC para resguardar tu dirección IP real.
 • Limpia automáticamente parámetros de seguimiento (utm_*, fbclid, gclid, mc_cid, etc.) en enlaces visitados.
-
-⚡ ELEMENT ZAPPER DESTACADO (Alt+Shift+Z)
-• Mira interactiva para vaporizar cualquier banner flotante, reproductor invasivo o modal publicitario con 1 clic.
-• Control deslizante para ajustar la profundidad del contenedor seleccionado.
-• Guarda y aplica permanentemente reglas cosméticas CSS en cada dominio.
 
 🍪 AUTO-CIERRE DE BANNERS DE COOKIES Y DESBLOQUEO DE SCROLL
 • Elimina avisos GDPR/CCPA sin aceptar cookies de seguimiento.
@@ -152,12 +168,12 @@ Diseñado con la interfaz moderna de StreamGrabber con selector de Tono Claro (�
 
 🎨 DISEÑO STREAMGRABBER Y MODO DUAL CLARO/OSCURO
 • Cambia al instante entre Tono Claro (☀️) y Tono Oscuro (🌙).
-• Tipografía nítida y elementos visuales optimizados.
+• Interfaz multi-idioma (EN, ES, ZH, RU) con exportación e importación de respaldo JSON.
 
 --------------------------------------------------------------------------------
 🚀 EXTENSIÓN COMPAÑERA
 --------------------------------------------------------------------------------
-¿Necesitas descargar contenido multimedia? Prueba StreamGrabber 2:
+¿Necesitas descargar contenido multimedia? Prueba StreamGrabber 2 (XtremeGrbr):
 Descarga videos en streaming, listas m3u8 y pistas de audio directamente a la máxima velocidad disponible y sin complicaciones.
 
 --------------------------------------------------------------------------------
@@ -170,12 +186,12 @@ Descarga videos en streaming, listas m3u8 y pistas de audio directamente a la m�
 --------------------------------------------------------------------------------
 ⌨️ ATAJOS DE TECLADO
 --------------------------------------------------------------------------------
-• Alt + Shift + Z: Activar Element Zapper
+• Alt + Shift + Z: Activar Element Zapper (M: Modo Smart/Exacto, P: Vista Previa, Enter: Vaporizar, Ctrl+Z: Deshacer)
 • Alt + Shift + P: Encender / Apagar Protección Global
 
 
 ================================================================================
-4. CHINESE (中文 - 中国) - STORE LISTING
+5. CHINESE (中文 - 中国) - STORE LISTING
 ================================================================================
 
 [简短描述 - 最多132个字符]
@@ -184,17 +200,17 @@ XtremeShld（原名 ExtremeShield）：针对弹窗、重定向、广告与跨�
 [详细描述 - 复制并粘贴至 Chrome 网上应用店]
 🛡️ XtremeShld（原名 ExtremeShield）：终极隐私保护、弹窗与广告拦截装甲 (Manifest V3)
 
-体验极致浏览速度、绝对隐私保护与全方位恶意广告拦截。XtremeShld（原名 ExtremeShield）将弹窗拦截、视频前贴片广告跳过、防恶意重定向及高级 Canvas 指纹伪装技术融于一身，打造超快、轻量级的 Chrome 扩展。无付费墙、无数据遥测、零用户追踪。
+体验极致浏览速度、绝对隐私保护与全方位恶意广告拦截。XtremeShld（原名 ExtremeShield）将弹窗拦截、视频前贴片广告跳过、防恶意重定向、智能跨页元素擦除器及高级 Canvas 指纹伪装技术融于一身，打造超快、轻量级的 Chrome 扩展。无付费墙、无数据遥测、零用户追踪。
 
 全新采用 StreamGrabber 现代设计系统，并支持即时切换浅色明亮色调 (☀️) 与深色护黑色调 (🌙)。
 
 --------------------------------------------------------------------------------
-⚡ 核心防御引擎
+⚡ 核心防御引擎 (v1.0.43)
 --------------------------------------------------------------------------------
 
 🚫 强力弹窗、底层弹窗 (Popunder) 与全屏劫持拦截
-• 在 document_start 阶段直接拦截未授权的 window.open 调用。
-• 瓦解伪装的动态链接点击陷阱、静默底层弹窗 (popunder) 与欺诈性跳转。
+• 在 document_start 阶段直接拦截未授权的 window.open 调用，并开启视频播放器零弹窗保护区。
+• 瓦解伪装的动态链接点击陷阱、静默底层弹窗 (popunder) 与欺诈性跳转，同时保留正常的登录与支付弹窗。
 • 拦截钓鱼网站恶意强制调用 requestFullscreen 锁死全屏的行为。
 • 底部轻量通知提示，支持一键“仅允许一次”或“加入白名单”。
 
@@ -208,17 +224,18 @@ XtremeShld（原名 ExtremeShield）：针对弹窗、重定向、广告与跨�
 • 彻底解决 JWPlayer 及 HTML5 播放器中恼人的“无法播放此视频文件 (错误代码: 224003)”。
 • 净化视频播放器广告配置，自动跳过倒计时前贴片等待。
 
+⚡ 智能跨页元素擦除器 Element Zapper (Alt+Shift+Z)
+• 激光瞄准任意广告位、漂浮横幅、视频覆盖遮罩或订阅弹窗，一键瞬间永久清除。
+• 智能模式 (Smart Mode) 与精确模式切换 (快捷键 M)：智能模式自动跳过通用布局外框并锁定语义化广告容器，确保切换至同站其他页面时相同位置的广告不会再次出现。
+• 配备容器层级滑块、可编辑 CSS 选择器输入框、实时匹配数量徽章、多元素预览 (P) 与一键撤销 (Ctrl+Z)。
+• 控制中心内置自定义规则编辑器，支持单站规则与全局 (*) 通配规则。
+
 🕵️ 防追踪、指纹伪装与 Deep Shadow DOM 递归扫描
 • 全面屏蔽第三方广告追踪域、遥测像素 (Google、Meta、TikTok、Criteo) 与行为热力图分析。
-• Deep Shadow DOM 扫描器：递归穿透开放式 Shadow DOM 树 (element.shadowRoot)，清除藏匿于组件阴影根中的隐形追踪代码。
+• Deep Shadow DOM 扫描器与输入焦点保护：递归穿透开放式 Shadow DOM 树，清除隐形追踪代码，同时确保在 YouTube 等搜索框输入文字时绝不丢失焦点。
 • 针对 Canvas 2D 与 AudioContext API 注入不可感知的确定性微扰动，彻底击溃设备指纹识别算法。
 • WebRTC IP 泄露防御：防止非代理环境下的真实内网与公网 IP 意外暴露。
 • 自动过滤点击链接中的商业追踪参数 (utm_*、fbclid、gclid、mc_cid 等)。
-
-⚡ 可视化元素擦除器 Element Zapper (Alt+Shift+Z)
-• 激光瞄准任意漂浮横幅、视频覆盖遮罩或订阅弹窗，一键瞬间永久清除。
-• 配备容器层级滑块，自由微调选择范围。
-• 自动在本地持久化保存域名专用的 CSS 屏蔽规则。
 
 🍪 自动关闭 Cookie 授权弹窗与滚动条防锁死恢复
 • 自动清除繁琐的 GDPR/CCPA Cookie 遮罩，无需接受任何侵犯隐私的追踪条款。
@@ -227,12 +244,12 @@ XtremeShld（原名 ExtremeShield）：针对弹窗、重定向、广告与跨�
 
 🎨 STREAMGRABBER 质感设计与浅色/深色双主题
 • 自由切换浅色明亮模式 (☀️) 或深色护眼模式 (🌙)。
-• 统一精致的排版设计与响应式操控界面。
+• 支持四国语言 (EN, ES, ZH, RU) 及 JSON 配置导入与导出。
 
 --------------------------------------------------------------------------------
 🚀 官方配套扩展推荐
 --------------------------------------------------------------------------------
-需要抓取或下载网络视频？欢迎体验我们的免费配套工具 StreamGrabber 2：
+需要抓取或下载网络视频？欢迎体验我们的免费配套工具 StreamGrabber 2 (XtremeGrbr)：
 支持极速抓取在线流媒体视频、m3u8 切片播放列表及高品质音频，简单快捷。
 
 --------------------------------------------------------------------------------
@@ -250,7 +267,7 @@ XtremeShld（原名 ExtremeShield）：针对弹窗、重定向、广告与跨�
 
 
 ================================================================================
-5. RUSSIAN (РУССКИЙ) - STORE LISTING
+6. RUSSIAN (РУССКИЙ) - STORE LISTING
 ================================================================================
 
 [КРАТКОЕ ОПИСАНИЕ - Не более 132 символов]
@@ -259,41 +276,42 @@ XtremeShld (ранее ExtremeShield): Защита от всплывающих 
 [ПОЛНОЕ ОПИСАНИЕ - Скопируйте и вставьте в Chrome Web Store]
 🛡️ XtremeShld (ранее ExtremeShield): Полная защита от всплывающих окон, рекламы и слежки (Manifest V3)
 
-Наслаждайтесь молниеносной скоростью интернета, абсолютной конфиденциальностью и надежной защитой от навязчивой рекламы. XtremeShld (ранее известное как ExtremeShield) объединяет блокировку всплывающих окон, пропуск видеорекламы, защиту от скрытых перенаправлений и защиту от фингерпринтинга в быстром расширении для Chrome без платных подписок, без телеметрии и без сбора данных.
+Наслаждайтесь молниеносной скоростью интернета, абсолютной конфиденциальностью и надежной защитой от навязчивой рекламы. XtremeShld (ранее известное как ExtremeShield) объединяет блокировку всплывающих окон, пропуск видеорекламы, умный межстраничный удалитель элементов Element Zapper, защиту от скрытых перенаправлений и защиту от фингерпринтинга в быстром расширении для Chrome без платных подписок, без телеметрии и без сбора данных.
 
 Современный дизайн в стиле StreamGrabber с поддержкой переключения между Светлой (☀️) и Темной (🌙) темами.
 
 --------------------------------------------------------------------------------
-⚡ КЛЮЧЕВЫЕ МОДУЛИ ЗАЩИТЫ
+⚡ КЛЮЧЕВЫЕ МОДУЛИ ЗАЩИТЫ (v1.0.43)
 --------------------------------------------------------------------------------
 
 🚫 БЛОКИРОВКА POP-UP, POP-UNDER И ЗАХВАТА ПОЛНОЭКРАННОГО РЕЖИМА
-• Перехватывает несанкционированные вызовы window.open на этапе document_start.
-• Блокирует скрытые pop-under окна, симулированные клики по скрытым ссылкам и перенаправления.
+• Перехватывает несанкционированные вызовы window.open на этапе document_start и защищает видеоплееры от всплывающих окон.
+• Блокирует скрытые pop-under окна, симулированные клики по скрытым ссылкам и перенаправления, сохраняя работу авторизации и оплаты.
 • Предотвращает мошеннические попытки принудительного включения полноэкранного режима (requestFullscreen).
 • Ненавязчивое уведомление с возможностью разрешить окно один раз или добавить сайт в белый список.
 
 🔀 ЗАЩИТА ОТ ПЕРЕНАПРАВЛЕНИЙ, TAB-UNDER И БЛОКИРОВКИ КНОПКИ «НАЗАД»
 • Нейтрализует принудительные перенаправления по таймеру (location.replace, location.assign, meta refresh).
 • Не позволяет неактивным фоновым вкладкам переключаться на фишинговые сайты или ложные загрузчики.
-• Защита от блокировки кнопки «Назад» (History Trapping Defense): предотвращает зависание навигации из-за циклических вызовов history.pushState, сохраняя корректную работу SPA-сервисов (YouTube, Gmail, Twitter).
+• Защита от блокировки кнопки «Назад» (History Trapping Defense): предотвращает зависание навигации из-за циклических вызовов history.pushState, сохраняя корректную работу SPA-сервисов (YouTube, Gmail, X/Twitter).
 
 🎬 ПРОПУСК ПРЕДВАРИТЕЛЬНОЙ ВИДЕОРЕКЛАМЫ И ИСПРАВЛЕНИЕ ОШИБКИ 224003
 • Перехватывает VAST-запросы видеорекламы и возвращает корректный пустой ответ VAST XML.
 • Навсегда устраняет ошибку «This video file cannot be played (Error Code: 224003)» в JWPlayer и HTML5-плеерах.
 • Очищает рекламные параметры плееров и автоматически пропускает таймеры видеорекламы.
 
+⚡ УМНЫЙ УДАЛИТЕЛЬ ЭЛЕМЕНТОВ ELEMENT ZAPPER (Alt+Shift+Z)
+• Наведите курсор и удалите любой рекламный блок, баннер или всплывающее окно в один клик.
+• Умный режим (Smart Mode) и Точный режим (клавиша M): Умный режим автоматически распознает рекламные контейнеры (например, div.spot), чтобы удаленная реклама не появлялась снова при переходе на другие страницы сайта.
+• Ползунок глубины, редактируемое поле CSS-селектора, счетчик совпадений, предпросмотр (P) и мгновенная отмена (Ctrl+Z).
+• Встроенный редактор пользовательских CSS-правил в Центре управления (поддержка правил для конкретных доменов и глобального символа *).
+
 🕵️ АНТИТРЕКИНГ, ЗАЩИТА ОТ ФИНГЕРПРИНТИНГА И СКАНИРОВАНИЕ SHADOW DOM
-• Блокирует трекеры, пиксели слежки (Google, Meta, TikTok, Criteo) и тепловые карты поведения.
-• Сканер Shadow DOM: рекурсивно проверяет открытые узлы (element.shadowRoot) для удаления скрытых рекламных элементов.
+• Блокирует трекеры, пиксели слежки (Google, Meta, TikTok, Criteo) и тепловые карты поведения через нативный движок Declarative Net Request (DNR).
+• Сканер Shadow DOM и защита фокуса ввода: рекурсивно проверяет открытые узлы (element.shadowRoot), не прерывая ввод текста в поисковых строках (YouTube и др.).
 • Добавляет неощутимый микрошум в Canvas 2D и AudioContext, предотвращая снятие цифрового отпечатка устройства.
 • Защита от утечек IP через WebRTC защищает ваш реальный сетевой адрес.
 • Автоматически очищает ссылки от маркетинговых параметров (utm_*, fbclid, gclid, mc_cid и др.).
-
-⚡ УМНЫЙ УДАЛИТЕЛЬ ЭЛЕМЕНТОВ ELEMENT ZAPPER (Alt+Shift+Z)
-• Наведите курсор и удалите любой навязчивый баннер, всплывающий блок или окно подписки в один клик.
-• Ползунок глубины для точной настройки границ удаляемого блока.
-• Сохраняет косметические CSS-правила локально для каждого сайта.
 
 🍪 АВТОМАТИЧЕСКОЕ ЗАКРЫТИЕ COOKIE-БАННЕРОВ И РАЗБЛОКИРОВКА ПРОКРУТКИ
 • Скрывает навязчивые предупреждения GDPR/CCPA без принятия отслеживающих файлов cookie.
@@ -302,12 +320,12 @@ XtremeShld (ранее ExtremeShield): Защита от всплывающих 
 
 🎨 ДИЗАЙН СТИЛЯ STREAMGRABBER И ДВЕ ТЕМЫ ОФОРМЛЕНИЯ
 • Удобный переключатель между Светлой темой (☀️) и Темной темой (🌙).
-• Четкая типографика и отзывчивый интерфейс.
+• Поддержка 4 языков (EN, ES, ZH, RU) и резервное копирование настроек в JSON.
 
 --------------------------------------------------------------------------------
 🚀 РЕКОМЕНДУЕМОЕ РАСШИРЕНИЕ-КОМПАНЬОН
 --------------------------------------------------------------------------------
-Хотите легко сохранять видео и аудио из интернета? Попробуйте StreamGrabber 2:
+Хотите легко сохранять видео и аудио из интернета? Попробуйте StreamGrabber 2 (XtremeGrbr):
 Загружайте потоковые видеоролики, плейлисты m3u8 и звуковые дорожки напрямую на максимальной скорости.
 
 --------------------------------------------------------------------------------
@@ -325,7 +343,7 @@ XtremeShld (ранее ExtremeShield): Защита от всплывающих 
 
 
 ================================================================================
-6. CHROME WEB STORE REVIEW JUSTIFICATIONS (FOR GOOGLE REVIEWERS)
+7. CHROME WEB STORE REVIEW JUSTIFICATIONS (FOR GOOGLE REVIEWERS)
 ================================================================================
 
 SINGLE PURPOSE STATEMENT:
@@ -333,10 +351,13 @@ SINGLE PURPOSE STATEMENT:
 
 PERMISSION JUSTIFICATIONS:
 • declarativeNetRequest:
-  Used to block known third-party tracking domains, ad telemetry pixels, and popup ad networks at the network layer with zero latency.
+  Used to block known third-party tracking domains, ad telemetry pixels, and popup ad networks at the network layer with zero latency, and to dynamically sync user whitelist and shield toggles.
 
 • declarativeNetRequestFeedback:
   Used in background debug telemetry to report the exact count and categories of blocked trackers to the user in the popup interface.
+
+• alarms:
+  Used to schedule reliable Manifest V3 background reactivation timers when the user temporarily pauses protection for 15 minutes.
 
 • storage:
   Used exclusively to store user preferences locally, including active protection toggles, theme mode, domain whitelist, and custom cosmetic CSS rules.
@@ -350,7 +371,7 @@ PERMISSION JUSTIFICATIONS:
 • privacy:
   Used to configure WebRTC IP handling policy to 'default_public_interface_only' to protect users against IP leaks over UDP.
 
-• tabs:
+• activeTab & tabs:
   Used to query the active tab's hostname and status for display in the popup interface, and to close unrequested advertising popup tabs.
 
 • Host Permissions (<all_urls>):
