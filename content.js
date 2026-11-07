@@ -134,6 +134,7 @@
   });
 
   const detectedUrls = new Set();
+  let latestDetectedStream = null;
   let cachedPoster = null;
 
   function detectQualityFromUrl(url, defaultQuality = 'Auto HD') {
@@ -331,7 +332,7 @@
 
   function reportMedia(mediaItem) {
     if (!isExtensionEnabled || isSiteExcluded) return;
-    if (!mediaItem.url || isExcludedUrl(mediaItem.url) || isAdOrAnnounceUrl(mediaItem.url) || detectedUrls.has(mediaItem.url)) return;
+    if (!mediaItem.url || mediaItem.url.startsWith('blob:') || isExcludedUrl(mediaItem.url) || isAdOrAnnounceUrl(mediaItem.url) || detectedUrls.has(mediaItem.url)) return;
 
     detectedUrls.add(mediaItem.url);
 
@@ -348,6 +349,9 @@
       pageTitle: document.title,
       timestamp: Date.now()
     };
+
+    latestDetectedStream = fullItem;
+    console.log('[XtremeGrbr] reportMedia registered stream:', fullItem);
 
     try {
       chrome.runtime.sendMessage({
@@ -377,6 +381,7 @@
     try {
       if (!e.detail) return;
       const data = typeof e.detail === 'string' ? JSON.parse(e.detail) : e.detail;
+      console.log('[XtremeGrbr] Received __STREAMGRABBER_MEDIA_EVENT__:', data);
       if (data && data.url && !isExcludedUrl(data.url) && !isAdOrAnnounceUrl(data.url)) {
         reportMedia({
           url: data.url,
@@ -1643,11 +1648,21 @@
     floatingBtn.style.background = '#0284c7';
 
     const videoSrc = video ? (video.currentSrc || video.src || '') : '';
+    const streamCandidate = latestDetectedStream;
+
+    console.log('[XtremeGrbr] handleFloatingDownload clicked:', {
+      videoSrc,
+      streamCandidate,
+      location: window.location.href
+    });
 
     chrome.runtime.sendMessage({
       action: 'START_FLOATING_DOWNLOAD',
-      videoSrc: videoSrc
+      videoSrc: videoSrc,
+      streamUrl: streamCandidate ? streamCandidate.url : null,
+      fallbackItem: streamCandidate || null
     }, (response) => {
+      console.log('[XtremeGrbr] START_FLOATING_DOWNLOAD response:', response);
       if (chrome.runtime.lastError || !response || !response.success) {
         if (textEl) textEl.textContent = '⚠️ Play video 1st';
         floatingBtn.style.background = '#e11d48';

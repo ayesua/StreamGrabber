@@ -598,33 +598,54 @@
     if (!player || player.__xg_hooked__) return player;
     player.__xg_hooked__ = true;
 
+    function sniffJWItem(item) {
+      if (!item) return;
+      try {
+        const sources = Array.isArray(item.sources) ? item.sources : (item.file ? [item] : []);
+        sources.forEach(s => {
+          if (s && s.file && typeof s.file === 'string' && !s.file.startsWith('blob:')) {
+            const fullUrl = s.file.startsWith('/') ? location.origin + s.file : s.file;
+            console.log('[XtremeGrbr] JWPlayer stream detected:', fullUrl);
+            broadcastStreamData({
+              url: fullUrl,
+              type: (s.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
+              quality: s.label || detectQualityFromUrl(fullUrl),
+              title: item.title || document.title,
+              poster: item.image || null
+            });
+          }
+        });
+      } catch (err) {}
+    }
+
     const origSetup = player.setup;
     if (origSetup) {
       player.setup = function (config) {
         hookJWPlayerConfig(config);
-        return origSetup.apply(this, arguments);
+        const res = origSetup.apply(this, arguments);
+        try {
+          if (typeof player.getPlaylistItem === 'function') {
+            sniffJWItem(player.getPlaylistItem());
+          }
+        } catch (_) {}
+        return res;
       };
     }
 
     if (typeof player.on === 'function') {
-      player.on('playlistItem', function (e) {
+      const handleEvent = function (e) {
+        sniffJWItem(e && e.item);
         try {
-          if (e && e.item && Array.isArray(e.item.sources)) {
-            e.item.sources.forEach(s => {
-              if (s && s.file) {
-                const fullUrl = s.file.startsWith('/') ? location.origin + s.file : s.file;
-                broadcastStreamData({
-                  url: fullUrl,
-                  type: (s.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
-                  quality: s.label || detectQualityFromUrl(fullUrl),
-                  title: e.item.title || document.title,
-                  poster: e.item.image || null
-                });
-              }
-            });
+          if (typeof player.getPlaylistItem === 'function') {
+            sniffJWItem(player.getPlaylistItem());
           }
-        } catch (err) {}
-      });
+        } catch (_) {}
+      };
+
+      player.on('playlistItem', handleEvent);
+      player.on('play', handleEvent);
+      player.on('firstFrame', handleEvent);
+      player.on('beforePlay', handleEvent);
     }
 
     return player;
@@ -664,6 +685,36 @@
     });
     if (_jwplayer) _jwplayer = hookJWPlayerGlobal(_jwplayer);
   } catch (e) {}
+
+  // Fail-safe: When any video element plays on the page, check for JWPlayer playlist items
+  try {
+    document.addEventListener('play', (e) => {
+      try {
+        if (typeof window.jwplayer === 'function') {
+          const jw = window.jwplayer();
+          if (jw && typeof jw.getPlaylistItem === 'function') {
+            const item = jw.getPlaylistItem();
+            if (item) {
+              const sources = Array.isArray(item.sources) ? item.sources : (item.file ? [item] : []);
+              sources.forEach(s => {
+                if (s && s.file && typeof s.file === 'string' && !s.file.startsWith('blob:')) {
+                  const fullUrl = s.file.startsWith('/') ? location.origin + s.file : s.file;
+                  console.log('[XtremeGrbr] JWPlayer stream detected on native play event:', fullUrl);
+                  broadcastStreamData({
+                    url: fullUrl,
+                    type: (s.type === 'hls' || fullUrl.includes('.m3u8')) ? 'HLS' : 'MP4',
+                    quality: s.label || detectQualityFromUrl(fullUrl),
+                    title: item.title || document.title,
+                    poster: item.image || null
+                  });
+                }
+              });
+            }
+          }
+        }
+      } catch (_) {}
+    }, true);
+  } catch (_) {}
 
   // 1B-2. FluidPlayer Interceptor (Neutralizes VAST ad traps, unfreezes timeline scrubber & sniffs sources)
   function hookFluidPlayerGlobal(origFP) {

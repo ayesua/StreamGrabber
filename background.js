@@ -1547,12 +1547,29 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
 
   if (message.action === 'START_FLOATING_DOWNLOAD') {
     const targetTabId = message.tabId || sender.tab?.id;
-    const tabStore = tabMediaStore.get(targetTabId);
+    let tabStore = tabMediaStore.get(targetTabId);
     let itemToDownload = null;
 
+    console.log('[XtremeGrbr] START_FLOATING_DOWNLOAD received:', {
+      targetTabId,
+      videoSrc: message.videoSrc,
+      streamUrl: message.streamUrl,
+      fallbackItem: message.fallbackItem,
+      tabStoreCount: tabStore ? tabStore.size : 0
+    });
+
     if (tabStore && tabStore.size > 0) {
-      // 1. Try matching exact videoSrc if provided and not an ad URL
-      if (message.videoSrc && !isAdOrAnnounceUrl(message.videoSrc)) {
+      // 1. Try matching explicit streamUrl passed from content script
+      if (message.streamUrl && !message.streamUrl.startsWith('blob:') && !isAdOrAnnounceUrl(message.streamUrl)) {
+        for (const item of tabStore.values()) {
+          if (item.url === message.streamUrl) {
+            itemToDownload = item;
+            break;
+          }
+        }
+      }
+      // 2. Try matching exact videoSrc if provided and not a blob or ad URL
+      if (!itemToDownload && message.videoSrc && !message.videoSrc.startsWith('blob:') && !isAdOrAnnounceUrl(message.videoSrc)) {
         for (const item of tabStore.values()) {
           if (item.url === message.videoSrc) {
             itemToDownload = item;
@@ -1560,14 +1577,28 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
           }
         }
       }
-      // 2. Prioritize HLS (.m3u8) streams or largest non-ad MP4 video in the tab store
+      // 3. Prioritize HLS (.m3u8) streams or largest non-ad, non-blob video in the tab store
       if (!itemToDownload) {
-        const items = Array.from(tabStore.values()).filter(i => !isAdOrAnnounceUrl(i.url));
+        const items = Array.from(tabStore.values()).filter(i => !isAdOrAnnounceUrl(i.url) && !i.url.startsWith('blob:'));
         itemToDownload = items.find(i => i.type === 'HLS') || items.sort((a, b) => (b.size || 0) - (a.size || 0))[0] || items[0];
       }
     }
 
-    if (!itemToDownload && message.videoSrc && !message.videoSrc.startsWith('blob:') && !isAdOrAnnounceUrl(message.videoSrc)) {
+    // 4. Fallback: Use direct stream candidate passed from content script or videoSrc (if not blob)
+    if (!itemToDownload && message.fallbackItem && message.fallbackItem.url && !message.fallbackItem.url.startsWith('blob:') && !isAdOrAnnounceUrl(message.fallbackItem.url)) {
+      itemToDownload = message.fallbackItem;
+      if (targetTabId) addMediaItem(targetTabId, itemToDownload);
+    } else if (!itemToDownload && message.streamUrl && !message.streamUrl.startsWith('blob:') && !isAdOrAnnounceUrl(message.streamUrl)) {
+      itemToDownload = {
+        id: 'direct_' + Date.now(),
+        url: message.streamUrl,
+        title: tabTitles.get(targetTabId) || sender.tab?.title || 'Video',
+        type: message.streamUrl.includes('.m3u8') ? 'HLS' : 'MP4',
+        quality: 'Auto HD',
+        poster: tabPosters.get(targetTabId) || null
+      };
+      if (targetTabId) addMediaItem(targetTabId, itemToDownload);
+    } else if (!itemToDownload && message.videoSrc && !message.videoSrc.startsWith('blob:') && !isAdOrAnnounceUrl(message.videoSrc)) {
       itemToDownload = {
         id: 'direct_' + Date.now(),
         url: message.videoSrc,
@@ -1576,9 +1607,11 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
         quality: 'Auto HD',
         poster: tabPosters.get(targetTabId) || null
       };
+      if (targetTabId) addMediaItem(targetTabId, itemToDownload);
     }
 
     if (itemToDownload) {
+      console.log('[XtremeGrbr] Starting download for stream:', itemToDownload.title, itemToDownload.url);
       handleStartDownload({
         item: itemToDownload,
         referer: sender.tab?.url || '',
@@ -1588,6 +1621,7 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
         sendResponse({ success: true, title: itemToDownload.title, downloadId: res?.downloadId });
       });
     } else {
+      console.warn('[XtremeGrbr] No downloadable stream found in tab store or message payload.');
       sendResponse({ success: false, error: 'No video stream detected yet. Try playing the video.' });
     }
     return true;
