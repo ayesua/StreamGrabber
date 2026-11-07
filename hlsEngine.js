@@ -209,30 +209,58 @@ export class HLSEngine {
   }
 
   /**
-   * Resilient Text Fetcher: Tries in-page fetch via content script first (bypasses HTTP 412 / CORS),
-   * then falls back to background fetch.
+   * Send message to content script with a strict timeout so frozen/ad iframes can never hang downloads.
+   */
+  sendTabMessageWithTimeout(tabId, message, timeoutMs = 8000) {
+    if (!tabId) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          resolve(null);
+        }
+      }, timeoutMs);
+
+      try {
+        chrome.tabs.sendMessage(tabId, message, (res) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (chrome.runtime.lastError || !res) {
+            resolve(null);
+          } else {
+            resolve(res);
+          }
+        });
+      } catch (e) {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      }
+    });
+  }
+
+  /**
+   * Fetch with AbortController timeout so unresponsive CDNs fail fast and trigger fallback/retry.
+   */
+  async fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Resilient Text Fetcher: Tries background fetch first (fast, immune to CORS wildcard issues,
+   * uses DNR Referer/Origin headers), then falls back to in-page fetch via content script (bypasses HTTP 412).
    */
   async fetchPlaylistText(url, tabId, referer) {
-    // 1. Try In-Page Fetch (100% immune to HTTP 412 Precondition Failed)
-    if (tabId) {
-      try {
-        const response = await new Promise((resolve) => {
-          chrome.tabs.sendMessage(tabId, { action: 'PAGE_FETCH_TEXT', url }, (res) => {
-            if (chrome.runtime.lastError || !res) {
-              resolve(null);
-            } else {
-              resolve(res);
-            }
-          });
-        });
-
-        if (response && response.success && response.text) {
-          return response.text;
-        }
-      } catch (e) {}
-    }
-
-    // 2. Fallback: Background fetch without restricted conditional headers
     const headers = {
       'Accept': '*/*'
     };
@@ -242,31 +270,78 @@ export class HLSEngine {
       } catch (e) {}
     }
 
-    const resp = await fetch(url, {
-      headers,
-      cache: 'no-store'
-    });
+    let bgError = null;
+    // 1. Primary: Background fetch (immune to CORS Access-Control-Allow-Origin: * + credentials issues)
+    try {
+      const resp = await this.fetchWithTimeout(url, {
+        headers,
+        cache: 'no-store'
+      }, 10000);
 
-    if (!resp.ok) {
-      throw new Error(`HTTP ${resp.status} reading playlist`);
+      if (resp.ok) {
+        const text = await resp.text();
+        if (text && text.includes('#EXTM3U')) {
+          return text;
+        }
+      } else {
+        bgError = new Error(`HTTP ${resp.status} reading playlist`);
+      }
+    } catch (e) {
+      bgError = e;
     }
 
-    return await resp.text();
+    // 2. Fallback: In-Page Fetch (100% immune to HTTP 412 Precondition Failed / strict cookie checks)
+    if (tabId) {
+      try {
+        const response = await this.sendTabMessageWithTimeout(
+          tabId,
+          { action: 'PAGE_FETCH_TEXT', url, referer },
+          8000
+        );
+
+        if (response && response.success && response.text) {
+          return response.text;
+        }
+      } catch (e) {}
+    }
+
+    throw bgError || new Error('Could not read HLS playlist');
   }
 
   /**
-   * Resilient Segment Buffer Fetcher (CDNs with tokenized URLs / Pornhub phncdn protection)
+   * Resilient Segment Buffer Fetcher:
+   * 1. Primary: Native background fetch (high-speed ArrayBuffer, immune to CORS wildcard issues, zero Base64 IPC overhead).
+   * 2. Fallback: In-Page Fetch via Content Script (for CDNs requiring strict page cookies/TLS session).
    */
   async fetchSegmentBuffer(segUrl, tabId, referer) {
-    // 1. Primary: Try In-Page Fetch via Content Script (100% immune to CDN cookie/token/IP checks)
+    const headers = {
+      'Accept': '*/*'
+    };
+    if (referer) {
+      try {
+        headers['Referer'] = referer;
+      } catch (e) {}
+    }
+
+    // 1. Primary: Background fetch with DNR Referer header & timeout
+    try {
+      const resp = await this.fetchWithTimeout(segUrl, { headers, cache: 'no-store' }, 20000);
+      if (resp.ok) {
+        const buf = await resp.arrayBuffer();
+        if (buf && buf.byteLength > 0) {
+          return buf;
+        }
+      }
+    } catch (e) {}
+
+    // 2. Fallback: In-Page Fetch via Content Script with strict timeout
     if (tabId) {
       try {
-        const response = await new Promise((resolve) => {
-          chrome.tabs.sendMessage(tabId, { action: 'PAGE_FETCH_BUFFER', url: segUrl }, (res) => {
-            if (chrome.runtime.lastError || !res) resolve(null);
-            else resolve(res);
-          });
-        });
+        const response = await this.sendTabMessageWithTimeout(
+          tabId,
+          { action: 'PAGE_FETCH_BUFFER', url: segUrl, referer },
+          20000
+        );
 
         if (response && response.success && response.base64) {
           const binary = atob(response.base64);
@@ -278,23 +353,6 @@ export class HLSEngine {
         }
       } catch (e) {}
     }
-
-    // 2. Secondary: Background fetch with referer header
-    const headers = {
-      'Accept': '*/*'
-    };
-    if (referer) {
-      try {
-        headers['Referer'] = referer;
-      } catch (e) {}
-    }
-
-    try {
-      const resp = await fetch(segUrl, { headers, cache: 'no-store' });
-      if (resp.ok) {
-        return await resp.arrayBuffer();
-      }
-    } catch (e) {}
 
     throw new Error(`Could not download video segment: ${segUrl}`);
   }
@@ -500,6 +558,7 @@ export class HLSEngine {
 
       updateState({
         status: 'downloading',
+        progress: Math.max(2, downloadState.progress || 0),
         totalSegments: segments.length,
         durationSec: downloadState.durationSec,
         estimatedBytes: downloadState.estimatedBytes

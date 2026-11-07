@@ -1330,7 +1330,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-function handleStartDownload({ item, referer, downloadTabId, format, downloadId: passedDownloadId }, callback) {
+function handleStartDownload({ item, referer, downloadTabId, format, downloadId: passedDownloadId, skipSaveAsPrompt }, callback) {
   if (!item || !item.url) {
     if (callback) callback({ success: false, error: 'Invalid media item' });
     return;
@@ -1344,12 +1344,20 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
   }
 
   const chosenFormat = (format || 'mp4').toLowerCase();
-  const effectiveReferer = getEffectiveReferer(item.url, referer || item.pageUrl || '');
+  // Prefer iframe/initiator referer when the stream came from a cross-origin embedded player (e.g. saa89ba.com inside favoyeurtube.net)
+  const rawReferer = (item.pageUrl && item.pageUrl !== referer)
+    ? item.pageUrl
+    : (item.initiator || referer || item.pageUrl || '');
+  const effectiveReferer = getEffectiveReferer(item.url, rawReferer);
 
   chrome.storage.sync.get({ askFilename: false, maxThreads: 8 }, async (settings) => {
-    const askFilename = Boolean(settings.askFilename);
+    // If the filename was already prompted/confirmed upfront (via popup modal or in-page modal),
+    // saveAs for chrome.downloads.download must be FALSE so the file writes directly to disk
+    // without interrupting the user or opening a duplicate file picker at the end!
+    const askFilename = skipSaveAsPrompt ? false : Boolean(settings.askFilename);
 
-    const sanitizedTitle = (item.title || 'video_completo')
+    const userTitle = (item.customTitle || item.title || 'video_completo');
+    const sanitizedTitle = userTitle
       .replace(/[/\\?%*:|"<>]/g, '_')
       .replace(/\s+/g, ' ')
       .trim()
@@ -1399,6 +1407,10 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
         if (chrome.runtime.lastError) {}
       });
 
+      if (effectiveReferer) {
+        await setDownloadRefererRules(item.selectedVariantUrl || item.url, effectiveReferer);
+      }
+
       hlsEngine.maxParallel = settings.maxThreads || 8;
       hlsEngine.startDownload({
         id: downloadId,
@@ -1421,6 +1433,8 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
             state.completedAt = Date.now();
             notifyDownloadComplete(item.title, `${sanitizedTitle}.${chosenFormat}`);
             setTimeout(() => activeDownloadsMap.delete(downloadId), 3000);
+          } else if (state.status === 'error' || state.status === 'cancelled') {
+            setTimeout(() => activeDownloadsMap.delete(downloadId), 5000);
           }
           activeDownloadsMap.set(downloadId, state);
           chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
@@ -1540,7 +1554,8 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
       item: message.item,
       referer: message.referer,
       downloadTabId: message.tabId || sender.tab?.id,
-      format: message.format
+      format: message.format,
+      skipSaveAsPrompt: Boolean(message.skipSaveAsPrompt)
     }, sendResponse);
     return true;
   }
@@ -1611,12 +1626,17 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
     }
 
     if (itemToDownload) {
+      if (message.customTitle) {
+        itemToDownload.title = message.customTitle;
+        itemToDownload.customTitle = message.customTitle;
+      }
       console.log('[XtremeGrbr] Starting download for stream:', itemToDownload.title, itemToDownload.url);
       handleStartDownload({
         item: itemToDownload,
         referer: sender.tab?.url || '',
         downloadTabId: targetTabId,
-        format: 'mp4'
+        format: 'mp4',
+        skipSaveAsPrompt: Boolean(message.skipSaveAsPrompt)
       }, (res) => {
         sendResponse({ success: true, title: itemToDownload.title, downloadId: res?.downloadId });
       });
@@ -2066,7 +2086,17 @@ async function fetchFallbackDownload(url, filename, referer, downloadId, saveAs,
         }
 
         const inPageRes = await new Promise((resolve) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              resolve(null);
+            }
+          }, 20000);
           chrome.tabs.sendMessage(tabId, { action: 'PAGE_FETCH_BUFFER', url }, (r) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
             if (chrome.runtime.lastError || !r || !r.success || !r.base64) {
               resolve(null);
             } else {

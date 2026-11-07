@@ -269,6 +269,25 @@
             }).catch(() => {});
           }
 
+          if (url.includes('/api/stream')) {
+            promise.then(res => {
+              try {
+                const clone = res.clone();
+                clone.json().then(data => {
+                  if (data && data.streaming_url && typeof data.streaming_url === 'string') {
+                    broadcastStreamData({
+                      url: data.streaming_url,
+                      type: data.streaming_url.includes('.m3u8') ? 'HLS' : 'MP4',
+                      quality: detectQualityFromUrl(data.streaming_url, 'Auto HD'),
+                      title: data.title || document.title,
+                      poster: data.thumbnail || null
+                    });
+                  }
+                }).catch(() => {});
+              } catch (err) {}
+            }).catch(() => {});
+          }
+
           if (url.includes('al_video.php')) {
             promise.then(res => {
               try {

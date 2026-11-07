@@ -1279,48 +1279,88 @@
 
     // In-Page Manifest Fetch (Runs with page's cookies, origin & headers -> Bypasses HTTP 412)
     if (request.action === 'PAGE_FETCH_TEXT') {
-      fetch(request.url, {
-        credentials: 'include',
-        headers: {
-          'Accept': '*/*',
-          ...(request.headers || {})
+      if (window.self !== window.top) return false;
+      (async () => {
+        const fetchTextWithMode = async (credentialsMode) => {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 8000);
+          try {
+            const resp = await fetch(request.url, {
+              credentials: credentialsMode,
+              headers: {
+                'Accept': '*/*',
+                ...(request.headers || {})
+              },
+              signal: controller.signal
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return await resp.text();
+          } finally {
+            clearTimeout(timer);
+          }
+        };
+
+        try {
+          let text;
+          try {
+            text = await fetchTextWithMode('include');
+          } catch (_) {
+            // Retry with 'omit' when cross-origin CDN returns Access-Control-Allow-Origin: *
+            text = await fetchTextWithMode('omit');
+          }
+          sendResponse({ success: true, text });
+        } catch (err) {
+          sendResponse({ success: false, error: err.message });
         }
-      })
-      .then(resp => {
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.text();
-      })
-      .then(text => sendResponse({ success: true, text }))
-      .catch(err => sendResponse({ success: false, error: err.message }));
+      })();
       return true;
     }
 
     // In-Page ArrayBuffer Segment Fetch
     if (request.action === 'PAGE_FETCH_BUFFER') {
-      fetch(request.url, {
-        credentials: 'include',
-        headers: {
-          'Accept': '*/*',
-          ...(request.headers || {})
+      if (window.self !== window.top) return false;
+      (async () => {
+        const fetchBufferWithMode = async (credentialsMode) => {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 18000);
+          try {
+            const resp = await fetch(request.url, {
+              credentials: credentialsMode,
+              headers: {
+                'Accept': '*/*',
+                ...(request.headers || {})
+              },
+              signal: controller.signal
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return await resp.arrayBuffer();
+          } finally {
+            clearTimeout(timer);
+          }
+        };
+
+        try {
+          let buffer;
+          try {
+            buffer = await fetchBufferWithMode('include');
+          } catch (_) {
+            // Retry with 'omit' when cross-origin CDN returns Access-Control-Allow-Origin: *
+            buffer = await fetchBufferWithMode('omit');
+          }
+          // Convert buffer to base64 safely without stack overflow for large files
+          const bytes = new Uint8Array(buffer);
+          const CHUNK_SIZE = 0x8000; // 32KB chunks
+          let binary = '';
+          for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+            const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+            binary += String.fromCharCode.apply(null, chunk);
+          }
+          const base64 = btoa(binary);
+          sendResponse({ success: true, base64, size: buffer.byteLength });
+        } catch (err) {
+          sendResponse({ success: false, error: err.message });
         }
-      })
-      .then(resp => {
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.arrayBuffer();
-      })
-      .then(buffer => {
-        // Convert buffer to base64 safely without stack overflow for large files
-        const bytes = new Uint8Array(buffer);
-        const CHUNK_SIZE = 0x8000; // 32KB chunks
-        let binary = '';
-        for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-          const chunk = bytes.subarray(i, i + CHUNK_SIZE);
-          binary += String.fromCharCode.apply(null, chunk);
-        }
-        const base64 = btoa(binary);
-        sendResponse({ success: true, base64, size: buffer.byteLength });
-      })
-      .catch(err => sendResponse({ success: false, error: err.message }));
+      })();
       return true;
     }
   });
@@ -1638,19 +1678,178 @@
     }
   }
 
+  function promptInPageFilename(defaultTitle, callback) {
+    const existing = document.getElementById('streamgrabber-filename-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'streamgrabber-filename-modal';
+    overlay.setAttribute('data-streamgrabber', 'true');
+    overlay.style.cssText = [
+      'position: fixed !important',
+      'top: 0 !important',
+      'left: 0 !important',
+      'width: 100vw !important',
+      'height: 100vh !important',
+      'background: rgba(0, 0, 0, 0.72) !important',
+      'backdrop-filter: blur(5px) !important',
+      '-webkit-backdrop-filter: blur(5px) !important',
+      'z-index: 2147483647 !important',
+      'display: flex !important',
+      'align-items: center !important',
+      'justify-content: center !important',
+      'box-sizing: border-box !important',
+      'margin: 0 !important',
+      'padding: 16px !important',
+      'opacity: 1 !important',
+      'pointer-events: auto !important'
+    ].join(';');
+
+    const card = document.createElement('div');
+    card.style.cssText = [
+      'background: #0f172a !important',
+      'border: 1px solid #334155 !important',
+      'border-radius: 12px !important',
+      'box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important',
+      'padding: 22px 24px !important',
+      'width: 440px !important',
+      'max-width: 92vw !important',
+      'box-sizing: border-box !important',
+      'color: #f8fafc !important',
+      'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important',
+      'text-align: left !important'
+    ].join(';');
+
+    card.innerHTML = `
+      <div style="display: flex !important; align-items: center !important; justify-content: space-between !important; margin-bottom: 8px !important;">
+        <div style="display: flex !important; align-items: center !important; gap: 8px !important; font-size: 16px !important; font-weight: 700 !important; color: #f8fafc !important;">
+          <span style="font-size: 18px !important; line-height: 1 !important;">💾</span>
+          <span>Save Video As</span>
+        </div>
+        <button type="button" class="xg-modal-close" style="background: none !important; border: none !important; color: #94a3b8 !important; font-size: 18px !important; cursor: pointer !important; padding: 4px !important; line-height: 1 !important; border-radius: 4px !important;">✕</button>
+      </div>
+      <div style="font-size: 13px !important; color: #94a3b8 !important; margin-bottom: 14px !important; line-height: 1.4 !important;">
+        Choose a file name for this video before download begins:
+      </div>
+      <input type="text" class="xg-filename-input" style="width: 100% !important; box-sizing: border-box !important; background: #1e293b !important; border: 1.5px solid #475569 !important; border-radius: 8px !important; padding: 10px 14px !important; font-size: 14px !important; color: #ffffff !important; outline: none !important; margin-bottom: 18px !important; font-family: inherit !important;" />
+      <div style="display: flex !important; justify-content: flex-end !important; gap: 10px !important;">
+        <button type="button" class="xg-btn-cancel" style="background: #334155 !important; color: #cbd5e1 !important; border: none !important; border-radius: 8px !important; padding: 8px 16px !important; font-size: 13px !important; font-weight: 600 !important; cursor: pointer !important;">Cancel</button>
+        <button type="button" class="xg-btn-download" style="background: #0284c7 !important; color: #ffffff !important; border: none !important; border-radius: 8px !important; padding: 8px 20px !important; font-size: 13px !important; font-weight: 700 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3) !important;">⬇️ Download</button>
+      </div>
+    `;
+
+    overlay.appendChild(card);
+    const targetRoot = document.fullscreenElement || document.body || document.documentElement;
+    targetRoot.appendChild(overlay);
+
+    const input = card.querySelector('.xg-filename-input');
+    const btnCancel = card.querySelector('.xg-btn-cancel');
+    const btnDownload = card.querySelector('.xg-btn-download');
+    const btnClose = card.querySelector('.xg-modal-close');
+
+    input.value = defaultTitle || 'video';
+
+    setTimeout(() => {
+      try {
+        input.focus();
+        input.select();
+      } catch (_) {}
+    }, 50);
+
+    const cleanup = () => {
+      overlay.remove();
+    };
+
+    let resolved = false;
+    const confirm = () => {
+      if (resolved) return;
+      resolved = true;
+      const cleanVal = input.value.trim().replace(/[/\\?%*:|"<>]/g, '_') || defaultTitle || 'video';
+      cleanup();
+      callback(cleanVal);
+    };
+
+    const cancel = () => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      callback(null);
+    };
+
+    btnDownload.addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirm();
+    });
+
+    btnCancel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cancel();
+    });
+
+    btnClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cancel();
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        cancel();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirm();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancel();
+      }
+    });
+
+    input.addEventListener('focus', () => {
+      input.style.borderColor = '#0284c7';
+      input.style.boxShadow = '0 0 0 3px rgba(2, 132, 199, 0.25)';
+    });
+    input.addEventListener('blur', () => {
+      input.style.borderColor = '#475569';
+      input.style.boxShadow = 'none';
+    });
+  }
+
   function handleFloatingDownload() {
     if (!floatingBtn) return;
     const textEl = floatingBtn.querySelector('.streamgrabber-btn-text');
     const originalText = 'Download';
     const video = activeVideo || findMostVisibleVideo();
 
-    if (textEl) textEl.textContent = '⏳ Starting...';
-    floatingBtn.style.background = '#0284c7';
-
     const videoSrc = video ? (video.currentSrc || video.src || '') : '';
     const streamCandidate = latestDetectedStream;
 
-    console.log('[XtremeGrbr] handleFloatingDownload clicked:', {
+    let candidateTitle = (streamCandidate && streamCandidate.title) || getPageTitle() || 'video';
+    candidateTitle = candidateTitle.replace(/[/\\?%*:|"<>]/g, '_').trim();
+
+    chrome.storage.sync.get({ askFilename: false }, (settings) => {
+      const ask = settings && settings.askFilename;
+      if (ask) {
+        promptInPageFilename(candidateTitle, (chosenTitle) => {
+          if (!chosenTitle) return; // User cancelled
+          doStartFloatingDownload(chosenTitle, videoSrc, streamCandidate, textEl, originalText, true);
+        });
+      } else {
+        doStartFloatingDownload(candidateTitle, videoSrc, streamCandidate, textEl, originalText, false);
+      }
+    });
+  }
+
+  function doStartFloatingDownload(title, videoSrc, streamCandidate, textEl, originalText, skipSaveAsPrompt) {
+    if (!floatingBtn) return;
+    if (textEl) textEl.textContent = '⏳ Starting...';
+    floatingBtn.style.background = '#0284c7';
+
+    console.log('[XtremeGrbr] handleFloatingDownload starting with title:', {
+      title,
       videoSrc,
       streamCandidate,
       location: window.location.href
@@ -1660,7 +1859,9 @@
       action: 'START_FLOATING_DOWNLOAD',
       videoSrc: videoSrc,
       streamUrl: streamCandidate ? streamCandidate.url : null,
-      fallbackItem: streamCandidate || null
+      fallbackItem: streamCandidate || null,
+      customTitle: title,
+      skipSaveAsPrompt: skipSaveAsPrompt
     }, (response) => {
       console.log('[XtremeGrbr] START_FLOATING_DOWNLOAD response:', response);
       if (chrome.runtime.lastError || !response || !response.success) {

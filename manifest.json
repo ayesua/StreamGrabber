@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Video Downloader - XtremeGrbr",
-  "version": "3.5.11",
+  "version": "3.5.12",
   "description": "Conveniently detect and save online videos with built-in player preview, seeking controls, and custom quality options.",
   "permissions": [
     "storage",

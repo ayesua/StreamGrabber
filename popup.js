@@ -206,7 +206,7 @@ function toggleSiteExclusion(forcedDomain = null) {
 document.addEventListener('DOMContentLoaded', async () => {
   // 0. Initialize Internationalization (i18n) & Theme
   try {
-    const ver = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.11';
+    const ver = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.12';
     const verEl = document.querySelector('.version-label');
     if (verEl) verEl.textContent = `v${ver}`;
   } catch (_) {}
@@ -1193,18 +1193,19 @@ function triggerDownload(item, format = 'mp4', selectedVariantUrl = null) {
           // User clicked Cancel in the modal
           return;
         }
-        executeDownload(updatedItem, chosenTitle, format);
+        executeDownload(updatedItem, chosenTitle, format, true);
       });
     } else {
-      executeDownload(updatedItem, finalTitle, format);
+      executeDownload(updatedItem, finalTitle, format, false);
     }
   });
 }
 
-function executeDownload(item, title, format) {
+function executeDownload(item, title, format, skipSaveAsPrompt = false) {
   const updatedItem = {
     ...item,
-    title
+    title,
+    customTitle: title
   };
 
   const downloadId = 'dl_' + Date.now();
@@ -1227,7 +1228,8 @@ function executeDownload(item, title, format) {
     item: updatedItem,
     format,
     tabId: currentTabId,
-    referer: currentTabUrl
+    referer: currentTabUrl,
+    skipSaveAsPrompt: Boolean(skipSaveAsPrompt)
   }, (response) => {
     if (chrome.runtime.lastError) return;
     if (response && response.success) {
@@ -1261,7 +1263,14 @@ function renderActiveDownloads(downloads) {
   container.style.display = 'block';
   list.innerHTML = activeOnly.map(dl => {
     const isComplete = dl.status === 'complete' || (dl.progress >= 100 && dl.status !== 'downloading');
-    const isConnecting = !isComplete && (dl.status === 'connecting' || dl.status === 'starting' || (dl.progress <= 1 && (!dl.speedBps || dl.speedBps === 0)));
+    const isError = dl.status === 'error';
+    const isCancelled = dl.status === 'cancelled';
+    const isConnecting = !isComplete && !isError && !isCancelled && (
+      dl.status === 'connecting' ||
+      dl.status === 'starting' ||
+      dl.status === 'analyzing' ||
+      (dl.progress <= 1 && (!dl.speedBps || dl.speedBps === 0) && !dl.totalSegments)
+    );
     return `
       <div class="download-item" id="dl_${dl.id}">
         <div class="download-item-header">
@@ -1272,21 +1281,25 @@ function renderActiveDownloads(downloads) {
           }
         </div>
         <div class="progress-bar-bg">
-          <div class="progress-bar-fill ${isConnecting ? 'is-connecting' : ''}" style="width: ${isConnecting ? 10 : (dl.progress || 0)}%; ${isComplete ? 'background: var(--vdh-green);' : ''}"></div>
+          <div class="progress-bar-fill ${isConnecting ? 'is-connecting' : ''}" style="width: ${isConnecting ? 10 : (dl.progress || 0)}%; ${isComplete ? 'background: var(--vdh-green);' : isError ? 'background: var(--vdh-red);' : ''}"></div>
         </div>
         <div class="download-meta">
           ${isComplete
             ? `<span style="color: var(--vdh-green); font-weight: 700;">Download complete! (100% • ${formatBytes(dl.downloadedBytes)})</span>`
-            : isConnecting
-              ? `<span>⏳ ${typeof t === 'function' ? t('connectingStream', currentLang) : 'Connecting to stream...'}</span><span>⚡ ${typeof t === 'function' ? t('startingDownload', currentLang) : 'Starting...'}</span>`
-              : `<span>${dl.progress || 0}% (${formatBytes(dl.downloadedBytes)})</span><span>⚡ ${formatSpeed(dl.speedBps)}</span>`
+            : isError
+              ? `<span style="color: var(--vdh-red);">Error: ${escapeHtml(dl.error || 'Download failed')}</span>`
+              : isCancelled
+                ? `<span style="color: var(--vdh-text-muted);">Download cancelled</span>`
+                : isConnecting
+                  ? `<span>⏳ ${typeof t === 'function' ? t('connectingStream', currentLang) : 'Connecting to stream...'}</span><span>⚡ ${typeof t === 'function' ? t('startingDownload', currentLang) : 'Starting...'}</span>`
+                  : `<span>${dl.progress || 0}% (${formatBytes(dl.downloadedBytes)})</span><span>⚡ ${formatSpeed(dl.speedBps)}</span>`
           }
         </div>
       </div>
     `;
   }).join('');
 
-  // Auto-remove completed items after 2.5 seconds
+  // Auto-remove completed or failed items after a delay
   activeOnly.forEach(dl => {
     if (dl.status === 'complete' || (dl.progress >= 100 && dl.status !== 'downloading')) {
       setTimeout(() => {
@@ -1294,6 +1307,12 @@ function renderActiveDownloads(downloads) {
         if (itemEl) itemEl.remove();
         if (list.children.length === 0) container.style.display = 'none';
       }, 2500);
+    } else if (dl.status === 'error' || dl.status === 'cancelled') {
+      setTimeout(() => {
+        const itemEl = document.getElementById(`dl_${dl.id}`);
+        if (itemEl) itemEl.remove();
+        if (list.children.length === 0) container.style.display = 'none';
+      }, 5000);
     }
   });
 
@@ -1356,7 +1375,15 @@ function updateActiveDownloadUI(state) {
 
   const fill = el.querySelector('.progress-bar-fill');
   const meta = el.querySelector('.download-meta');
-  const isConnecting = (state.status === 'connecting' || state.status === 'starting' || (state.progress <= 1 && (!state.speedBps || state.speedBps === 0)));
+  const isError = state.status === 'error';
+  const isCancelled = state.status === 'cancelled';
+  const isComplete = state.status === 'complete';
+  const isConnecting = !isComplete && !isError && !isCancelled && (
+    state.status === 'connecting' ||
+    state.status === 'starting' ||
+    state.status === 'analyzing' ||
+    (state.progress <= 1 && (!state.speedBps || state.speedBps === 0) && !state.totalSegments)
+  );
 
   if (fill) {
     if (isConnecting) {
@@ -1365,6 +1392,7 @@ function updateActiveDownloadUI(state) {
     } else {
       fill.classList.remove('is-connecting');
       fill.style.width = `${state.progress || 0}%`;
+      if (isError) fill.style.background = 'var(--vdh-red)';
     }
   }
 
