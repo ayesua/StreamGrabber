@@ -214,6 +214,7 @@
     if (origFetch) {
       window.fetch = function (input, init) {
         const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+        if (url && typeof url === 'string') {
           if (url.includes('vast.yomeno.xyz')) {
             if (url.includes('/vast') || url.includes('.xml')) {
               return Promise.resolve(new Response(EMPTY_VAST_XML, {
@@ -631,14 +632,24 @@
 
   function hookJWPlayerGlobal(jwFn) {
     if (typeof jwFn !== 'function') return jwFn;
-    const wrapped = function () {
-      const player = jwFn.apply(this, arguments);
-      return wrapJWPlayerInstance(player);
-    };
-    for (const k in jwFn) {
-      try { wrapped[k] = jwFn[k]; } catch (e) {}
+    if (jwFn.__xg_proxy__) return jwFn;
+    try {
+      return new Proxy(jwFn, {
+        apply(target, thisArg, args) {
+          const player = Reflect.apply(target, thisArg, args);
+          return wrapJWPlayerInstance(player);
+        },
+        get(target, prop, receiver) {
+          if (prop === '__xg_proxy__') return true;
+          return Reflect.get(target, prop, receiver);
+        },
+        set(target, prop, val, receiver) {
+          return Reflect.set(target, prop, val, target);
+        }
+      });
+    } catch (_) {
+      return jwFn;
     }
-    return wrapped;
   }
 
   let _jwplayer = window.jwplayer;
