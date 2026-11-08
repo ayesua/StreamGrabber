@@ -1818,65 +1818,286 @@
     });
   }
 
+  function formatBytesShort(bytes) {
+    if (!bytes || isNaN(bytes)) return '';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function formatSpeedShort(bps) {
+    if (!bps || isNaN(bps) || bps <= 0) return '';
+    if (bps < 1024 * 1024) return (bps / 1024).toFixed(0) + ' KB/s';
+    return (bps / (1024 * 1024)).toFixed(1) + ' MB/s';
+  }
+
+  function escapeHtmlStr(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  let inPageToastEl = null;
+
+  function showInPageToast(state) {
+    if (!isExtensionEnabled) return;
+
+    if (!inPageToastEl) {
+      const toast = document.createElement('div');
+      toast.id = 'streamgrabber-inpage-toast';
+      toast.setAttribute('data-streamgrabber', 'true');
+      toast.style.cssText = [
+        'position: fixed !important',
+        'bottom: 24px !important',
+        'right: 24px !important',
+        'width: 320px !important',
+        'max-width: calc(100vw - 48px) !important',
+        'background: #0f172a !important',
+        'border: 1px solid #334155 !important',
+        'border-radius: 12px !important',
+        'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important',
+        'padding: 14px 16px !important',
+        'z-index: 2147483647 !important',
+        'box-sizing: border-box !important',
+        'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important',
+        'color: #f8fafc !important',
+        'transition: opacity 0.3s, transform 0.3s !important',
+        'opacity: 1 !important',
+        'transform: translateY(0) !important',
+        'pointer-events: auto !important'
+      ].join(';');
+
+      const targetRoot = document.fullscreenElement || document.body || document.documentElement;
+      targetRoot.appendChild(toast);
+      inPageToastEl = toast;
+    }
+
+    const isComplete = state.status === 'complete';
+    const isError = state.status === 'error';
+    const isConnecting = state.status === 'connecting' || state.status === 'starting' || state.status === 'analyzing';
+    const pct = Math.max(0, Math.min(100, Math.round(state.progress || 0)));
+
+    let statusText = `${pct}%`;
+    if (state.downloadedBytes) statusText += ` (${formatBytesShort(state.downloadedBytes)})`;
+    let speedText = state.speedBps ? `⚡ ${formatSpeedShort(state.speedBps)}` : (isConnecting ? '⏳ Connecting...' : '');
+
+    let headerIcon = '⬇️';
+    let headerTitle = 'Downloading Video...';
+    let barColor = '#0284c7';
+
+    if (isComplete) {
+      headerIcon = '✅';
+      headerTitle = 'Download Complete!';
+      barColor = '#16a34a';
+      statusText = 'Saved to Downloads folder';
+      speedText = '100%';
+    } else if (isError) {
+      headerIcon = '⚠️';
+      headerTitle = 'Download Error';
+      barColor = '#e11d48';
+      statusText = state.error || 'Failed to download stream';
+      speedText = '';
+    }
+
+    inPageToastEl.innerHTML = `
+      <div style="display: flex !important; align-items: center !important; justify-content: space-between !important; margin-bottom: 4px !important;">
+        <div style="display: flex !important; align-items: center !important; gap: 6px !important; font-size: 13px !important; font-weight: 700 !important; color: ${isError ? '#f87171' : isComplete ? '#4ade80' : '#f8fafc'} !important;">
+          <span>${headerIcon}</span>
+          <span>${headerTitle}</span>
+        </div>
+        <button type="button" class="xg-toast-close" style="background: none !important; border: none !important; color: #94a3b8 !important; font-size: 16px !important; cursor: pointer !important; padding: 2px 4px !important; line-height: 1 !important;">✕</button>
+      </div>
+      <div style="font-size: 11px !important; color: #94a3b8 !important; margin-bottom: 8px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important;" title="${escapeHtmlStr(state.title || 'Video')}">
+        ${escapeHtmlStr(state.title || 'Video')}
+      </div>
+      <div style="width: 100% !important; height: 5px !important; background: #334155 !important; border-radius: 3px !important; overflow: hidden !important;">
+        <div style="width: ${isComplete ? 100 : (isConnecting && pct === 0 ? 15 : pct)}% !important; height: 100% !important; background: ${barColor} !important; transition: width 0.3s ease !important;"></div>
+      </div>
+      <div style="display: flex !important; justify-content: space-between !important; font-size: 11px !important; color: #cbd5e1 !important; margin-top: 5px !important;">
+        <span>${statusText}</span>
+        <span>${speedText}</span>
+      </div>
+    `;
+
+    const btnClose = inPageToastEl.querySelector('.xg-toast-close');
+    if (btnClose) {
+      btnClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (inPageToastEl) {
+          inPageToastEl.remove();
+          inPageToastEl = null;
+        }
+      });
+    }
+
+    if (isComplete || isError) {
+      setTimeout(() => {
+        if (inPageToastEl) {
+          inPageToastEl.style.opacity = '0';
+          inPageToastEl.style.transform = 'translateY(10px)';
+          setTimeout(() => {
+            if (inPageToastEl) {
+              inPageToastEl.remove();
+              inPageToastEl = null;
+            }
+          }, 300);
+        }
+      }, 4500);
+    }
+  }
+
+  // Real-time listener for download progress and completion from background!
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === 'DOWNLOAD_PROGRESS' || message.action === 'DOWNLOAD_STATUS') {
+      const state = message.state;
+      if (!state) return;
+
+      // 1. Update in-page floating toast
+      showInPageToast(state);
+
+      // 2. Update floating download button on the video player in real-time
+      if (floatingBtn) {
+        const textEl = floatingBtn.querySelector('.streamgrabber-btn-text');
+        if (textEl) {
+          if (state.status === 'downloading') {
+            textEl.textContent = `⏳ ${state.progress || 0}%`;
+            floatingBtn.style.background = '#0284c7';
+          } else if (state.status === 'complete') {
+            textEl.textContent = '✅ Downloaded!';
+            floatingBtn.style.background = '#16a34a';
+            setTimeout(() => {
+              textEl.textContent = 'Download';
+              floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
+            }, 3500);
+          } else if (state.status === 'error') {
+            textEl.textContent = '⚠️ Failed';
+            floatingBtn.style.background = '#e11d48';
+            setTimeout(() => {
+              textEl.textContent = 'Download';
+              floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
+            }, 4000);
+          }
+        }
+      }
+    }
+  });
+
   function handleFloatingDownload() {
     if (!floatingBtn) return;
     const textEl = floatingBtn.querySelector('.streamgrabber-btn-text');
     const originalText = 'Download';
-    const video = activeVideo || findMostVisibleVideo();
 
-    const videoSrc = video ? (video.currentSrc || video.src || '') : '';
-    const streamCandidate = latestDetectedStream;
+    if (textEl) textEl.textContent = '⏳ Analyzing...';
+    floatingBtn.style.background = '#0284c7';
 
-    let candidateTitle = (streamCandidate && streamCandidate.title) || getPageTitle() || 'video';
-    candidateTitle = candidateTitle.replace(/[/\\?%*:|"<>]/g, '_').trim();
-
-    chrome.storage.sync.get({ askFilename: false }, (settings) => {
-      const ask = settings && settings.askFilename;
-      if (ask) {
-        promptInPageFilename(candidateTitle, (chosenTitle) => {
-          if (!chosenTitle) return; // User cancelled
-          doStartFloatingDownload(chosenTitle, videoSrc, streamCandidate, textEl, originalText, true);
-        });
-      } else {
-        doStartFloatingDownload(candidateTitle, videoSrc, streamCandidate, textEl, originalText, false);
+    // Query exact media items from background store (identical to popup widget!)
+    chrome.runtime.sendMessage({ action: 'GET_TAB_MEDIA' }, (res) => {
+      let candidate = null;
+      if (res && res.mediaList && res.mediaList.length > 0) {
+        candidate = res.mediaList[0];
       }
+      if (!candidate && latestDetectedStream) {
+        candidate = latestDetectedStream;
+      }
+
+      const video = activeVideo || findMostVisibleVideo();
+      const videoSrc = video ? (video.currentSrc || video.src || '') : '';
+
+      if (!candidate && !videoSrc) {
+        if (textEl) textEl.textContent = '⚠️ Play video 1st';
+        floatingBtn.style.background = '#e11d48';
+        setTimeout(() => {
+          if (textEl) textEl.textContent = originalText;
+          floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
+        }, 2500);
+        return;
+      }
+
+      let candidateTitle = (candidate && candidate.title) || getPageTitle() || 'video';
+      candidateTitle = candidateTitle.replace(/[/\\?%*:|"<>]/g, '_').trim();
+
+      chrome.storage.sync.get({ askFilename: false }, (settings) => {
+        const ask = settings && settings.askFilename;
+        if (ask) {
+          promptInPageFilename(candidateTitle, (chosenTitle) => {
+            if (!chosenTitle) {
+              if (textEl) textEl.textContent = originalText;
+              floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
+              return;
+            }
+            startDownloadProcess(chosenTitle, videoSrc, candidate, textEl, originalText, true);
+          });
+        } else {
+          startDownloadProcess(candidateTitle, videoSrc, candidate, textEl, originalText, false);
+        }
+      });
     });
   }
 
-  function doStartFloatingDownload(title, videoSrc, streamCandidate, textEl, originalText, skipSaveAsPrompt) {
-    if (!floatingBtn) return;
-    if (textEl) textEl.textContent = '⏳ Starting...';
+  function startDownloadProcess(title, videoSrc, candidate, textEl, originalText, skipSaveAsPrompt) {
+    if (textEl) textEl.textContent = '⏳ Connecting...';
     floatingBtn.style.background = '#0284c7';
 
-    console.log('[XtremeGrbr] handleFloatingDownload starting with title:', {
-      title,
-      videoSrc,
-      streamCandidate,
-      location: window.location.href
+    // Show initial in-page toast immediately for instant user feedback!
+    showInPageToast({
+      title: title,
+      progress: 1,
+      status: 'connecting',
+      speedBps: 0,
+      downloadedBytes: 0
     });
 
-    chrome.runtime.sendMessage({
-      action: 'START_FLOATING_DOWNLOAD',
-      videoSrc: videoSrc,
-      streamUrl: streamCandidate ? streamCandidate.url : null,
-      fallbackItem: streamCandidate || null,
-      customTitle: title,
-      skipSaveAsPrompt: skipSaveAsPrompt
-    }, (response) => {
-      console.log('[XtremeGrbr] START_FLOATING_DOWNLOAD response:', response);
-      if (chrome.runtime.lastError || !response || !response.success) {
-        if (textEl) textEl.textContent = '⚠️ Play video 1st';
-        floatingBtn.style.background = '#e11d48';
-      } else {
-        if (textEl) textEl.textContent = '✅ Downloading!';
-        floatingBtn.style.background = '#16a34a';
-      }
+    if (candidate && candidate.url) {
+      const updatedItem = {
+        ...candidate,
+        title: title,
+        customTitle: title
+      };
 
-      setTimeout(() => {
-        if (textEl) textEl.textContent = originalText;
-        floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
-      }, 2500);
-    });
+      chrome.runtime.sendMessage({
+        action: 'START_DOWNLOAD',
+        downloadId: 'dl_' + Date.now(),
+        item: updatedItem,
+        format: 'mp4',
+        referer: window.location.href,
+        skipSaveAsPrompt: skipSaveAsPrompt
+      }, (response) => {
+        if (chrome.runtime.lastError || !response || !response.success) {
+          if (textEl) textEl.textContent = '⚠️ Failed';
+          floatingBtn.style.background = '#e11d48';
+          showInPageToast({
+            title: title,
+            status: 'error',
+            error: response?.error || 'Failed to start download'
+          });
+          setTimeout(() => {
+            if (textEl) textEl.textContent = originalText;
+            floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
+          }, 3500);
+        }
+      });
+    } else {
+      chrome.runtime.sendMessage({
+        action: 'START_FLOATING_DOWNLOAD',
+        videoSrc: videoSrc,
+        streamUrl: candidate ? candidate.url : null,
+        fallbackItem: candidate || null,
+        customTitle: title,
+        skipSaveAsPrompt: skipSaveAsPrompt
+      }, (response) => {
+        if (chrome.runtime.lastError || !response || !response.success) {
+          if (textEl) textEl.textContent = '⚠️ Play video 1st';
+          floatingBtn.style.background = '#e11d48';
+          showInPageToast({
+            title: title,
+            status: 'error',
+            error: 'No video stream detected yet. Try playing the video.'
+          });
+          setTimeout(() => {
+            if (textEl) textEl.textContent = originalText;
+            floatingBtn.style.background = 'rgba(15, 23, 42, 0.94)';
+          }, 3500);
+        }
+      });
+    }
   }
 
   function initFloatingButton() {

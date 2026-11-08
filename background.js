@@ -877,6 +877,51 @@ async function resolveVkVideo(vkData, tabId) {
   }
 }
 
+function broadcastDownloadProgress(tabId, state) {
+  // 1. Broadcast to popup UI
+  chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state }, () => {
+    if (chrome.runtime.lastError) {}
+  });
+
+  // 2. Broadcast to active tab content script
+  if (tabId && tabId > 0) {
+    chrome.tabs.sendMessage(tabId, { action: 'DOWNLOAD_PROGRESS', state }, () => {
+      if (chrome.runtime.lastError) {}
+    });
+
+    // 3. Update extension toolbar badge with live percentage
+    if (state.status === 'downloading' || state.status === 'starting' || state.status === 'analyzing') {
+      const pct = Math.max(1, Math.min(99, Math.round(state.progress || 1)));
+      chrome.action.setBadgeText({ tabId, text: `${pct}%` });
+      chrome.action.setBadgeBackgroundColor({ tabId, color: '#0284c7' });
+    }
+  }
+}
+
+function broadcastDownloadStatus(tabId, state) {
+  // 1. Broadcast to popup UI
+  chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
+    if (chrome.runtime.lastError) {}
+  });
+
+  // 2. Broadcast to active tab content script
+  if (tabId && tabId > 0) {
+    chrome.tabs.sendMessage(tabId, { action: 'DOWNLOAD_STATUS', state }, () => {
+      if (chrome.runtime.lastError) {}
+    });
+
+    if (state.status === 'complete') {
+      chrome.action.setBadgeText({ tabId, text: '✓' });
+      chrome.action.setBadgeBackgroundColor({ tabId, color: '#16a34a' });
+      setTimeout(() => updateBadge(tabId), 4000);
+    } else if (state.status === 'error' || state.status === 'cancelled') {
+      chrome.action.setBadgeText({ tabId, text: '!' });
+      chrome.action.setBadgeBackgroundColor({ tabId, color: '#e11d48' });
+      setTimeout(() => updateBadge(tabId), 5000);
+    }
+  }
+}
+
 function updateBadge(tabId) {
   if (!tabId || tabId < 0) return;
   if (!isExtensionGloballyEnabled) {
@@ -1227,7 +1272,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'GET_TAB_MEDIA') {
-    const tabUrl = tabUrls.get(message.tabId);
+    const targetTabId = message.tabId || sender.tab?.id;
+    const tabUrl = targetTabId ? tabUrls.get(targetTabId) : '';
     if (tabUrl && isSiteExcluded(tabUrl)) {
       sendResponse({
         mediaList: [],
@@ -1239,16 +1285,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
       return true;
     }
-    const tabStore = tabMediaStore.get(message.tabId);
+    const tabStore = targetTabId ? tabMediaStore.get(targetTabId) : null;
     let mediaList = tabStore ? Array.from(tabStore.values()) : [];
 
     // 1. Resolve authentic title: from tabTitles or from any DOM-detected item that has a good title
-    let knownTitle = tabTitles.get(message.tabId);
+    let knownTitle = targetTabId ? tabTitles.get(targetTabId) : '';
     if (!knownTitle || isGenericOrTechnicalTitle(knownTitle)) {
       const goodItem = mediaList.find(m => m.title && !isGenericOrTechnicalTitle(m.title));
       if (goodItem) {
         knownTitle = goodItem.title;
-        tabTitles.set(message.tabId, knownTitle);
+        if (targetTabId) tabTitles.set(targetTabId, knownTitle);
       }
     }
 
@@ -1286,9 +1332,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return list;
     }
 
-    if (message.tabId) {
+    if (targetTabId) {
       // 1. Check if we already have an authentic video poster
-      const existingPoster = tabPosters.get(message.tabId) || mediaList.find(m => m.poster)?.poster;
+      const existingPoster = tabPosters.get(targetTabId) || mediaList.find(m => m.poster)?.poster;
 
       if (existingPoster && (existingPoster.startsWith('http') || existingPoster.startsWith('data:image'))) {
         mediaList.forEach(m => {
@@ -1299,7 +1345,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       // 2. Only if no poster exists, crop video rect from screenshot
-      chrome.tabs.sendMessage(message.tabId, { action: 'GET_VIDEO_CROP_RECT' }, (rectRes) => {
+      chrome.tabs.sendMessage(targetTabId, { action: 'GET_VIDEO_CROP_RECT' }, (rectRes) => {
         if (chrome.runtime.lastError) {
           // Tab does not have content script (or is protected) -> return mediaList cleanly
           sendResponse({ mediaList, activeDownloads: getSanitizedActiveDownloads() });
@@ -1403,9 +1449,7 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
         downloadedBytes: 0
       };
       activeDownloadsMap.set(downloadId, initialState);
-      chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state: initialState }, () => {
-        if (chrome.runtime.lastError) {}
-      });
+      broadcastDownloadProgress(downloadTabId, initialState);
 
       if (effectiveReferer) {
         await setDownloadRefererRules(item.selectedVariantUrl || item.url, effectiveReferer);
@@ -1424,9 +1468,7 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
         rotation: item.rotation || 0,
         onProgress: (state) => {
           activeDownloadsMap.set(downloadId, state);
-          chrome.runtime.sendMessage({ action: 'DOWNLOAD_PROGRESS', state }, () => {
-            if (chrome.runtime.lastError) {}
-          });
+          broadcastDownloadProgress(downloadTabId, state);
         },
         onStatusChange: (state) => {
           if (state.status === 'complete') {
@@ -1437,12 +1479,18 @@ function handleStartDownload({ item, referer, downloadTabId, format, downloadId:
             setTimeout(() => activeDownloadsMap.delete(downloadId), 5000);
           }
           activeDownloadsMap.set(downloadId, state);
-          chrome.runtime.sendMessage({ action: 'DOWNLOAD_STATUS', state }, () => {
-            if (chrome.runtime.lastError) {}
-          });
+          broadcastDownloadStatus(downloadTabId, state);
         }
       }).catch(err => {
         console.error('HLS Download Error:', err);
+        const errState = {
+          id: downloadId,
+          title: item.title || sanitizedTitle,
+          status: 'error',
+          error: err.message || 'Stream download failed'
+        };
+        activeDownloadsMap.set(downloadId, errState);
+        broadcastDownloadStatus(downloadTabId, errState);
       });
     } else {
       // Direct Media File Downloader with intact URL (avoids HTTP 404 from signature invalidation)
@@ -1574,28 +1622,29 @@ async function startRotatedDirectDownload(url, filename, referer, downloadId, sa
     });
 
     if (tabStore && tabStore.size > 0) {
+      // Sort candidates identically to GET_TAB_MEDIA
+      const candidates = Array.from(tabStore.values()).filter(i => !isAdOrAnnounceUrl(i.url) && !i.url.startsWith('blob:'));
+      candidates.sort((a, b) => {
+        if (a.type === 'HLS' && b.type !== 'HLS') return -1;
+        if (b.type === 'HLS' && a.type !== 'HLS') return 1;
+        const aIsHD = (a.quality || '').includes('1080') || (a.quality || '').includes('720') || (a.quality || '').includes('HD');
+        const bIsHD = (b.quality || '').includes('1080') || (b.quality || '').includes('720') || (b.quality || '').includes('HD');
+        if (aIsHD && !bIsHD) return -1;
+        if (bIsHD && !aIsHD) return 1;
+        return (b.size || 0) - (a.size || 0);
+      });
+
       // 1. Try matching explicit streamUrl passed from content script
       if (message.streamUrl && !message.streamUrl.startsWith('blob:') && !isAdOrAnnounceUrl(message.streamUrl)) {
-        for (const item of tabStore.values()) {
-          if (item.url === message.streamUrl) {
-            itemToDownload = item;
-            break;
-          }
-        }
+        itemToDownload = candidates.find(i => i.url === message.streamUrl);
       }
       // 2. Try matching exact videoSrc if provided and not a blob or ad URL
       if (!itemToDownload && message.videoSrc && !message.videoSrc.startsWith('blob:') && !isAdOrAnnounceUrl(message.videoSrc)) {
-        for (const item of tabStore.values()) {
-          if (item.url === message.videoSrc) {
-            itemToDownload = item;
-            break;
-          }
-        }
+        itemToDownload = candidates.find(i => i.url === message.videoSrc);
       }
-      // 3. Prioritize HLS (.m3u8) streams or largest non-ad, non-blob video in the tab store
-      if (!itemToDownload) {
-        const items = Array.from(tabStore.values()).filter(i => !isAdOrAnnounceUrl(i.url) && !i.url.startsWith('blob:'));
-        itemToDownload = items.find(i => i.type === 'HLS') || items.sort((a, b) => (b.size || 0) - (a.size || 0))[0] || items[0];
+      // 3. Prioritize top candidate from tabStore (same as widget!)
+      if (!itemToDownload && candidates.length > 0) {
+        itemToDownload = candidates[0];
       }
     }
 
