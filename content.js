@@ -185,6 +185,12 @@
         }
       }));
 
+      // Immediately remove any visible toast if user disabled Popup Blocked Toast Notifications
+      if (!settings.showToastNotifications && toastContainer) {
+        toastContainer.remove();
+        toastContainer = null;
+      }
+
       // Apply custom cosmetic hiding rules
       if (!isWhitelisted) {
         applyCustomCosmeticRules(data.customCosmeticRules || {});
@@ -342,10 +348,7 @@
             e.stopImmediatePropagation();
             console.warn('[XtremeShld] Defused media click-jacking overlay link:', href);
             try { target.remove(); } catch (_) {}
-            safeSendMessage({
-              action: 'recordBlockedEvent',
-              data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
-            });
+            recordBlockedEventThrottled('popup', href);
             if (settings.showToastNotifications && !isWhitelisted && settings.blockPopups) {
               showBlockedPopupToast(href);
             }
@@ -363,10 +366,7 @@
             e.stopPropagation();
             e.stopImmediatePropagation();
             console.warn('[XtremeShld] Intercepted malicious ad / search hijack link click:', href);
-            safeSendMessage({
-              action: 'recordBlockedEvent',
-              data: { type: 'popup', url: href, domain: hostname, timestamp: Date.now() }
-            });
+            recordBlockedEventThrottled('popup', href);
             if (settings.showToastNotifications && !isWhitelisted && settings.blockPopups) {
               showBlockedPopupToast(href);
             }
@@ -379,13 +379,17 @@
   });
 
   /* ==========================================================================
-     4. TELEMETRY EVENT LISTENER
+     4. TELEMETRY EVENT LISTENER (Deduplicated against Rapid-Fire Loops)
      ========================================================================== */
-  window.addEventListener('pureshield-event', (e) => {
-    if (!e.detail || isWhitelisted) return;
+  const recentTelemetryMap = new Map();
 
-    const { type, url } = e.detail;
-    if (type === 'popup' && !settings.blockPopups) return;
+  function recordBlockedEventThrottled(type, url) {
+    const key = `${type}:${getPopupToastKey(url)}`;
+    const now = Date.now();
+    const lastTime = recentTelemetryMap.get(key) || 0;
+    // Suppress identical rapid-fire events within 3 seconds from flooding IPC
+    if (now - lastTime < 3000) return;
+    recentTelemetryMap.set(key, now);
 
     safeSendMessage({
       action: 'recordBlockedEvent',
@@ -393,9 +397,18 @@
         type: type || 'tracker',
         url: url || 'Blocked Resource',
         domain: hostname,
-        timestamp: Date.now()
+        timestamp: now
       }
     });
+  }
+
+  window.addEventListener('pureshield-event', (e) => {
+    if (!e.detail || isWhitelisted) return;
+
+    const { type, url } = e.detail;
+    if (type === 'popup' && !settings.blockPopups) return;
+
+    recordBlockedEventThrottled(type || 'tracker', url || 'Blocked Resource');
 
     if (type === 'popup' && settings.showToastNotifications && settings.blockPopups && !isWhitelisted) {
       showBlockedPopupToast(url);
@@ -873,9 +886,11 @@
   });
 
   /* ==========================================================================
-     6. DISCREET TOAST NOTIFICATION
+     6. DISCREET TOAST NOTIFICATION (Single-Show Per Page + Mute Option)
      ========================================================================== */
   let toastContainer = null;
+  const shownPopupToastKeys = new Set();
+  let pagePopupToastCount = 0;
 
   function ensureToastContainer() {
     if (!toastContainer || !document.body.contains(toastContainer)) {
@@ -886,13 +901,45 @@
     return toastContainer;
   }
 
+  function getPopupToastKey(popupUrl) {
+    if (!popupUrl) return 'unrequested-window';
+    const raw = String(popupUrl).trim();
+    if (!raw || raw === 'about:blank' || raw === 'Media-zone Popup' || raw === 'Blocked Resource') {
+      return 'generic-popup';
+    }
+    try {
+      if (raw.startsWith('http://') || rawUrlStartsWithHttps(raw) || raw.startsWith('//')) {
+        const u = new URL(raw, window.location.href);
+        return u.hostname.toLowerCase().replace(/^www\./, '');
+      }
+    } catch (_) {}
+    return raw.toLowerCase().slice(0, 80);
+  }
+
+  function rawUrlStartsWithHttps(s) {
+    return s.startsWith('https://');
+  }
+
   function showBlockedPopupToast(popupUrl) {
+    // Only display toast notifications in the top-level frame, never inside nested ad iframes
+    if (window !== window.top) return;
     if (isWhitelisted || !settings.blockPopups || !settings.showToastNotifications) return;
     if (!document.body) return;
+
+    const toastKey = getPopupToastKey(popupUrl);
+
+    // Show at most ONCE per popup on the same page (and cap total popup notices per page at 1).
+    // All subsequent popup attempts on the page continue to be blocked 100% silently!
+    if (shownPopupToastKeys.has(toastKey) || pagePopupToastCount >= 1) {
+      return;
+    }
+    shownPopupToastKeys.add(toastKey);
+    pagePopupToastCount++;
+
     const container = ensureToastContainer();
 
-    // Prevent toast flooding & memory accumulation
-    while (container.children.length >= 3) {
+    // Prevent toast stacking
+    while (container.children.length >= 1) {
       container.removeChild(container.firstChild);
     }
 
@@ -912,14 +959,14 @@
         <div class="pureshield-toast-url" title="${displayUrl}">${displayUrl}</div>
       </div>
       <div class="pureshield-toast-actions">
-        <button class="pureshield-toast-btn" id="ps-btn-allow-once">Allow Once</button>
-        <button class="pureshield-toast-btn" id="ps-btn-whitelist">Whitelist</button>
+        <button class="pureshield-toast-btn" id="ps-btn-allow-once" title="Open this blocked popup once">Allow Once</button>
+        <button class="pureshield-toast-btn" id="ps-btn-mute-toasts" title="Disable popup blocked notifications (keep blocking silently)">🔕 Mute Alerts</button>
         <button class="pureshield-toast-close" title="Close">&times;</button>
       </div>
     `;
 
     const allowBtn = toast.querySelector('#ps-btn-allow-once');
-    const whitelistBtn = toast.querySelector('#ps-btn-whitelist');
+    const muteBtn = toast.querySelector('#ps-btn-mute-toasts');
     const closeBtn = toast.querySelector('.pureshield-toast-close');
 
     if (allowBtn) {
@@ -931,12 +978,14 @@
       });
     }
 
-    if (whitelistBtn) {
-      whitelistBtn.addEventListener('click', () => {
-        safeSendMessage({ action: 'whitelistCurrentDomain', domain: hostname }, () => {
-          syncSettings();
-          dismissToast(toast);
+    if (muteBtn) {
+      muteBtn.addEventListener('click', () => {
+        settings.showToastNotifications = false;
+        chrome.storage.local.get(['settings'], (data) => {
+          const updated = { ...(data.settings || settings), showToastNotifications: false };
+          chrome.storage.local.set({ settings: updated });
         });
+        dismissToast(toast);
       });
     }
 
@@ -945,7 +994,7 @@
     }
 
     container.appendChild(toast);
-    const timer = setTimeout(() => dismissToast(toast), 4500);
+    const timer = setTimeout(() => dismissToast(toast), 3500);
     toast.addEventListener('mouseenter', () => clearTimeout(timer));
   }
 

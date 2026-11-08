@@ -243,13 +243,31 @@
     }
   });
 
-  // Helper to notify content script
+  // Helper to notify content script (deduplicated against rapid-fire popup/tracker loops)
+  const notifiedEventsMap = new Map();
   function notifyBlocked(type, detail) {
     if (config.whitelisted) return;
     if (type === 'popup' && !config.blockPopups) return;
     if (type === 'tracker' && !config.blockTrackers) return;
+
+    const rawUrl = String((detail && detail.url) || '').trim();
+    let normKey = rawUrl;
+    try {
+      if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('//')) {
+        normKey = new URL(rawUrl, window.location.href).hostname.toLowerCase();
+      }
+    } catch (_) {}
+    const eventKey = `${type}:${normKey || 'generic'}`;
+    const now = Date.now();
+    const prev = notifiedEventsMap.get(eventKey) || 0;
+    if (now - prev < 4000) {
+      // Already notified recently for this same popup/tracker; keep blocking silently
+      return;
+    }
+    notifiedEventsMap.set(eventKey, now);
+
     window.dispatchEvent(new CustomEvent('pureshield-event', {
-      detail: { type, ...detail, timestamp: Date.now() }
+      detail: { type, ...detail, timestamp: now }
     }));
   }
 
@@ -1113,14 +1131,21 @@
       if (!fv || typeof fv !== 'object') return fv;
       try {
         console.log('[XtremeShld:Debug] Sanitizing KVS flashvars prerolls/ads');
+        fv.adv_pre_vast = '';
+        fv.adv_pre_vast_alt = '';
+        fv.adv_pre = '';
+        fv.adv_pre_duration = '0';
+        fv.adv_pre_skip_duration = '0';
+        delete fv.vast_timeout1;
+        delete fv.vast_timeout2;
+        delete fv.vast_timeout;
         const adKeys = [
-          'adv_pre', 'adv_pre_vast', 'adv_pre_vast_alt', 'adv_pre_duration',
-          'adv_pre_skip_duration', 'adv_pre_click_url', 'adv_pre_url',
+          'adv_pre_click_url', 'adv_pre_url',
           'adv_pre_alternative', 'adv_pre_alternative_type',
           'adv_post', 'adv_post_vast', 'adv_post_vast_alt', 'adv_post_duration',
           'adv_post_skip_duration', 'adv_post_click_url', 'adv_post_url',
           'adv_pause', 'adv_pause_vast', 'adv_pause_vast_alt', 'adv_pause_duration',
-          'adv_text', 'adv_img', 'adv_block', 'vast_timeout1', 'vast_timeout2', 'vast_timeout',
+          'adv_text', 'adv_img', 'adv_block',
           'protect_block', 'protect_block_timeout', 'protect_block_html', 'protect_block_html_after'
         ];
         for (const k of adKeys) {
@@ -1199,12 +1224,18 @@
           fpStyle = document.createElement('style');
           fpStyle.id = 'xtremeshld-player-styles';
           fpStyle.textContent = `
-            #kt_player .fp-player[style*="visibility: hidden"],
-            #kt_player .fp-player[style*="position: absolute"],
-            .flowplayer .fp-player[style*="visibility: hidden"],
-            .flowplayer .fp-player[style*="position: absolute"] {
+            #kt_player .fp-player,
+            .flowplayer .fp-player {
               visibility: visible !important;
               position: relative !important;
+              pointer-events: auto !important;
+            }
+            #kt_player div[style*="z-index: 186"],
+            #kt_player div[style*="z-index: 176"],
+            #kt_player .fp-ui-block,
+            .ts-im-container {
+              display: none !important;
+              pointer-events: none !important;
             }
             .jwplayer .jw-display-icon-container,
             .jwplayer .jw-display-icon-display,
