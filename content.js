@@ -181,6 +181,7 @@
           blockMediaPrerolls: settings.blockMediaPrerolls !== false,
           historyTrapDefense: settings.historyTrapDefense !== false,
           fullscreenDefense: settings.fullscreenDefense !== false,
+          unlockRightClick: settings.unlockRightClick === true,
           whitelisted: isWhitelisted
         }
       }));
@@ -237,12 +238,44 @@
 
     // 3. Unlock Right Click & Text Selection (SAFE: Never intercept mousedown/mouseup!)
     if (settings.unlockRightClick) {
-      ['contextmenu', 'copy'].forEach(evt => {
-        document.addEventListener(evt, (e) => e.stopPropagation(), true);
-      });
-      document.oncontextmenu = null;
-      document.onselectstart = null;
-      if (document.body) document.body.style.userSelect = 'auto';
+      if (!window.__xtremeshld_rightclick_bound__) {
+        window.__xtremeshld_rightclick_bound__ = true;
+        ['contextmenu', 'copy', 'selectstart', 'cut'].forEach(evt => {
+          window.addEventListener(evt, (e) => {
+            if (!isWhitelisted && settings.unlockRightClick) {
+              e.stopPropagation();
+            }
+          }, true);
+          document.addEventListener(evt, (e) => {
+            if (!isWhitelisted && settings.unlockRightClick) {
+              e.stopPropagation();
+            }
+          }, true);
+        });
+      }
+      try {
+        window.oncontextmenu = null;
+        document.oncontextmenu = null;
+        document.onselectstart = null;
+        document.oncopy = null;
+        if (document.documentElement) {
+          document.documentElement.oncontextmenu = null;
+          document.documentElement.onselectstart = null;
+        }
+        if (document.body) {
+          document.body.oncontextmenu = null;
+          document.body.onselectstart = null;
+          document.body.style.userSelect = 'auto';
+        }
+        document.querySelectorAll('[oncontextmenu], [onselectstart], [oncopy]').forEach(el => {
+          el.removeAttribute('oncontextmenu');
+          el.removeAttribute('onselectstart');
+          el.removeAttribute('oncopy');
+          el.oncontextmenu = null;
+          el.onselectstart = null;
+          el.oncopy = null;
+        });
+      } catch (_) {}
     }
 
     // 4. Anti-Autoplay Video Shield

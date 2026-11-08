@@ -35,6 +35,7 @@
     stripParams: true,
     historyTrapDefense: true,
     fullscreenDefense: true,
+    unlockRightClick: false,
     whitelisted: isInitialWhitelisted
   };
 
@@ -240,7 +241,27 @@
   window.addEventListener('pureshield-config-sync', (e) => {
     if (e.detail) {
       Object.assign(config, e.detail);
+      if (config.unlockRightClick && !config.whitelisted) {
+        try {
+          window.oncontextmenu = null;
+          document.oncontextmenu = null;
+          document.onselectstart = null;
+          document.oncopy = null;
+          if (document.body) {
+            document.body.oncontextmenu = null;
+            document.body.onselectstart = null;
+          }
+        } catch (_) {}
+      }
     }
+  });
+
+  ['contextmenu', 'selectstart', 'copy', 'cut'].forEach(evt => {
+    window.addEventListener(evt, (e) => {
+      if (!config.whitelisted && config.unlockRightClick) {
+        e.stopPropagation();
+      }
+    }, true);
   });
 
   // Helper to notify content script (deduplicated against rapid-fire popup/tracker loops)
@@ -1175,13 +1196,19 @@
       return wrapped;
     }
 
-    // Intercept inline `var flashvars = { ... }` assignments
+    // Intercept inline `var flashvars = { ... }` assignments (chaining any existing setter)
+    const _prevFvDesc = Object.getOwnPropertyDescriptor(window, 'flashvars');
     let _flashvars = window.flashvars;
     Object.defineProperty(window, 'flashvars', {
-      get: () => _flashvars,
-      set: (fv) => {
+      get: function () {
+        return (_prevFvDesc && _prevFvDesc.get) ? _prevFvDesc.get.call(this) : _flashvars;
+      },
+      set: function (fv) {
         if (config.blockMediaPrerolls && fv && typeof fv === 'object') {
           sanitizeKvsFlashvars(fv);
+        }
+        if (_prevFvDesc && _prevFvDesc.set) {
+          try { _prevFvDesc.set.call(this, fv); } catch (_) {}
         }
         _flashvars = fv;
       },
@@ -1189,23 +1216,39 @@
     });
 
     // Intercept kt_player definition & wrap
+    const _prevKtDesc = Object.getOwnPropertyDescriptor(window, 'kt_player');
     let _ktPlayer = window.kt_player;
     if (typeof _ktPlayer === 'function') {
       _ktPlayer = wrapKtPlayer(_ktPlayer);
     }
     Object.defineProperty(window, 'kt_player', {
       get: () => _ktPlayer,
-      set: (fn) => {
+      set: function (fn) {
+        if (_prevKtDesc && _prevKtDesc.set) {
+          try {
+            _prevKtDesc.set.call(this, fn);
+            if (_prevKtDesc.get) fn = _prevKtDesc.get.call(this);
+          } catch (_) {}
+        }
         _ktPlayer = wrapKtPlayer(fn);
       },
       configurable: true
     });
 
     // Intercept flowplayer initialization and ensure kt_player is wrapped
+    const _prevFpDesc = Object.getOwnPropertyDescriptor(window, 'flowplayer');
     let _flowplayer = window.flowplayer;
     Object.defineProperty(window, 'flowplayer', {
-      get: () => _flowplayer,
-      set: (fn) => {
+      get: function () {
+        return (_prevFpDesc && _prevFpDesc.get) ? _prevFpDesc.get.call(this) : _flowplayer;
+      },
+      set: function (fn) {
+        if (_prevFpDesc && _prevFpDesc.set) {
+          try {
+            _prevFpDesc.set.call(this, fn);
+            if (_prevFpDesc.get) fn = _prevFpDesc.get.call(this);
+          } catch (_) {}
+        }
         _flowplayer = fn;
         if (typeof window.kt_player === 'function' && !window.kt_player.__xtremeshld_wrapped__) {
           window.kt_player = wrapKtPlayer(window.kt_player);
@@ -1227,7 +1270,6 @@
             #kt_player .fp-player,
             .flowplayer .fp-player {
               visibility: visible !important;
-              position: relative !important;
               pointer-events: auto !important;
             }
             #kt_player div[style*="z-index: 186"],
@@ -1236,6 +1278,9 @@
             .ts-im-container {
               display: none !important;
               pointer-events: none !important;
+              scale: 0 !important;
+              translate: -99999px -99999px !important;
+              content-visibility: hidden !important;
             }
             .jwplayer .jw-display-icon-container,
             .jwplayer .jw-display-icon-display,
@@ -1264,6 +1309,9 @@
               height: 0 !important;
               opacity: 0 !important;
               z-index: -99999 !important;
+              scale: 0 !important;
+              translate: -99999px -99999px !important;
+              content-visibility: hidden !important;
             }
           `;
           target.appendChild(fpStyle);

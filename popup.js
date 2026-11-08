@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnToggleFingerprint = document.getElementById('btn-toggle-fingerprint');
   const btnTogglePrerolls = document.getElementById('btn-toggle-prerolls');
   const btnToggleToasts = document.getElementById('btn-toggle-toasts');
+  const btnToggleRightClick = document.getElementById('btn-toggle-rightclick');
   const btnTogglePause = document.getElementById('btn-toggle-pause');
 
   const accordionToggle = document.getElementById('accordion-toggle');
@@ -111,6 +112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateToolBtn(btnToggleFingerprint, settings.blockFingerprinting !== false);
     if (btnTogglePrerolls) updateToolBtn(btnTogglePrerolls, settings.blockMediaPrerolls !== false);
     if (btnToggleToasts) updateToolBtn(btnToggleToasts, settings.showToastNotifications !== false);
+    if (btnToggleRightClick) updateToolBtn(btnToggleRightClick, settings.unlockRightClick === true);
 
     // Update Donation Handles
     const ds = data.donationSettings || { kofi: 'yesuag' };
@@ -292,6 +294,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnToggleFingerprint?.addEventListener('click', () => toggleSetting('blockFingerprinting', btnToggleFingerprint));
   btnTogglePrerolls?.addEventListener('click', () => toggleSetting('blockMediaPrerolls', btnTogglePrerolls));
   btnToggleToasts?.addEventListener('click', () => toggleSetting('showToastNotifications', btnToggleToasts));
+  btnToggleRightClick?.addEventListener('click', async () => {
+    const current = settings.unlockRightClick === true;
+    settings.unlockRightClick = !current;
+    updateToolBtn(btnToggleRightClick, settings.unlockRightClick);
+    await chrome.storage.local.set({ settings });
+  });
 
   btnTogglePause?.addEventListener('click', async () => {
     await chrome.runtime.sendMessage({ action: 'pauseProtection', minutes: 15 });

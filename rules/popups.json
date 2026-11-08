@@ -1425,5 +1425,56 @@
         "main_frame"
       ]
     }
+  },
+  {
+    "id": 2086,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||thisvid.com/zvrk/",
+      "resourceTypes": [
+        "script",
+        "sub_frame",
+        "xmlhttprequest",
+        "media",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 2087,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||fozekikikiminu.com^",
+      "resourceTypes": [
+        "script",
+        "sub_frame",
+        "xmlhttprequest",
+        "media",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 2088,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||growcdnssedge.com^",
+      "resourceTypes": [
+        "script",
+        "sub_frame",
+        "xmlhttprequest",
+        "media",
+        "other"
+      ]
+    }
   }
 ]
