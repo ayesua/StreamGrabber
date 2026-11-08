@@ -807,8 +807,24 @@
   } catch (e) {}
 
   // 1C. KVS / Flashvars / kt_player Interceptor for thisvid.com & Tube Players (Sniffs HQ streams)
+  function defuseKvsPrerolls(fv) {
+    if (!fv || typeof fv !== 'object') return fv;
+    try {
+      fv.adv_pre_vast = '';
+      fv.adv_pre_vast_alt = '';
+      fv.adv_pre = '';
+      fv.adv_pre_duration = '0';
+      fv.adv_pre_skip_duration = '0';
+      delete fv.vast_timeout1;
+      delete fv.vast_timeout2;
+      delete fv.vast_timeout;
+    } catch (_) {}
+    return fv;
+  }
+
   function sniffFlashvars(flashvars) {
     if (!flashvars || typeof flashvars !== 'object') return;
+    defuseKvsPrerolls(flashvars);
     const licenseCode = flashvars.license_code || '';
     const sniffUrl = (urlStr, quality) => {
       if (!urlStr || typeof urlStr !== 'string') return;

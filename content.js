@@ -2152,7 +2152,11 @@
         '.fp-preroll',
         '.video-overlay-advertisement',
         '.vast_clickthrough_layer',
-        '.fluid_ad_container'
+        '.fluid_ad_container',
+        '#kt_player div[style*="z-index: 186"]',
+        '#kt_player div[style*="z-index: 176"]',
+        '#kt_player .fp-ui-block',
+        '.ts-im-container'
       ];
       for (const sel of badSelectors) {
         const els = document.querySelectorAll(sel);
@@ -2191,6 +2195,11 @@
       .jw-state-idle .jw-display-icon-container { display: flex !important; }
       .fp-player { pointer-events: auto !important; }
       #kt_player { pointer-events: auto !important; }
+      #kt_player .fp-player { visibility: visible !important; position: relative !important; pointer-events: auto !important; }
+      #kt_player div[style*="z-index: 186"],
+      #kt_player div[style*="z-index: 176"],
+      #kt_player .fp-ui-block,
+      .ts-im-container { display: none !important; pointer-events: none !important; }
 
       .xg-video-seen {
         position: relative !important;
