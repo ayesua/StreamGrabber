@@ -49,6 +49,52 @@
   if (window.__STREAMGRABBER_PAGE_HOOK__) return;
   window.__STREAMGRABBER_PAGE_HOOK__ = true;
 
+  let isRightClickUnlocked = false;
+  try {
+    isRightClickUnlocked = window.localStorage && window.localStorage.getItem('__xg_rightclick__') === '1';
+  } catch (e) {}
+
+  function applyMainWorldRightClickUnlock() {
+    if (!isRightClickUnlocked) return;
+    try {
+      window.oncontextmenu = null;
+      document.oncontextmenu = null;
+      document.onselectstart = null;
+      document.oncopy = null;
+      if (document.documentElement) {
+        document.documentElement.oncontextmenu = null;
+        document.documentElement.onselectstart = null;
+      }
+      if (document.body) {
+        document.body.oncontextmenu = null;
+        document.body.onselectstart = null;
+        document.body.style.userSelect = 'auto';
+      }
+    } catch (e) {}
+  }
+
+  window.addEventListener('__STREAMGRABBER_RIGHTCLICK_SYNC__', (e) => {
+    try {
+      isRightClickUnlocked = Boolean(e.detail && e.detail.enabled);
+      if (isRightClickUnlocked) {
+        applyMainWorldRightClickUnlock();
+      }
+    } catch (_) {}
+  });
+
+  ['contextmenu', 'selectstart', 'copy', 'cut'].forEach(evt => {
+    window.addEventListener(evt, (e) => {
+      if (isRightClickUnlocked) {
+        e.stopPropagation();
+      }
+    }, true);
+  });
+
+  if (isRightClickUnlocked) {
+    applyMainWorldRightClickUnlock();
+    document.addEventListener('DOMContentLoaded', applyMainWorldRightClickUnlock);
+  }
+
 
 
   function detectQualityFromUrl(url) {
@@ -86,6 +132,11 @@
   function broadcastStreamData(data) {
     try {
       if (!data || !data.url) return;
+      const lowerUrl = String(data.url).toLowerCase();
+      if (lowerUrl.includes('fozekikikiminu.com') || lowerUrl.includes('growcdnssedge.com') ||
+          lowerUrl.includes('sacdnssedge.com') || lowerUrl.includes('/zvrk/')) {
+        return;
+      }
       document.dispatchEvent(new CustomEvent('__STREAMGRABBER_MEDIA_EVENT__', {
         detail: JSON.stringify(data)
       }));
@@ -880,14 +931,20 @@
     });
   }
 
-  // Hook global window.flashvars directly
+  // Hook global window.flashvars directly (chaining any existing setter)
+  const _prevFlashvarsDesc = Object.getOwnPropertyDescriptor(window, 'flashvars');
   let _flashvars = window.flashvars;
   try {
     Object.defineProperty(window, 'flashvars', {
       configurable: true,
       enumerable: true,
-      get: function () { return _flashvars; },
+      get: function () {
+        return (_prevFlashvarsDesc && _prevFlashvarsDesc.get) ? _prevFlashvarsDesc.get.call(this) : _flashvars;
+      },
       set: function (fv) {
+        if (_prevFlashvarsDesc && _prevFlashvarsDesc.set) {
+          try { _prevFlashvarsDesc.set.call(this, fv); } catch (e) {}
+        }
         _flashvars = fv;
         sniffFlashvars(fv);
       }
@@ -898,26 +955,43 @@
   } catch (e) {}
 
   function hookKtPlayerGlobal(fn) {
-    if (typeof fn !== 'function') return fn;
+    if (typeof fn !== 'function' || fn.__xg_kt_hooked__) return fn;
     const wrapped = function (id, swf, w, h, flashvars) {
       if (flashvars && typeof flashvars === 'object') {
         sniffFlashvars(flashvars);
       }
       return fn.apply(this, arguments);
     };
+    wrapped.__xg_kt_hooked__ = true;
+    try {
+      for (const k of Object.getOwnPropertyNames(fn)) {
+        if (k !== 'length' && k !== 'name' && k !== 'prototype') {
+          wrapped[k] = fn[k];
+        }
+      }
+    } catch (e) {}
     for (const k in fn) {
       try { wrapped[k] = fn[k]; } catch (e) {}
     }
     return wrapped;
   }
 
+  const _prevKtDesc = Object.getOwnPropertyDescriptor(window, 'kt_player');
   let _kt_player = window.kt_player;
   try {
     Object.defineProperty(window, 'kt_player', {
       configurable: true,
       enumerable: true,
-      get: function () { return _kt_player; },
+      get: function () {
+        return _kt_player;
+      },
       set: function (val) {
+        if (_prevKtDesc && _prevKtDesc.set) {
+          try {
+            _prevKtDesc.set.call(this, val);
+            if (_prevKtDesc.get) val = _prevKtDesc.get.call(this);
+          } catch (e) {}
+        }
         _kt_player = hookKtPlayerGlobal(val);
       }
     });
@@ -926,7 +1000,7 @@
 
   // 1D. Flowplayer Interceptor
   function hookFlowplayerGlobal(fn) {
-    if (typeof fn !== 'function') return fn;
+    if (typeof fn !== 'function' || fn.__xg_fp_hooked__) return fn;
     const wrapped = function (target, config) {
       if (config && typeof config === 'object') {
         if (config.clip && Array.isArray(config.clip.sources)) {
@@ -946,7 +1020,7 @@
       if (player && typeof player.load === 'function' && !player.__xg_load_hooked__) {
         player.__xg_load_hooked__ = true;
         const origLoad = player.load;
-        player.load = function (source) {
+        const wrappedLoad = function (source) {
           try {
             if (source && typeof source === 'object') {
               const srcList = Array.isArray(source.sources) ? source.sources : (source.src ? [source] : []);
@@ -969,17 +1043,41 @@
               });
             }
           } catch (e) {}
-          return origLoad.apply(this, arguments);
+          const res = origLoad.apply(this, arguments);
+          wrappedLoad.ed = origLoad.ed !== undefined ? origLoad.ed : 1;
+          return res;
         };
+        try {
+          for (const k of Object.getOwnPropertyNames(origLoad)) {
+            if (k !== 'length' && k !== 'name' && k !== 'prototype') {
+              wrappedLoad[k] = origLoad[k];
+            }
+          }
+        } catch (e) {}
+        for (const k in origLoad) {
+          try { wrappedLoad[k] = origLoad[k]; } catch (e) {}
+        }
+        // Preserve Flowplayer Unlimited license verification flag (.ed = 1) so T.load.ed || T.pause() never pauses playback
+        wrappedLoad.ed = origLoad.ed !== undefined ? origLoad.ed : 1;
+        player.load = wrappedLoad;
       }
       return player;
     };
+    wrapped.__xg_fp_hooked__ = true;
+    try {
+      for (const k of Object.getOwnPropertyNames(fn)) {
+        if (k !== 'length' && k !== 'name' && k !== 'prototype') {
+          wrapped[k] = fn[k];
+        }
+      }
+    } catch (e) {}
     for (const k in fn) {
       try { wrapped[k] = fn[k]; } catch (e) {}
     }
     return wrapped;
   }
 
+  const _prevFpDesc = Object.getOwnPropertyDescriptor(window, 'flowplayer');
   let _flowplayer = window.flowplayer;
   try {
     Object.defineProperty(window, 'flowplayer', {
@@ -987,6 +1085,12 @@
       enumerable: true,
       get: function () { return _flowplayer; },
       set: function (val) {
+        if (_prevFpDesc && _prevFpDesc.set) {
+          try {
+            _prevFpDesc.set.call(this, val);
+            if (_prevFpDesc.get) val = _prevFpDesc.get.call(this);
+          } catch (e) {}
+        }
         _flowplayer = hookFlowplayerGlobal(val);
       }
     });

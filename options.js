@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const extensionEnabledInput = document.getElementById('extensionEnabled');
   const askFilenameInput = document.getElementById('askFilename');
   const showFloatingBtnInput = document.getElementById('showFloatingBtn');
+  const enableRightClickInput = document.getElementById('enableRightClick');
   const minSizeInput = document.getElementById('minSize');
   const maxThreadsInput = document.getElementById('maxThreads');
   const defaultFormatInput = document.getElementById('defaultFormat');
@@ -99,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get({
     askFilename: false,
     showFloatingBtn: true,
+    enableRightClick: false,
     dimSeenVideos: true,
     minSizeKB: 100,
     maxThreads: 5,
@@ -107,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, (items) => {
     if (askFilenameInput) askFilenameInput.checked = Boolean(items.askFilename);
     if (showFloatingBtnInput) showFloatingBtnInput.checked = Boolean(items.showFloatingBtn ?? true);
+    if (enableRightClickInput) enableRightClickInput.checked = Boolean(items.enableRightClick);
     if (dimSeenVideosInput) dimSeenVideosInput.checked = Boolean(items.dimSeenVideos !== false);
     if (minSizeInput) minSizeInput.value = items.minSizeKB;
     if (maxThreadsInput) maxThreadsInput.value = items.maxThreads;
@@ -117,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveOptions(showToast = true) {
     const askFilename = askFilenameInput ? askFilenameInput.checked : false;
     const showFloatingBtn = showFloatingBtnInput ? showFloatingBtnInput.checked : true;
+    const enableRightClick = enableRightClickInput ? enableRightClickInput.checked : false;
     const dimSeenVideos = dimSeenVideosInput ? dimSeenVideosInput.checked : true;
     const minSizeKB = parseInt(minSizeInput.value, 10) || 100;
     const maxThreads = parseInt(maxThreadsInput.value, 10) || 5;
@@ -126,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set({
       askFilename,
       showFloatingBtn,
+      enableRightClick,
       dimSeenVideos,
       minSizeKB,
       maxThreads,
@@ -160,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (dimSeenVideosInput) dimSeenVideosInput.addEventListener('change', () => saveOptions(true));
   if (askFilenameInput) askFilenameInput.addEventListener('change', () => saveOptions(true));
   if (showFloatingBtnInput) showFloatingBtnInput.addEventListener('change', () => saveOptions(true));
+  if (enableRightClickInput) enableRightClickInput.addEventListener('change', () => saveOptions(true));
   if (minSizeInput) minSizeInput.addEventListener('change', () => saveOptions(true));
   if (maxThreadsInput) maxThreadsInput.addEventListener('change', () => saveOptions(true));
   if (defaultFormatInput) defaultFormatInput.addEventListener('change', () => saveOptions(true));

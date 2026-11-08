@@ -1276,6 +1276,18 @@
     return true;
   }
 
+  // Toggle / Enable Right-Click Context Menu on Page
+  if (request.action === 'TOGGLE_RIGHT_CLICK') {
+    try {
+      isRightClickEnabled = request.enable !== undefined ? Boolean(request.enable) : !isRightClickEnabled;
+      applyRightClickUnlock(isRightClickEnabled);
+      sendResponse({ success: true, enabled: isRightClickEnabled });
+    } catch (err) {
+      sendResponse({ success: false, error: err.message });
+    }
+    return true;
+  }
+
 
     // In-Page Manifest Fetch (Runs with page's cookies, origin & headers -> Bypasses HTTP 412)
     if (request.action === 'PAGE_FETCH_TEXT') {
@@ -1369,14 +1381,76 @@
   let floatingBtn = null;
   let activeVideo = null;
   let isFloatingBtnEnabled = true;
+  let isRightClickEnabled = false;
   let isMouseOverBtn = false;
 
   const appIconUrl = chrome.runtime.getURL('icon48.png');
 
-  chrome.storage.sync.get({ showFloatingBtn: true }, (res) => {
+  function applyRightClickUnlock(enabled) {
+    isRightClickEnabled = Boolean(enabled);
+    try {
+      if (isRightClickEnabled) {
+        localStorage.setItem('__xg_rightclick__', '1');
+      } else {
+        localStorage.removeItem('__xg_rightclick__');
+      }
+    } catch (_) {}
+
+    try {
+      window.dispatchEvent(new CustomEvent('__STREAMGRABBER_RIGHTCLICK_SYNC__', {
+        detail: { enabled: isRightClickEnabled }
+      }));
+    } catch (_) {}
+
+    if (isRightClickEnabled) {
+      if (!window.__xg_rightclick_bound__) {
+        window.__xg_rightclick_bound__ = true;
+        ['contextmenu', 'selectstart', 'copy', 'cut'].forEach(evt => {
+          window.addEventListener(evt, (e) => {
+            if (isExtensionEnabled && !isSiteExcluded && isRightClickEnabled) {
+              e.stopPropagation();
+            }
+          }, true);
+          document.addEventListener(evt, (e) => {
+            if (isExtensionEnabled && !isSiteExcluded && isRightClickEnabled) {
+              e.stopPropagation();
+            }
+          }, true);
+        });
+      }
+      try {
+        window.oncontextmenu = null;
+        document.oncontextmenu = null;
+        document.onselectstart = null;
+        document.oncopy = null;
+        if (document.documentElement) {
+          document.documentElement.oncontextmenu = null;
+          document.documentElement.onselectstart = null;
+        }
+        if (document.body) {
+          document.body.oncontextmenu = null;
+          document.body.onselectstart = null;
+          document.body.style.userSelect = 'auto';
+        }
+        document.querySelectorAll('[oncontextmenu], [onselectstart], [oncopy]').forEach(el => {
+          el.removeAttribute('oncontextmenu');
+          el.removeAttribute('onselectstart');
+          el.removeAttribute('oncopy');
+          el.oncontextmenu = null;
+          el.onselectstart = null;
+          el.oncopy = null;
+        });
+      } catch (_) {}
+    }
+  }
+
+  chrome.storage.sync.get({ showFloatingBtn: true, enableRightClick: false }, (res) => {
     isFloatingBtnEnabled = Boolean(res?.showFloatingBtn ?? true);
     if (isFloatingBtnEnabled) {
       initFloatingButton();
+    }
+    if (res?.enableRightClick) {
+      applyRightClickUnlock(true);
     }
   });
 
@@ -1388,6 +1462,9 @@
       } else if (isFloatingBtnEnabled) {
         initFloatingButton();
       }
+    }
+    if (changes.enableRightClick !== undefined) {
+      applyRightClickUnlock(Boolean(changes.enableRightClick.newValue));
     }
   });
 
@@ -2195,11 +2272,19 @@
       .jw-state-idle .jw-display-icon-container { display: flex !important; }
       .fp-player { pointer-events: auto !important; }
       #kt_player { pointer-events: auto !important; }
-      #kt_player .fp-player { visibility: visible !important; position: relative !important; pointer-events: auto !important; }
+      #kt_player .fp-player { visibility: visible !important; pointer-events: auto !important; }
       #kt_player div[style*="z-index: 186"],
       #kt_player div[style*="z-index: 176"],
       #kt_player .fp-ui-block,
-      .ts-im-container { display: none !important; pointer-events: none !important; }
+      .ts-im-container,
+      #tr-interstitial,
+      [id^="tr-interstitial"] {
+        display: none !important;
+        pointer-events: none !important;
+        scale: 0 !important;
+        translate: -99999px -99999px !important;
+        content-visibility: hidden !important;
+      }
 
       .xg-video-seen {
         position: relative !important;

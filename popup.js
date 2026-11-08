@@ -206,7 +206,7 @@ function toggleSiteExclusion(forcedDomain = null) {
 document.addEventListener('DOMContentLoaded', async () => {
   // 0. Initialize Internationalization (i18n) & Theme
   try {
-    const ver = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.12';
+    const ver = chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '3.5.13';
     const verEl = document.querySelector('.version-label');
     if (verEl) verEl.textContent = `v${ver}`;
   } catch (_) {}
@@ -363,6 +363,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => {
           btnToggleVideoControls.classList.remove('active-toggle');
         }, 1000);
+      });
+    });
+  }
+
+  const btnToggleRightClick = document.getElementById('btnToggleRightClick');
+  if (btnToggleRightClick) {
+    chrome.storage.sync.get({ enableRightClick: false }, (res) => {
+      if (res && res.enableRightClick) {
+        btnToggleRightClick.classList.add('active-toggle');
+      }
+    });
+
+    btnToggleRightClick.addEventListener('click', () => {
+      chrome.storage.sync.get({ enableRightClick: false }, (res) => {
+        const nextState = !Boolean(res && res.enableRightClick);
+        chrome.storage.sync.set({ enableRightClick: nextState }, () => {
+          btnToggleRightClick.classList.toggle('active-toggle', nextState);
+          if (currentTabId) {
+            chrome.tabs.sendMessage(currentTabId, { action: 'TOGGLE_RIGHT_CLICK', enable: nextState }, () => {
+              if (chrome.runtime.lastError) {
+                chrome.scripting.executeScript({
+                  target: { tabId: currentTabId },
+                  files: ['content.js']
+                }).then(() => {
+                  chrome.tabs.sendMessage(currentTabId, { action: 'TOGGLE_RIGHT_CLICK', enable: nextState });
+                }).catch(() => {});
+              }
+            });
+          }
+        });
       });
     });
   }
