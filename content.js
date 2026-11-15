@@ -415,6 +415,11 @@
   ].join(', ');
 
   const PLAYER_CONTAINER_SELECTORS = [
+    '#kt_player',
+    '.kt-player',
+    '.fp-player',
+    '.flowplayer',
+    '.video-holder',
     'iframe.VideoPlayer-Sandbox',
     'iframe[class*="VideoPlayer"]',
     'iframe[src*="video-player"]',
@@ -1276,19 +1281,6 @@
     return true;
   }
 
-  // Toggle / Enable Right-Click Context Menu on Page
-  if (request.action === 'TOGGLE_RIGHT_CLICK') {
-    try {
-      isRightClickEnabled = request.enable !== undefined ? Boolean(request.enable) : !isRightClickEnabled;
-      applyRightClickUnlock(isRightClickEnabled);
-      sendResponse({ success: true, enabled: isRightClickEnabled });
-    } catch (err) {
-      sendResponse({ success: false, error: err.message });
-    }
-    return true;
-  }
-
-
     // In-Page Manifest Fetch (Runs with page's cookies, origin & headers -> Bypasses HTTP 412)
     if (request.action === 'PAGE_FETCH_TEXT') {
       if (window.self !== window.top) return false;
@@ -1381,76 +1373,14 @@
   let floatingBtn = null;
   let activeVideo = null;
   let isFloatingBtnEnabled = true;
-  let isRightClickEnabled = false;
   let isMouseOverBtn = false;
 
   const appIconUrl = chrome.runtime.getURL('icon48.png');
 
-  function applyRightClickUnlock(enabled) {
-    isRightClickEnabled = Boolean(enabled);
-    try {
-      if (isRightClickEnabled) {
-        localStorage.setItem('__xg_rightclick__', '1');
-      } else {
-        localStorage.removeItem('__xg_rightclick__');
-      }
-    } catch (_) {}
-
-    try {
-      window.dispatchEvent(new CustomEvent('__STREAMGRABBER_RIGHTCLICK_SYNC__', {
-        detail: { enabled: isRightClickEnabled }
-      }));
-    } catch (_) {}
-
-    if (isRightClickEnabled) {
-      if (!window.__xg_rightclick_bound__) {
-        window.__xg_rightclick_bound__ = true;
-        ['contextmenu', 'selectstart', 'copy', 'cut'].forEach(evt => {
-          window.addEventListener(evt, (e) => {
-            if (isExtensionEnabled && !isSiteExcluded && isRightClickEnabled) {
-              e.stopPropagation();
-            }
-          }, true);
-          document.addEventListener(evt, (e) => {
-            if (isExtensionEnabled && !isSiteExcluded && isRightClickEnabled) {
-              e.stopPropagation();
-            }
-          }, true);
-        });
-      }
-      try {
-        window.oncontextmenu = null;
-        document.oncontextmenu = null;
-        document.onselectstart = null;
-        document.oncopy = null;
-        if (document.documentElement) {
-          document.documentElement.oncontextmenu = null;
-          document.documentElement.onselectstart = null;
-        }
-        if (document.body) {
-          document.body.oncontextmenu = null;
-          document.body.onselectstart = null;
-          document.body.style.userSelect = 'auto';
-        }
-        document.querySelectorAll('[oncontextmenu], [onselectstart], [oncopy]').forEach(el => {
-          el.removeAttribute('oncontextmenu');
-          el.removeAttribute('onselectstart');
-          el.removeAttribute('oncopy');
-          el.oncontextmenu = null;
-          el.onselectstart = null;
-          el.oncopy = null;
-        });
-      } catch (_) {}
-    }
-  }
-
-  chrome.storage.sync.get({ showFloatingBtn: true, enableRightClick: false }, (res) => {
+  chrome.storage.sync.get({ showFloatingBtn: true }, (res) => {
     isFloatingBtnEnabled = Boolean(res?.showFloatingBtn ?? true);
     if (isFloatingBtnEnabled) {
       initFloatingButton();
-    }
-    if (res?.enableRightClick) {
-      applyRightClickUnlock(true);
     }
   });
 
@@ -1463,13 +1393,112 @@
         initFloatingButton();
       }
     }
-    if (changes.enableRightClick !== undefined) {
-      applyRightClickUnlock(Boolean(changes.enableRightClick.newValue));
-    }
   });
 
+  function resolveTargetVideoElement(targetVideo) {
+    const candidate = targetVideo || activeVideo || findMostVisibleVideo();
+    if (candidate && candidate.tagName === 'VIDEO') return candidate;
+    if (candidate && candidate.querySelector) {
+      const inner = candidate.querySelector('video');
+      if (inner) return inner;
+    }
+    const ktVid = document.querySelector('#kt_player video, .kt-player video, .fp-player video');
+    if (ktVid) return ktVid;
+    const allVids = Array.from(document.querySelectorAll('video')).filter(v => !isAdVideoElement(v));
+    return allVids[0] || document.querySelector('video');
+  }
+
+  let currentPageWidthMode = 0;
+
+  function getWidthModeInfo(mode, hasNativeNarrowRatio, intrinsicRatio, containerRatio) {
+    if (!mode || mode === 0) {
+      return { widthPct: 100, label: 'Original', objectFit: '', active: false };
+    }
+    if (mode === 1) {
+      if (hasNativeNarrowRatio) {
+        const pct = Math.max(25, Math.min(95, (intrinsicRatio / containerRatio) * 100));
+        return { widthPct: pct, label: 'Width: Auto', objectFit: 'contain', active: true };
+      }
+      return { widthPct: 56.25, label: 'Width: 9:16', objectFit: 'fill', active: true };
+    }
+    if (mode === 2) {
+      return { widthPct: 75, label: 'Width: 4:3', objectFit: 'fill', active: true };
+    }
+    return { widthPct: 42, label: 'Width: Tall', objectFit: 'fill', active: true };
+  }
+
+  function applyVideoWidthMode(video, mode) {
+    if (!video || video.tagName !== 'VIDEO') {
+      return getWidthModeInfo(mode, false, 0, 16 / 9);
+    }
+    video.dataset.xgWidthMode = String(mode);
+
+    if (!mode || mode === 0) {
+      video.style.removeProperty('width');
+      video.style.removeProperty('left');
+      video.style.removeProperty('right');
+      video.style.removeProperty('margin-left');
+      video.style.removeProperty('margin-right');
+      video.style.removeProperty('object-fit');
+      video.style.removeProperty('transform');
+      return { label: 'Original', active: false };
+    }
+
+    const container = video.parentElement || video;
+    const cRect = container.getBoundingClientRect();
+    const containerRatio = (cRect.width > 0 && cRect.height > 0) ? (cRect.width / cRect.height) : (16 / 9);
+    const intrinsicRatio = (video.videoWidth > 0 && video.videoHeight > 0) ? (video.videoWidth / video.videoHeight) : 0;
+    const hasNativeNarrowRatio = intrinsicRatio > 0 && intrinsicRatio < containerRatio - 0.1;
+
+    const info = getWidthModeInfo(mode, hasNativeNarrowRatio, intrinsicRatio, containerRatio);
+    const leftPct = (100 - info.widthPct) / 2;
+
+    video.style.setProperty('width', `${info.widthPct.toFixed(2)}%`, 'important');
+    video.style.setProperty('height', '100%', 'important');
+    video.style.setProperty('left', `${leftPct.toFixed(2)}%`, 'important');
+    video.style.setProperty('right', 'auto', 'important');
+    video.style.setProperty('margin-left', 'auto', 'important');
+    video.style.setProperty('margin-right', 'auto', 'important');
+    video.style.setProperty('display', 'block', 'important');
+    video.style.setProperty('object-fit', info.objectFit, 'important');
+
+    return { label: info.label, active: info.active };
+  }
+
+  function handleToggleOriginalWidth(targetVideo) {
+    const video = resolveTargetVideoElement(targetVideo);
+    currentPageWidthMode = ((video && video.dataset.xgWidthMode !== undefined ? parseInt(video.dataset.xgWidthMode, 10) : currentPageWidthMode) + 1) % 4;
+    const res = applyVideoWidthMode(video, currentPageWidthMode);
+
+    // Also narrow preview poster image inside .video-holder if video hasn't started yet
+    try {
+      const previewImg = document.querySelector('.video-holder img');
+      if (previewImg) {
+        if (!currentPageWidthMode) {
+          previewImg.style.removeProperty('width');
+          previewImg.style.removeProperty('margin');
+          previewImg.style.removeProperty('display');
+        } else {
+          const info = getWidthModeInfo(currentPageWidthMode, false, 0, 16 / 9);
+          previewImg.style.setProperty('width', `${info.widthPct.toFixed(2)}%`, 'important');
+          previewImg.style.setProperty('margin', '0 auto', 'important');
+          previewImg.style.setProperty('display', 'block', 'important');
+        }
+      }
+    } catch (_) {}
+
+    const textEl = floatingBtn?.querySelector('.streamgrabber-aspect-text');
+    if (textEl) {
+      textEl.textContent = res.label;
+      textEl.style.setProperty('color', res.active ? '#4ade80' : '#fde047', 'important');
+    }
+    if (floatingBtn && (video || activeVideo)) {
+      positionFloatingButton(video || activeVideo);
+    }
+  }
+
   function handleToggleControls(targetVideo) {
-    const video = targetVideo || activeVideo || findMostVisibleVideo();
+    const video = resolveTargetVideoElement(targetVideo);
     if (!video) return;
 
     const newState = !video.controls;
@@ -1507,6 +1536,11 @@
         <span class="streamgrabber-btn-text" style="font-weight: 700 !important; font-size: 12px !important; color: #ffffff !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Download</span>
       </div>
       <div style="width: 1px !important; height: 16px !important; background: rgba(255, 255, 255, 0.25) !important; flex-shrink: 0 !important; margin: 0 1px !important;"></div>
+      <div class="streamgrabber-aspect-action" title="Make narrower videos look in their original width (cycles 9:16 / 4:3 / Tall / Full, or press Alt+W)" style="display: flex !important; align-items: center !important; gap: 4px !important; cursor: pointer !important; padding: 3px 8px !important; border-radius: 14px !important; background: rgba(255, 255, 255, 0.1) !important;">
+        <span style="font-size: 11px !important; pointer-events: none !important; line-height: 1 !important;">↔️</span>
+        <span class="streamgrabber-aspect-text" style="font-weight: 700 !important; font-size: 11px !important; color: #fde047 !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Original</span>
+      </div>
+      <div style="width: 1px !important; height: 16px !important; background: rgba(255, 255, 255, 0.25) !important; flex-shrink: 0 !important; margin: 0 1px !important;"></div>
       <div class="streamgrabber-controls-action" title="Toggle native HTML5 video player controls (or press Alt+C) to seek/advance with mouse pointer" style="display: flex !important; align-items: center !important; gap: 4px !important; cursor: pointer !important; padding: 3px 8px !important; border-radius: 14px !important; background: rgba(255, 255, 255, 0.1) !important;">
         <span style="font-size: 11px !important; pointer-events: none !important; line-height: 1 !important;">⏯️</span>
         <span class="streamgrabber-controls-text" style="font-weight: 700 !important; font-size: 11px !important; color: #7dd3fc !important; pointer-events: none !important; white-space: nowrap !important; line-height: 1 !important;">Controls</span>
@@ -1537,8 +1571,8 @@
       'opacity': '0.9',
       'width': 'auto',
       'height': 'auto',
-      'min-width': '180px',
-      'max-width': '270px',
+      'min-width': 'auto',
+      'max-width': '380px',
       'min-height': '32px',
       'max-height': '40px',
       'bottom': 'auto',
@@ -1572,8 +1606,11 @@
       e.stopPropagation();
       e.stopImmediatePropagation();
 
+      const aspectBtn = e.target.closest('.streamgrabber-aspect-action');
       const controlsBtn = e.target.closest('.streamgrabber-controls-action');
-      if (controlsBtn) {
+      if (aspectBtn) {
+        handleToggleOriginalWidth();
+      } else if (controlsBtn) {
         handleToggleControls();
       } else {
         handleFloatingDownload();
@@ -1595,7 +1632,10 @@
     }
 
     const btn = floatingBtn || createFloatingButton();
-    const rect = video.getBoundingClientRect();
+    const rectTarget = (video.dataset && video.dataset.xgWidthMode && video.dataset.xgWidthMode !== '0' && video.parentElement)
+      ? video.parentElement
+      : video;
+    const rect = rectTarget.getBoundingClientRect();
 
     if (rect.width < 140 || rect.height < 90) {
       if (!isMouseOverBtn) btn.style.setProperty('display', 'none', 'important');
@@ -1607,7 +1647,15 @@
       return;
     }
 
-    const btnWidth = btn.offsetWidth || 116;
+    btn.style.setProperty('width', 'auto', 'important');
+    btn.style.setProperty('height', 'auto', 'important');
+    btn.style.setProperty('bottom', 'auto', 'important');
+    btn.style.setProperty('right', 'auto', 'important');
+    btn.style.setProperty('max-width', '380px', 'important');
+    btn.style.setProperty('max-height', '40px', 'important');
+    btn.style.setProperty('display', 'flex', 'important');
+
+    const btnWidth = btn.offsetWidth || 250;
     const btnHeight = btn.offsetHeight || 36;
 
     const left = Math.max(10, Math.min(window.innerWidth - btnWidth - 10, rect.right - btnWidth - 12));
@@ -1615,13 +1663,6 @@
 
     btn.style.setProperty('left', `${Math.round(left)}px`, 'important');
     btn.style.setProperty('top', `${Math.round(top)}px`, 'important');
-    btn.style.setProperty('width', 'auto', 'important');
-    btn.style.setProperty('height', 'auto', 'important');
-    btn.style.setProperty('bottom', 'auto', 'important');
-    btn.style.setProperty('right', 'auto', 'important');
-    btn.style.setProperty('max-width', '160px', 'important');
-    btn.style.setProperty('max-height', '40px', 'important');
-    btn.style.setProperty('display', 'flex', 'important');
 
     if (document.fullscreenElement && btn.parentElement !== document.fullscreenElement) {
       document.fullscreenElement.appendChild(btn);
@@ -2197,7 +2238,16 @@
     document.addEventListener('play', (e) => {
       if (e.target && e.target.tagName === 'VIDEO') {
         activeVideo = e.target;
+        if (currentPageWidthMode > 0 && !isAdVideoElement(e.target)) {
+          applyVideoWidthMode(e.target, currentPageWidthMode);
+        }
         positionFloatingButton(e.target);
+      }
+    }, true);
+
+    document.addEventListener('loadedmetadata', (e) => {
+      if (e.target && e.target.tagName === 'VIDEO' && currentPageWidthMode > 0 && !isAdVideoElement(e.target)) {
+        applyVideoWidthMode(e.target, currentPageWidthMode);
       }
     }, true);
 
@@ -2207,85 +2257,20 @@
     document.addEventListener('keydown', (e) => {
       if (e.altKey && (e.key === 'c' || e.key === 'C')) {
         handleToggleControls();
+      } else if (e.altKey && (e.key === 'w' || e.key === 'W')) {
+        handleToggleOriginalWidth();
       }
     }, { capture: true });
 
     setInterval(updateTracker, 1500);
-    setInterval(cleanVideoPlayerOverlays, 1500);
     setTimeout(updateTracker, 500);
     setTimeout(updateTracker, 1500);
   }
 
-  // Defuse interstitials and unhide player display icons (e.g. TrafficStars on thisvid, FluidPlayer on anysex)
-  function cleanupInterstitialsAndFixPlayers() {
-    try {
-      cleanVideoPlayerOverlays();
-      const badSelectors = [
-        '#tr-interstitial',
-        '[id^="tr-interstitial"]',
-        '[class*="interstitial-overlay"]',
-        '[id^="tr-"][style*="z-index"]',
-        '.fp-ad',
-        '.fp-preroll',
-        '.video-overlay-advertisement',
-        '.vast_clickthrough_layer',
-        '.fluid_ad_container',
-        '#kt_player div[style*="z-index: 186"]',
-        '#kt_player div[style*="z-index: 176"]',
-        '#kt_player .fp-ui-block',
-        '.ts-im-container'
-      ];
-      for (const sel of badSelectors) {
-        const els = document.querySelectorAll(sel);
-        for (const el of els) {
-          if (el && el.parentNode) {
-            el.remove();
-          }
-        }
-      }
-
-      // Ensure Flowplayer / JWPlayer / FluidPlayer elements have proper pointer-events and visibility
-      const players = document.querySelectorAll('.fp-player, #kt_player, .jwplayer, .video__player, .fluid_video_wrapper');
-      for (const p of players) {
-        if (p) {
-          p.style.pointerEvents = 'auto';
-        }
-      }
-    } catch (e) {}
-  }
-
   try {
     const style = document.createElement('style');
-    style.id = '__xg_player_fix_css__';
+    style.id = '__xg_seen_videos_css__';
     style.textContent = `
-      .vast_clickthrough_layer, .fluid_vpaid_slot, .fluid_ad_container, .fluid_ad_playing {
-        display: none !important;
-        pointer-events: none !important;
-        width: 0 !important;
-        height: 0 !important;
-      }
-      .fluid_controls_container, .fluid_controls_progress_container, .fluid_controls_progress {
-        pointer-events: auto !important;
-        z-index: 2147483640 !important;
-      }
-      .jw-display-icon-container { display: flex !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
-      .jw-state-idle .jw-display-icon-container { display: flex !important; }
-      .fp-player { pointer-events: auto !important; }
-      #kt_player { pointer-events: auto !important; }
-      #kt_player .fp-player { visibility: visible !important; pointer-events: auto !important; }
-      #kt_player div[style*="z-index: 186"],
-      #kt_player div[style*="z-index: 176"],
-      #kt_player .fp-ui-block,
-      .ts-im-container,
-      #tr-interstitial,
-      [id^="tr-interstitial"] {
-        display: none !important;
-        pointer-events: none !important;
-        scale: 0 !important;
-        translate: -99999px -99999px !important;
-        content-visibility: hidden !important;
-      }
-
       .xg-video-seen {
         position: relative !important;
         transition: opacity 0.25s ease, filter 0.25s ease !important;
@@ -2346,8 +2331,6 @@
     `;
     (document.head || document.documentElement).appendChild(style);
   } catch (e) {}
-
-  setInterval(cleanupInterstitialsAndFixPlayers, 800);
 
   /* ==========================================================================
      Watched / Seen Videos Dimmer Module
@@ -2492,7 +2475,6 @@
     scanMediaElements();
     scanYandexVideoPlayer();
     scanVkVideoPlayer();
-    cleanupInterstitialsAndFixPlayers();
     applyDimmedSeenVideos();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });

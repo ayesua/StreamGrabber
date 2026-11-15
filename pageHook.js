@@ -1,7 +1,7 @@
 /**
  * StreamGrabber - Main World Page Hook
- * Runs at document_start in the MAIN execution context to disable pre-roll announcements,
- * skip video ads cleanly without Error 224003, and broadcast authentic video stream URLs.
+ * Runs at document_start in the MAIN execution context to passively sniff
+ * and broadcast authentic video stream URLs to the content script.
  */
 
 (function () {
@@ -49,54 +49,6 @@
   if (window.__STREAMGRABBER_PAGE_HOOK__) return;
   window.__STREAMGRABBER_PAGE_HOOK__ = true;
 
-  let isRightClickUnlocked = false;
-  try {
-    isRightClickUnlocked = window.localStorage && window.localStorage.getItem('__xg_rightclick__') === '1';
-  } catch (e) {}
-
-  function applyMainWorldRightClickUnlock() {
-    if (!isRightClickUnlocked) return;
-    try {
-      window.oncontextmenu = null;
-      document.oncontextmenu = null;
-      document.onselectstart = null;
-      document.oncopy = null;
-      if (document.documentElement) {
-        document.documentElement.oncontextmenu = null;
-        document.documentElement.onselectstart = null;
-      }
-      if (document.body) {
-        document.body.oncontextmenu = null;
-        document.body.onselectstart = null;
-        document.body.style.userSelect = 'auto';
-      }
-    } catch (e) {}
-  }
-
-  window.addEventListener('__STREAMGRABBER_RIGHTCLICK_SYNC__', (e) => {
-    try {
-      isRightClickUnlocked = Boolean(e.detail && e.detail.enabled);
-      if (isRightClickUnlocked) {
-        applyMainWorldRightClickUnlock();
-      }
-    } catch (_) {}
-  });
-
-  ['contextmenu', 'selectstart', 'copy', 'cut'].forEach(evt => {
-    window.addEventListener(evt, (e) => {
-      if (isRightClickUnlocked) {
-        e.stopPropagation();
-      }
-    }, true);
-  });
-
-  if (isRightClickUnlocked) {
-    applyMainWorldRightClickUnlock();
-    document.addEventListener('DOMContentLoaded', applyMainWorldRightClickUnlock);
-  }
-
-
-
   function detectQualityFromUrl(url) {
     if (!url || typeof url !== 'string') return 'Auto HD';
     const lower = url.toLowerCase();
@@ -111,22 +63,6 @@
     if (lower.includes('720')) return '720p HD';
     if (lower.includes('_lq') || lower.includes('lq.mp4') || lower.includes('_sd') || lower.includes('sd.mp4') || lower.includes('480')) return '480p SD';
     return 'Auto HD';
-  }
-
-  const EMPTY_VAST_XML = '<?xml version="1.0" encoding="UTF-8"?><VAST version="4.0"/>';
-  function isVastAdUrl(url) {
-    if (!url || typeof url !== 'string') return false;
-    const lower = url.toLowerCase();
-    if (lower.includes('.mp4') || lower.includes('.m3u8') || lower.includes('.mpd') ||
-        lower.includes('.ts') || lower.includes('.webm') || lower.includes('.key')) return false;
-    return (
-      lower.includes('/vast') || lower.includes('vast.xml') || lower.includes('vast=') ||
-      lower.includes('format=vast') || lower.includes('output=vast') || lower.includes('type=vast') ||
-      lower.includes('/vpaid') || lower.includes('in_stream_ad') || lower.includes('jwpreroll') ||
-      lower.includes('vstserv.com') || lower.includes('vstvstsa.com') || lower.includes('katds_ep') ||
-      lower.includes('tsyndicate.com/do2/') || lower.includes('magsrv.com/splash') ||
-      lower.includes('twinrdengine.com/adraw')
-    );
   }
 
   function broadcastStreamData(data) {
@@ -259,29 +195,13 @@
     }
   }
 
-  // Intercept window.fetch to sniff dynamic Yandex/VK/VoyeurHit stream API responses & defuse VAST ads
+  // Intercept window.fetch to sniff dynamic Yandex/VK/VoyeurHit stream API responses
   try {
     const origFetch = window.fetch;
     if (origFetch) {
       window.fetch = function (input, init) {
         const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
         if (url && typeof url === 'string') {
-          if (url.includes('vast.yomeno.xyz')) {
-            if (url.includes('/vast') || url.includes('.xml')) {
-              return Promise.resolve(new Response(EMPTY_VAST_XML, {
-                status: 200, headers: { 'Content-Type': 'application/xml; charset=utf-8' }
-              }));
-            }
-            return Promise.resolve(new Response(JSON.stringify({ campaign: null }), {
-              status: 200, headers: { 'Content-Type': 'application/json' }
-            }));
-          }
-          if (isVastAdUrl(url)) {
-            return Promise.resolve(new Response(EMPTY_VAST_XML, {
-              status: 200, headers: { 'Content-Type': 'application/xml; charset=utf-8' }
-            }));
-          }
-
           const lower = url.toLowerCase();
           const isRealStream = lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('ott-stream.yandex') || (lower.includes('.mp4') && !lower.includes('trailer') && !lower.includes('video-preview'));
           if (isRealStream) {
@@ -380,18 +300,14 @@
     }
   } catch (e) {}
 
-  // Intercept XMLHttpRequest to sniff video stream URLs & defuse VAST ad calls
+  // Intercept XMLHttpRequest to sniff video stream URLs
   try {
     const origOpen = XMLHttpRequest.prototype.open;
-    const origSend = XMLHttpRequest.prototype.send;
-    if (origOpen && origSend) {
+    if (origOpen) {
       XMLHttpRequest.prototype.open = function (method, url) {
         this.__xg_url = typeof url === 'string' ? url : (url ? url.toString() : '');
-        if (this.__xg_url && isVastAdUrl(this.__xg_url)) {
-          this.__xg_is_vast = true;
-        }
 
-        if (this.__xg_url && !this.__xg_is_vast) {
+        if (this.__xg_url) {
           const lower = this.__xg_url.toLowerCase();
           const isRealStream = lower.includes('.m3u8') || lower.includes('.mpd') || lower.includes('strm.yandex') || lower.includes('ott-stream.yandex') || (lower.includes('.mp4') && !lower.includes('trailer') && !lower.includes('video-preview'));
           if (isRealStream) {
@@ -460,59 +376,13 @@
         }
         return origOpen.apply(this, arguments);
       };
-
-      XMLHttpRequest.prototype.send = function (body) {
-        if (this.__xg_is_vast) {
-          try {
-            Object.defineProperty(this, 'status', { writable: true, value: 200 });
-            Object.defineProperty(this, 'readyState', { writable: true, value: 4 });
-            Object.defineProperty(this, 'responseText', { writable: true, value: EMPTY_VAST_XML });
-            Object.defineProperty(this, 'response', { writable: true, value: EMPTY_VAST_XML });
-            setTimeout(() => {
-              try {
-                if (typeof this.onreadystatechange === 'function') this.onreadystatechange(new Event('readystatechange'));
-                if (typeof this.onload === 'function') this.onload(new Event('load'));
-              } catch (e) {}
-            }, 10);
-            return;
-          } catch (e) {}
-        }
-        return origSend.apply(this, arguments);
-      };
     }
   } catch (e) {}
 
-  // 1. XVideos & XNXX HTML5Player Ad-Disabling & Stream Sniffer Hook
+  // 1. XVideos & XNXX HTML5Player Stream Sniffer Hook (Read-Only)
   function hookXvideosPlayer(player) {
     if (!player) return;
     try {
-      // Disable internal video ad engine safely using the player's native flags
-      player.disableVideoAds = true;
-      player.has_adblocker = true;
-      if (player.id_ad) player.id_ad = 0;
-      if (player.ad_id) player.ad_id = 0;
-
-      if (typeof player.enableVideoPreRollAds === 'function') {
-        player.enableVideoPreRollAds = function () {};
-      }
-      if (typeof player.enableVideoPostRollAds === 'function') {
-        player.enableVideoPostRollAds = function () {};
-      }
-      if (typeof player.loadVideoPreRollAds === 'function') {
-        player.loadVideoPreRollAds = function () { return false; };
-      }
-      if (typeof player.loadVideoPostRollAds === 'function') {
-        player.loadVideoPostRollAds = function () { return false; };
-      }
-      if (typeof player.setSponsors === 'function') {
-        player.setSponsors(false);
-      }
-
-      if (player.videos) {
-        if (player.videos.preroll) player.videos.preroll.bEnabled = false;
-        if (player.videos.postroll) player.videos.postroll.bEnabled = false;
-      }
-
       // Extract existing stream URLs if already populated on player initialization
       const playerTitle = player.sTitle || document.title;
       const playerThumb = player.sUrlThumb || null;
@@ -595,50 +465,28 @@
     } catch (e) {}
   }
 
-  // Intercept window.html5player assignments
+  // Intercept window.html5player assignments (chaining any existing setter)
+  const _prevHtml5Desc = Object.getOwnPropertyDescriptor(window, 'html5player');
   let _html5player = window.html5player;
   try {
     Object.defineProperty(window, 'html5player', {
       configurable: true,
       enumerable: true,
       get: function () {
-        return _html5player;
+        return (_prevHtml5Desc && _prevHtml5Desc.get) ? _prevHtml5Desc.get.call(this) : _html5player;
       },
       set: function (val) {
+        if (_prevHtml5Desc && _prevHtml5Desc.set) {
+          try {
+            _prevHtml5Desc.set.call(this, val);
+            if (_prevHtml5Desc.get) val = _prevHtml5Desc.get.call(this);
+          } catch (e) {}
+        }
         _html5player = val;
         hookXvideosPlayer(_html5player);
       }
     });
     if (_html5player) hookXvideosPlayer(_html5player);
-  } catch (e) {}
-
-  // Intercept window.HTML5Player class prototype
-  let _HTML5Player = window.HTML5Player;
-  try {
-    Object.defineProperty(window, 'HTML5Player', {
-      configurable: true,
-      enumerable: true,
-      get: function () {
-        return _HTML5Player;
-      },
-      set: function (val) {
-        _HTML5Player = val;
-        if (_HTML5Player && _HTML5Player.prototype) {
-          try {
-            _HTML5Player.prototype.enableVideoPreRollAds = function () {};
-            _HTML5Player.prototype.enableVideoPostRollAds = function () {};
-            _HTML5Player.prototype.loadVideoPreRollAds = function () { return false; };
-            _HTML5Player.prototype.loadVideoPostRollAds = function () { return false; };
-          } catch (pe) {}
-        }
-      }
-    });
-    if (_HTML5Player && _HTML5Player.prototype) {
-      _HTML5Player.prototype.enableVideoPreRollAds = function () {};
-      _HTML5Player.prototype.enableVideoPostRollAds = function () {};
-      _HTML5Player.prototype.loadVideoPreRollAds = function () { return false; };
-      _HTML5Player.prototype.loadVideoPostRollAds = function () { return false; };
-    }
   } catch (e) {}
 
   // 1B. JWPlayer Interceptor (Passive Sniffer Only: Never modifies ads, never breaks player)
@@ -786,24 +634,10 @@
     }, true);
   } catch (_) {}
 
-  // 1B-2. FluidPlayer Interceptor (Neutralizes VAST ad traps, unfreezes timeline scrubber & sniffs sources)
+  // 1B-2. FluidPlayer Interceptor (Passive Sniffer Only)
   function hookFluidPlayerGlobal(origFP) {
     if (typeof origFP !== 'function' || origFP.__xg_hooked__) return origFP;
     const wrappedFP = function (target, config) {
-      if (config && typeof config === 'object') {
-        // Strip out blocking VAST ads so player never enters frozen ad state or spawns clickthrough layers
-        if (config.vastOptions) {
-          config.vastOptions.adList = [];
-        }
-        if (config.layoutControls) {
-          if (config.layoutControls.htmlOnPauseBlock) {
-            delete config.layoutControls.htmlOnPauseBlock;
-          }
-          if (config.layoutControls.KVS && config.layoutControls.KVS.nextVideo) {
-            delete config.layoutControls.KVS.nextVideo.banner;
-          }
-        }
-      }
       const instance = origFP.apply(this, arguments);
 
       // Sniff media sources from target video element or instance
@@ -844,6 +678,7 @@
     return wrappedFP;
   }
 
+  const _prevFluidDesc = Object.getOwnPropertyDescriptor(window, 'fluidPlayer');
   let _fluidPlayer = window.fluidPlayer;
   try {
     Object.defineProperty(window, 'fluidPlayer', {
@@ -851,31 +686,21 @@
       enumerable: true,
       get: function () { return _fluidPlayer; },
       set: function (val) {
+        if (_prevFluidDesc && _prevFluidDesc.set) {
+          try {
+            _prevFluidDesc.set.call(this, val);
+            if (_prevFluidDesc.get) val = _prevFluidDesc.get.call(this);
+          } catch (e) {}
+        }
         _fluidPlayer = hookFluidPlayerGlobal(val);
       }
     });
     if (_fluidPlayer) _fluidPlayer = hookFluidPlayerGlobal(_fluidPlayer);
   } catch (e) {}
 
-  // 1C. KVS / Flashvars / kt_player Interceptor for thisvid.com & Tube Players (Sniffs HQ streams)
-  function defuseKvsPrerolls(fv) {
-    if (!fv || typeof fv !== 'object') return fv;
-    try {
-      fv.adv_pre_vast = '';
-      fv.adv_pre_vast_alt = '';
-      fv.adv_pre = '';
-      fv.adv_pre_duration = '0';
-      fv.adv_pre_skip_duration = '0';
-      delete fv.vast_timeout1;
-      delete fv.vast_timeout2;
-      delete fv.vast_timeout;
-    } catch (_) {}
-    return fv;
-  }
-
+  // 1C. KVS / Flashvars / kt_player Interceptor (Passive Read-Only Stream Sniffer)
   function sniffFlashvars(flashvars) {
     if (!flashvars || typeof flashvars !== 'object') return;
-    defuseKvsPrerolls(flashvars);
     const licenseCode = flashvars.license_code || '';
     const sniffUrl = (urlStr, quality) => {
       if (!urlStr || typeof urlStr !== 'string') return;
@@ -1096,45 +921,4 @@
     });
     if (_flowplayer) _flowplayer = hookFlowplayerGlobal(_flowplayer);
   } catch (e) {}
-
-  // 2. Generic In-Page Pre-Roll Video Ad Fast-Forward & Skip Button Clicker
-  function skipGenericAdVideos() {
-    try {
-      // 2A. Click in-video skip buttons
-      const skipSelectors = [
-        '.video-ad-skip-btn',
-        '.skip-button',
-        '.ad-skip',
-        '[id*="skip-ad"]',
-        '.exo-skip-button',
-        '[class*="skip-btn"]',
-        '.ytp-ad-skip-button',
-        '.videoAdUiSkipButton',
-        '[aria-label*="skip" i]'
-      ];
-      for (const sel of skipSelectors) {
-        const btns = document.querySelectorAll(sel);
-        for (const btn of btns) {
-          if (btn && btn.offsetParent !== null) {
-            btn.click();
-          }
-        }
-      }
-
-      // 2B. Fast-forward short ad clips in ad containers
-      const videos = document.querySelectorAll('video');
-      for (const v of videos) {
-        const closestAd = v.closest(
-          '[class*="ad-"], [class*="ads-"], [id*="ad-"], [id*="ads-"], [class*="preroll"], [class*="sponsor"], [class*="banner"], [id*="vast"], [class*="exo_"]'
-        );
-        if (closestAd && !v.ended && v.duration && v.duration > 0 && v.duration < 60) {
-          v.muted = true;
-          v.currentTime = v.duration;
-        }
-      }
-    } catch (e) {}
-  }
-
-  // Periodic check for dynamic players
-  setInterval(skipGenericAdVideos, 500);
 })();
