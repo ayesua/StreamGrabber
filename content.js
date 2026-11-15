@@ -1411,20 +1411,27 @@
   let currentPageWidthMode = 0;
 
   function getWidthModeInfo(mode, hasNativeNarrowRatio, intrinsicRatio, containerRatio) {
+    const safeContainerRatio = (containerRatio && containerRatio > 0) ? containerRatio : (16 / 9);
     if (!mode || mode === 0) {
       return { widthPct: 100, label: 'Original', objectFit: '', active: false };
     }
     if (mode === 1) {
       if (hasNativeNarrowRatio) {
-        const pct = Math.max(25, Math.min(95, (intrinsicRatio / containerRatio) * 100));
+        const pct = Math.max(15, Math.min(95, (intrinsicRatio / safeContainerRatio) * 100));
         return { widthPct: pct, label: 'Width: Auto', objectFit: 'contain', active: true };
       }
-      return { widthPct: 56.25, label: 'Width: 9:16', objectFit: 'fill', active: true };
+      // True 9:16 vertical aspect ratio inside container (e.g. (9/16)/(16/9) = 31.64% of 16:9 width)
+      const pct916 = Math.max(15, Math.min(95, ((9 / 16) / safeContainerRatio) * 100));
+      return { widthPct: pct916, label: 'Width: 9:16', objectFit: 'fill', active: true };
     }
     if (mode === 2) {
-      return { widthPct: 75, label: 'Width: 4:3', objectFit: 'fill', active: true };
+      // True 3:4 portrait aspect ratio inside container (e.g. (3/4)/(16/9) = 42.19% of 16:9 width)
+      const pct34 = Math.max(15, Math.min(95, ((3 / 4) / safeContainerRatio) * 100));
+      return { widthPct: pct34, label: 'Width: 3:4', objectFit: 'fill', active: true };
     }
-    return { widthPct: 42, label: 'Width: Tall', objectFit: 'fill', active: true };
+    // True 4:3 aspect ratio inside container (e.g. (4/3)/(16/9) = 75.00% of 16:9 width)
+    const pct43 = Math.max(15, Math.min(95, ((4 / 3) / safeContainerRatio) * 100));
+    return { widthPct: pct43, label: 'Width: 4:3', objectFit: 'fill', active: true };
   }
 
   function applyVideoWidthMode(video, mode) {
